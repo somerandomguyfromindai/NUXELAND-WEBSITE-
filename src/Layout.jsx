@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -7,7 +8,9 @@ import { base44 } from "@/api/base44Client";
 
 const navigationItems = [
   { title: "Home", url: createPageUrl("Home"), icon: Home },
-  { title: "Simulator", url: createPageUrl("Simulator"), icon: FlaskConical },
+  { title: "A.N.T. Console", url: createPageUrl("Simulator"), icon: FlaskConical },
+  { title: "Platformer", url: createPageUrl("Platformer"), icon: Clock },
+  { title: "Shop", url: createPageUrl("Shop"), icon: BarChart3 },
   { title: "Timeline", url: createPageUrl("Timeline"), icon: Clock },
   { title: "Dashboard", url: createPageUrl("Dashboard"), icon: BarChart3 },
   { title: "Community", url: createPageUrl("Community"), icon: Users },

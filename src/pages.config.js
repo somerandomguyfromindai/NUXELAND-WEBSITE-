@@ -3,6 +3,8 @@ import Simulator from './pages/Simulator';
 import Timeline from './pages/Timeline';
 import Dashboard from './pages/Dashboard';
 import Community from './pages/Community';
+import Shop from './pages/Shop';
+import Platformer from './pages/Platformer';
 import Layout from './Layout.jsx';
 
 
@@ -12,6 +14,8 @@ export const PAGES = {
     "Timeline": Timeline,
     "Dashboard": Dashboard,
     "Community": Community,
+    "Shop": Shop,
+    "Platformer": Platformer,
 }
 
 export const pagesConfig = {
