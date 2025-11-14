@@ -1,146 +1,109 @@
-import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Play, RotateCcw, Zap, Info } from "lucide-react";
-import ThreeJsSimulator from "../components/simulator/ThreeJsSimulator";
-import GameControls from "../components/simulator/GameControls";
-import GameStats from "../components/simulator/GameStats";
+import React, { useState, useEffect } from "react";
+import { base44 } from "@/api/base44Client";
+import { useQuery } from "@tanstack/react-query";
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Monitor, Folder, Radio, AlertTriangle } from "lucide-react";
+import AgentMonitor from "../components/game/AgentMonitor";
+import FileBrowser from "../components/game/FileBrowser";
+import CommsPanel from "../components/game/CommsPanel";
+import FinalChoice from "../components/game/FinalChoice";
 
 export default function Simulator() {
-  const [gameStarted, setGameStarted] = useState(false);
-  const [gameStats, setGameStats] = useState({
-    itemsCollected: 0,
-    miniaturizationLevel: 100,
-    score: 0,
-    time: 0
+  const [activeTab, setActiveTab] = useState("monitor");
+  const [showFinalChoice, setShowFinalChoice] = useState(false);
+  const [gameState, setGameState] = useState({
+    completedMissions: [],
+    unlockedChannels: [],
+    decryptedFiles: []
   });
 
-  const handleGameStart = () => {
-    setGameStarted(true);
-    setGameStats({
-      itemsCollected: 0,
-      miniaturizationLevel: 100,
-      score: 0,
-      time: 0
-    });
-  };
+  const { data: missions } = useQuery({
+    queryKey: ['missions'],
+    queryFn: () => base44.entities.Mission.list(),
+    initialData: [],
+  });
 
-  const handleGameReset = () => {
-    setGameStarted(false);
-    setGameStats({
-      itemsCollected: 0,
-      miniaturizationLevel: 100,
-      score: 0,
-      time: 0
-    });
-  };
+  useEffect(() => {
+    // Check if all missions completed
+    const allCompleted = missions.every(m => m.status === 'completed');
+    if (allCompleted && missions.length >= 3) {
+      setTimeout(() => setShowFinalChoice(true), 2000);
+    }
+  }, [missions]);
+
+  if (showFinalChoice) {
+    return <FinalChoice gameState={gameState} />;
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0A0E1A] to-[#0F1729] py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#0A0E1A] py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 flex items-center gap-3">
-            <Zap className="w-10 h-10 text-blue-400" />
-            3D Miniaturization Game
+        {/* Terminal Header */}
+        <div className="mb-6 bg-gradient-to-r from-red-900/20 to-red-800/10 border border-red-500/30 rounded-lg p-4">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+            <span className="text-red-400 font-mono text-sm">SYSTEM ACTIVE</span>
+            <span className="text-gray-500 font-mono text-xs ml-auto">
+              etinuxE Corp // Internal Terminal v2.4.1
+            </span>
+          </div>
+          <h1 className="text-2xl md:text-3xl font-bold text-white font-mono">
+            &gt; MINIATURIZATION COMMAND CENTER
           </h1>
-          <p className="text-xl text-gray-400">
-            Navigate through a microscopic world and experience miniaturization
+          <p className="text-gray-400 font-mono text-sm mt-1">
+            Unauthorized access detected. Session logged.
           </p>
         </div>
 
-        {!gameStarted ? (
-          <div className="max-w-4xl mx-auto">
-            <Card className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-blue-500/20 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-white text-2xl flex items-center gap-2">
-                  <Info className="w-6 h-6 text-blue-400" />
-                  How to Play
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="bg-white/5 rounded-lg p-6">
-                    <h3 className="text-blue-400 font-semibold mb-3 text-lg">🎮 Controls</h3>
-                    <ul className="space-y-2 text-gray-300">
-                      <li>• <span className="text-white font-medium">W/A/S/D</span> - Move around</li>
-                      <li>• <span className="text-white font-medium">Mouse</span> - Look around</li>
-                      <li>• <span className="text-white font-medium">Space</span> - Jump</li>
-                      <li>• <span className="text-white font-medium">Shift</span> - Run faster</li>
-                    </ul>
-                  </div>
+        {/* Warning Banner */}
+        <div className="mb-6 bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-3 flex items-center gap-3">
+          <AlertTriangle className="w-5 h-5 text-yellow-400" />
+          <p className="text-yellow-300 text-sm font-mono">
+            CLASSIFIED: This terminal contains sensitive etinuxE operational data
+          </p>
+        </div>
 
-                  <div className="bg-white/5 rounded-lg p-6">
-                    <h3 className="text-green-400 font-semibold mb-3 text-lg">🎯 Objectives</h3>
-                    <ul className="space-y-2 text-gray-300">
-                      <li>• Collect <span className="text-blue-400">blue orbs</span> to shrink</li>
-                      <li>• Avoid <span className="text-red-400">red obstacles</span></li>
-                      <li>• Reach the <span className="text-green-400">goal</span></li>
-                      <li>• Explore the nano-world</li>
-                    </ul>
-                  </div>
-                </div>
+        {/* Main Interface */}
+        <Card className="bg-[#0F1729] border-gray-700">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="w-full bg-[#1A1F2E] border-b border-gray-700 rounded-none">
+              <TabsTrigger 
+                value="monitor" 
+                className="flex-1 data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-400"
+              >
+                <Monitor className="w-4 h-4 mr-2" />
+                Agent Monitor
+              </TabsTrigger>
+              <TabsTrigger 
+                value="files"
+                className="flex-1 data-[state=active]:bg-purple-900/30 data-[state=active]:text-purple-400"
+              >
+                <Folder className="w-4 h-4 mr-2" />
+                File Browser
+              </TabsTrigger>
+              <TabsTrigger 
+                value="comms"
+                className="flex-1 data-[state=active]:bg-green-900/30 data-[state=active]:text-green-400"
+              >
+                <Radio className="w-4 h-4 mr-2" />
+                Internal Comms
+              </TabsTrigger>
+            </TabsList>
 
-                <div className="bg-gradient-to-r from-purple-500/20 to-blue-500/20 rounded-lg p-6 border border-purple-500/30">
-                  <h3 className="text-purple-400 font-semibold mb-3 text-lg">🌟 Game Features</h3>
-                  <div className="grid md:grid-cols-3 gap-4 text-gray-300">
-                    <div>
-                      <p className="text-white font-medium mb-1">Dynamic Scaling</p>
-                      <p className="text-sm">Experience size changes in real-time</p>
-                    </div>
-                    <div>
-                      <p className="text-white font-medium mb-1">3D Environment</p>
-                      <p className="text-sm">Immersive microscopic landscapes</p>
-                    </div>
-                    <div>
-                      <p className="text-white font-medium mb-1">Physics</p>
-                      <p className="text-sm">Realistic movement and collisions</p>
-                    </div>
-                  </div>
-                </div>
+            <TabsContent value="monitor" className="p-0">
+              <AgentMonitor gameState={gameState} setGameState={setGameState} />
+            </TabsContent>
 
-                <Button
-                  onClick={handleGameStart}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-xl py-7"
-                >
-                  <Play className="w-6 h-6 mr-3" />
-                  Start Game
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        ) : (
-          <div className="grid lg:grid-cols-4 gap-6">
-            {/* Game Canvas */}
-            <div className="lg:col-span-3">
-              <Card className="bg-black border-blue-500/20 overflow-hidden">
-                <CardContent className="p-0">
-                  <ThreeJsSimulator 
-                    gameStarted={gameStarted}
-                    onStatsUpdate={setGameStats}
-                  />
-                </CardContent>
-              </Card>
-              
-              <div className="mt-4">
-                <Button
-                  onClick={handleGameReset}
-                  variant="outline"
-                  className="border-white/20 text-white hover:bg-white/10"
-                >
-                  <RotateCcw className="w-4 h-4 mr-2" />
-                  Reset Game
-                </Button>
-              </div>
-            </div>
+            <TabsContent value="files" className="p-0">
+              <FileBrowser gameState={gameState} setGameState={setGameState} />
+            </TabsContent>
 
-            {/* Side Panel */}
-            <div className="space-y-6">
-              <GameStats stats={gameStats} />
-              <GameControls />
-            </div>
-          </div>
-        )}
+            <TabsContent value="comms" className="p-0">
+              <CommsPanel gameState={gameState} />
+            </TabsContent>
+          </Tabs>
+        </Card>
       </div>
     </div>
   );
