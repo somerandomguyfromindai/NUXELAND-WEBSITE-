@@ -215,7 +215,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       rim.position.set(30, 8, 20);
       rim.rotation.x = Math.PI / 2;
       scene.add(rim);
-      obstacles.push(rim); // Added to obstacles
+      obstacles.push(rim);
       
       bowlGroup.add(bowl);
       scene.add(bowlGroup);
@@ -267,7 +267,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       mugHandleMesh.castShadow = true;
       scene.add(mugHandleMesh);
       obstacles.push(mug);
-      obstacles.push(mugHandleMesh); // Added to obstacles
+      obstacles.push(mugHandleMesh);
 
       for (let i = 0; i < 8; i++) {
         const crumbSize = 1.2 + Math.random() * 1.8;
@@ -307,7 +307,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       butter.userData = { type: 'slippery', slipFactor: 3 };
       scene.add(butter);
       interactiveObjects.push(butter);
-      obstacles.push(butter); // Added to obstacles
+      obstacles.push(butter);
 
       const saltBaseGeometry = new THREE.CylinderGeometry(3, 3, 15, 32);
       const saltMaterial = new THREE.MeshPhysicalMaterial({ 
@@ -352,7 +352,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       button1.castShadow = true;
       scene.add(button1);
       puzzleElements.push(button1);
-      obstacles.push(button1); // Added to obstacles
+      obstacles.push(button1);
 
       if (activatedButtons.includes('button1')) {
         const ringGeometry = new THREE.TorusGeometry(1.5, 0.1, 16, 32);
@@ -417,7 +417,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       plate1.castShadow = true;
       scene.add(plate1);
       puzzleElements.push(plate1);
-      obstacles.push(plate1); // Added to obstacles
+      obstacles.push(plate1);
 
       const knifeBladeGeometry = new THREE.BoxGeometry(1.2, 0.2, 16);
       const knifeHandleGeometry = new THREE.CylinderGeometry(0.7, 0.7, 5, 16);
@@ -449,7 +449,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       knife.userData = { type: 'lever', id: 'lever1' };
       scene.add(knife);
       puzzleElements.push(knife);
-      obstacles.push(knife); // Added to obstacles
+      obstacles.push(knife);
 
       const dishGeometry = new THREE.CylinderGeometry(8, 7, 1.2, 64);
       const dishMaterial = new THREE.MeshStandardMaterial({ 
@@ -630,58 +630,31 @@ export default function Mission3DView({ gameState, setGameState }) {
       const delta = clock.getDelta();
 
       touchingObstacle = null;
-      const climbDetectionDistance = playerRadius + 0.1; // Small buffer for detection
+      const climbCheckDistance = 2;
       
-      const playerBBox = new THREE.Box3().setFromCenterAndSize(
-        player.position,
-        new THREE.Vector3(playerRadius * 2, playerHalfHeight * 2, playerRadius * 2)
-      );
-
       obstacles.forEach(obs => {
-        const obsBox = new THREE.Box3().setFromObject(obs);
-        // Expand player BBox slightly to detect nearby obstacles for climbing
-        const playerClimbDetectBBox = playerBBox.clone().expandByScalar(climbDetectionDistance);
-
-        if (playerClimbDetectBBox.intersectsBox(obsBox)) {
-          // A more refined check to see if player is *against* the obstacle horizontally
-          const playerXZ = new THREE.Vector2(player.position.x, player.position.z);
-          const obsMinXZ = new THREE.Vector2(obsBox.min.x, obsBox.min.z);
-          const obsMaxXZ = new THREE.Vector2(obsBox.max.x, obsBox.max.z);
-
-          // Check if player is horizontally close to obstacle
-          if (
-              (player.position.x + playerRadius > obsBox.min.x && player.position.x - playerRadius < obsBox.max.x) &&
-              (player.position.z + playerRadius > obsBox.min.z && player.position.z - playerRadius < obsBox.max.z)
-          ) {
-            // Check if player's Y is below the top of the object, and within climbing reach
-            if (player.position.y - playerHalfHeight < obsBox.max.y - 0.5) { // Can't climb if already on top
-                touchingObstacle = obs;
-            }
-          }
+        const distance = player.position.distanceTo(obs.position);
+        if (distance < climbCheckDistance) {
+          touchingObstacle = obs;
         }
       });
-      
 
-      if (keys[' '] && touchingObstacle && !isOnGround) {
+      if (keys[' '] && touchingObstacle) {
         isClimbing = true;
         playerVelocityY = 0;
         player.position.y += climbSpeed * delta;
+        isOnGround = false;
         
-        // Optional: Keep player snapped to the obstacle's horizontal plane
         const touchedBox = new THREE.Box3().setFromObject(touchingObstacle);
-        const playerCenter = player.position.clone();
-        
-        // Clamp player X and Z position to stay within a reasonable range of the object's face
-        // This is a simplified clamping, a more robust solution would consider which face is being climbed
-        playerCenter.x = Math.max(touchedBox.min.x, Math.min(touchedBox.max.x, playerCenter.x));
-        playerCenter.z = Math.max(touchedBox.min.z, Math.min(touchedBox.max.z, playerCenter.z));
-        
-        player.position.x = playerCenter.x;
-        player.position.z = playerCenter.z;
-
+        if (player.position.x < touchedBox.min.x) player.position.x = touchedBox.min.x - playerRadius;
+        if (player.position.x > touchedBox.max.x) player.position.x = touchedBox.max.x + playerRadius;
+        if (player.position.z < touchedBox.min.z) player.position.z = touchedBox.min.z - playerRadius;
+        if (player.position.z > touchedBox.max.z) player.position.z = touchedBox.max.z + playerRadius;
       } else {
         isClimbing = false;
-        playerVelocityY += gravity * delta;
+        if (!isOnGround) {
+          playerVelocityY += gravity * delta;
+        }
       }
       
       const baseSpeed = keys['shift'] ? 20 : 10;
@@ -739,14 +712,12 @@ export default function Mission3DView({ gameState, setGameState }) {
           playerVelocityY = 0;
           newPlayerPositionY = obsBox.min.y - playerHalfHeight;
         }
-        // Only apply horizontal collision if not climbing
         if (playerBoxAtTargetPos.intersectsBox(obsBox) && !isClimbing) {
           actualHorizontalPosition.x = player.position.x;
           actualHorizontalPosition.z = player.position.z;
         }
       });
 
-      // Apply position updates only if not climbing
       if (!isClimbing) {
         player.position.x = actualHorizontalPosition.x;
         player.position.z = actualHorizontalPosition.z;
