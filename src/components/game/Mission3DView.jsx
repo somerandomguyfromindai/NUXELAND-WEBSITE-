@@ -900,6 +900,17 @@ export default function Mission3DView({ gameState, setGameState }) {
             });
             
             addLog(`Collected: ${obj.userData.resourceName}`, 'success');
+            // Update local inventory state
+            setInventory(prev => {
+              const existingItemIndex = prev.findIndex(item => item.name === obj.userData.resourceName);
+              if (existingItemIndex > -1) {
+                const newInventory = [...prev];
+                newInventory[existingItemIndex].quantity += 1;
+                return newInventory;
+              } else {
+                return [...prev, { name: obj.userData.resourceName, quantity: 1 }];
+              }
+            });
             scene.remove(obj);
             resourceObjects.splice(index, 1); // Remove from our local tracking array
           }
@@ -1105,12 +1116,15 @@ export default function Mission3DView({ gameState, setGameState }) {
             missionComplete = true;
             completeMission();
           }
-        } else if (obj.userData.type === 'data_core' && obj.userData.accessible) {
-            const distance = player.position.distanceTo(obj.position);
-            if (!missionComplete && distance < 5) {
-                missionComplete = true;
-                completeMission();
-            }
+        }
+
+        if (obj.userData.type === 'data_core' && obj.userData.accessible) {
+          const distance = player.position.distanceTo(obj.position);
+          if (!missionComplete && distance < 5) {
+            missionComplete = true;
+            addLog('DATA CORE EXTRACTED!', 'success');
+            completeMission();
+          }
         }
 
         obj.position.y += Math.sin(clock.elapsedTime * 2) * 0.02;
