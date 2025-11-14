@@ -1,7 +1,8 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import * as THREE from "three";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Terminal, Lock, CheckCircle, AlertTriangle } from "lucide-react";
 import HackingTerminal from "../components/platformer/HackingTerminal";
