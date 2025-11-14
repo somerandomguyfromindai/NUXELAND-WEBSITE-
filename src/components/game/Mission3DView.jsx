@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as THREE from "three";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, AlertTriangle, Target, FileText, Hammer, Lightbulb } from "lucide-react";
+import { CheckCircle, AlertTriangle, Target, FileText, Hammer, Lightbulb, Bug } from "lucide-react";
 import MissionBriefing from "./MissionBriefing";
 
 export default function Mission3DView({ gameState, setGameState }) {
@@ -20,6 +20,7 @@ export default function Mission3DView({ gameState, setGameState }) {
   const [leverStates, setLeverStates] = useState({});
   const [activatedButtons, setActivatedButtons] = useState([]);
   const [showHint, setShowHint] = useState(false);
+  const [playerHealth, setPlayerHealth] = useState(100);
   const queryClient = useQueryClient();
 
   const { data: missions } = useQuery({
@@ -71,6 +72,7 @@ export default function Mission3DView({ gameState, setGameState }) {
           setDestroyedObjects([]);
           setLeverStates({});
           setActivatedButtons([]);
+          setPlayerHealth(100);
         }, 2000);
       }
     }
@@ -181,6 +183,7 @@ export default function Mission3DView({ gameState, setGameState }) {
     let destructibleObjects = [];
     let interactiveObjects = [];
     let mistParticles = [];
+    let enemies = [];
     let missionComplete = false;
     
     let playerVelocityY = 0;
@@ -191,7 +194,7 @@ export default function Mission3DView({ gameState, setGameState }) {
     const playerRadius = 0.4; // Radius of the capsule
 
     if (activeMission.mission_number === 1) {
-      addLog("Mission 1: Navigate kitchen - Use SPACE to jump and climb!", 'info');
+      addLog("Mission 1: Avoid hostile insects and reach water!", 'info');
       
       // CERAMIC BOWL - realistic china
       const bowlGroup = new THREE.Group();
@@ -477,6 +480,12 @@ export default function Mission3DView({ gameState, setGameState }) {
       obstacles.push(plate); // Rising plate is an obstacle
 
       // SUGAR CUBES - white crystalline
+      const sugarPositions = [
+        { x: 20, y: 1, z: -8 },
+        { x: 22, y: 1, z: -8 },
+        { x: 21, y: 3, z: -8 },
+        { x: 24, y: 1, z: -6 }
+      ];
       sugarPositions.forEach((pos, i) => {
         const cubeGeometry = new THREE.BoxGeometry(2, 2, 2);
         const cubeMaterial = new THREE.MeshStandardMaterial({ 
@@ -550,6 +559,79 @@ export default function Mission3DView({ gameState, setGameState }) {
           mistParticles.push(mist);
         }
       }
+
+      // ENEMY AI - Hostile ant-sized insects
+      const enemyPatrolRoutes = [
+        { path: [{x: 10, z: 10}, {x: 10, z: -10}, {x: -10, z: -10}, {x: -10, z: 10}], speed: 3 },
+        { path: [{x: 45, z: 0}, {x: 45, z: 15}, {x: 60, z: 15}, {x: 60, z: 0}], speed: 4 },
+        { path: [{x: -20, z: -20}, {x: 0, z: -20}, {x: 0, z: 0}], speed: 2.5 }
+      ];
+
+      enemyPatrolRoutes.forEach((route, idx) => {
+        const enemyGroup = new THREE.Group();
+        
+        // Ant-like body
+        const bodySegments = [
+          { size: 0.6, pos: 0 },
+          { size: 0.8, pos: -1 },
+          { size: 0.7, pos: -2.2 }
+        ];
+        
+        bodySegments.forEach(seg => {
+          const segmentGeometry = new THREE.SphereGeometry(seg.size, 16, 16);
+          const segmentMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x8B0000,
+            roughness: 0.7,
+            metalness: 0.3,
+            emissive: 0xff0000,
+            emissiveIntensity: 0.2
+          });
+          const segment = new THREE.Mesh(segmentGeometry, segmentMaterial);
+          segment.position.z = seg.pos;
+          segment.castShadow = true;
+          enemyGroup.add(segment);
+        });
+
+        // Antennae
+        for (let i = 0; i < 2; i++) {
+          const antennaGeometry = new THREE.CylinderGeometry(0.08, 0.08, 1.5, 8);
+          const antennaMaterial = new THREE.MeshStandardMaterial({ color: 0x400000 });
+          const antenna = new THREE.Mesh(antennaGeometry, antennaMaterial);
+          antenna.position.set(i === 0 ? -0.3 : 0.3, 0.8, 0.5);
+          antenna.rotation.z = i === 0 ? -0.3 : 0.3;
+          antenna.rotation.x = -0.5;
+          antenna.castShadow = true;
+          enemyGroup.add(antenna);
+        }
+
+        // Eye glow
+        const eyeGeometry = new THREE.SphereGeometry(0.15, 8, 8);
+        const eyeMaterial = new THREE.MeshBasicMaterial({ 
+          color: 0xff0000,
+          transparent: true,
+          opacity: 0.9
+        });
+        for (let i = 0; i < 2; i++) {
+          const eye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+          eye.position.set(i === 0 ? -0.2 : 0.2, 0.3, 0.7);
+          enemyGroup.add(eye);
+        }
+
+        enemyGroup.position.set(route.path[0].x, 1, route.path[0].z);
+        scene.add(enemyGroup);
+        
+        enemies.push({
+          mesh: enemyGroup,
+          patrolPath: route.path,
+          pathIndex: 0,
+          speed: route.speed,
+          detectionRange: 15,
+          chaseSpeed: 6,
+          state: 'patrol', // 'patrol', 'chase', 'attack'
+          attackCooldown: 0,
+          attackDamage: 10
+        });
+      });
 
     } else if (activeMission.mission_number === 2) {
       addLog("Mission 2: Lab infiltration and data extraction", 'warning');
@@ -652,7 +734,6 @@ export default function Mission3DView({ gameState, setGameState }) {
       if (keys['a']) direction.x -= 1;
       if (keys['d']) direction.x += 1;
 
-      const currentHorizontalPosition = new THREE.Vector3(player.position.x, 0, player.position.z);
       const targetHorizontalPosition = new THREE.Vector3(player.position.x, 0, player.position.z);
 
       if (direction.length() > 0) {
@@ -717,6 +798,79 @@ export default function Mission3DView({ gameState, setGameState }) {
 
       setPlayerPosition({ x: player.position.x, y: player.position.y, z: player.position.z });
 
+      // ENEMY AI LOGIC
+      enemies.forEach(enemy => {
+        const distanceToPlayer = new THREE.Vector2(player.position.x, player.position.z)
+          .distanceTo(new THREE.Vector2(enemy.mesh.position.x, enemy.mesh.position.z));
+        
+        if (enemy.attackCooldown > 0) {
+          enemy.attackCooldown -= delta;
+        }
+
+        if (distanceToPlayer < enemy.detectionRange) {
+          // Player detected - chase mode
+          enemy.state = 'chase';
+          
+          const directionToPlayer = new THREE.Vector2(
+            player.position.x - enemy.mesh.position.x,
+            player.position.z - enemy.mesh.position.z
+          ).normalize();
+          
+          enemy.mesh.position.x += directionToPlayer.x * enemy.chaseSpeed * delta;
+          enemy.mesh.position.z += directionToPlayer.y * enemy.chaseSpeed * delta;
+          
+          // Look at player
+          enemy.mesh.lookAt(new THREE.Vector3(player.position.x, enemy.mesh.position.y, player.position.z));
+          
+          // Attack if close enough
+          if (distanceToPlayer < 2 && enemy.attackCooldown <= 0) {
+            setPlayerHealth(prev => {
+              const newHealth = Math.max(0, prev - enemy.attackDamage);
+              if (newHealth <= 0) {
+                addLog("DEFEATED! Respawning...", 'error');
+                player.position.set(0, 1, 0);
+                return 100;
+              }
+              addLog(`Enemy attacked! Health: ${newHealth}`, 'error');
+              return newHealth;
+            });
+            enemy.attackCooldown = 1.5;
+          }
+        } else {
+          // Patrol mode
+          enemy.state = 'patrol';
+          
+          const currentTarget = enemy.patrolPath[enemy.pathIndex];
+          const targetPos = new THREE.Vector2(currentTarget.x, currentTarget.z);
+          const enemyPos = new THREE.Vector2(enemy.mesh.position.x, enemy.mesh.position.z);
+          
+          const distanceToTarget = enemyPos.distanceTo(targetPos);
+          
+          if (distanceToTarget < 1) {
+            enemy.pathIndex = (enemy.pathIndex + 1) % enemy.patrolPath.length;
+          } else {
+            const direction = new THREE.Vector2(
+              currentTarget.x - enemy.mesh.position.x,
+              currentTarget.z - enemy.mesh.position.z
+            ).normalize();
+            
+            enemy.mesh.position.x += direction.x * enemy.speed * delta;
+            enemy.mesh.position.z += direction.y * enemy.speed * delta;
+            
+            enemy.mesh.lookAt(new THREE.Vector3(currentTarget.x, enemy.mesh.position.y, currentTarget.z));
+          }
+        }
+        
+        // Pulse red when chasing
+        if (enemy.state === 'chase') {
+          enemy.mesh.children.forEach(child => {
+            if (child.material && child.material.emissive) {
+              child.material.emissiveIntensity = 0.5 + Math.sin(clock.elapsedTime * 10) * 0.3;
+            }
+          });
+        }
+      });
+
       // --- Pressure plate activation ---
       puzzleElements.forEach(elem => {
         if (elem.userData.type === 'pressure_plate') {
@@ -736,9 +890,6 @@ export default function Mission3DView({ gameState, setGameState }) {
               setPuzzleStates(prev => ({ ...prev, [elem.userData.id]: true }));
               addLog(`✓ Pressure plate activated!`, 'info');
             }
-          } else if (puzzleStates[elem.userData.id]) {
-            setPuzzleStates(prev => ({ ...prev, [elem.userData.id]: false }));
-            addLog(`Pressure plate deactivated.`, 'info');
           }
         }
       });
@@ -797,7 +948,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       
       renderer.dispose();
     };
-  }, [activeMission, puzzleStates, inventory, missionStarted, destroyedObjects, leverStates, activatedButtons]);
+  }, [activeMission, puzzleStates, inventory, missionStarted, destroyedObjects, leverStates, activatedButtons, playerHealth]); // Added playerHealth to dependency array
 
   return (
     <div className="grid lg:grid-cols-4 gap-4 p-6">
@@ -826,6 +977,27 @@ export default function Mission3DView({ gameState, setGameState }) {
               <p className="text-gray-300 font-mono text-xs">
                 {activeMission?.title || 'No active mission'}
               </p>
+              
+              {/* Health bar */}
+              <div className="mt-2">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs text-gray-400 font-mono">HEALTH:</span>
+                  <span className={`text-xs font-mono font-bold ${
+                    playerHealth > 60 ? 'text-green-400' : 
+                    playerHealth > 30 ? 'text-yellow-400' : 'text-red-400'
+                  }`}>{playerHealth}%</span>
+                </div>
+                <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full transition-all duration-300 ${
+                      playerHealth > 60 ? 'bg-green-500' : 
+                      playerHealth > 30 ? 'bg-yellow-500' : 'bg-red-500'
+                    }`}
+                    style={{ width: `${playerHealth}%` }}
+                  />
+                </div>
+              </div>
+              
               {activeMission && !missionStarted && (
                 <Button
                   onClick={() => setShowBriefing(true)}
@@ -841,8 +1013,9 @@ export default function Mission3DView({ gameState, setGameState }) {
             
             <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm border border-gray-600 rounded p-2 font-mono text-xs text-gray-300">
               <p>W/A/S/D: Move | SPACE: Jump | E: Interact | Shift: Sprint</p>
-              <p className="text-green-400 mt-1 font-bold">
-                Press SPACE to JUMP and climb platforms!
+              <p className="text-red-400 mt-1 font-bold flex items-center gap-1">
+                <Bug className="w-3 h-3" />
+                Avoid hostile insects! They will attack!
               </p>
             </div>
 
@@ -864,6 +1037,7 @@ export default function Mission3DView({ gameState, setGameState }) {
                   Mission 1 Solution:
                 </h4>
                 <ol className="text-yellow-100 font-mono text-xs space-y-1 list-decimal list-inside">
+                  <li>Avoid red ant enemies - they patrol and chase!</li>
                   <li>Jump (SPACE) to climb the SALT SHAKER</li>
                   <li>Press [E] on the button on top (turns green)</li>
                   <li>Jump across the fork bridge that appears</li>
@@ -872,8 +1046,8 @@ export default function Mission3DView({ gameState, setGameState }) {
                   <li>Jump onto the white plate that rises</li>
                   <li>Jump to reach WATER DROPLET</li>
                 </ol>
-                <p className="text-yellow-200 text-xs mt-2 italic font-bold">
-                  Use SPACE to jump and climb! All 3 puzzles unlock water!
+                <p className="text-red-200 text-xs mt-2 italic font-bold">
+                  Enemy attacks deal damage! Stay away from red ants!
                 </p>
               </div>
             )}
