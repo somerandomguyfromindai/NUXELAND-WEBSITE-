@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -19,7 +18,6 @@ export default function Mission3DView({ gameState, setGameState }) {
   const [destroyedObjects, setDestroyedObjects] = useState([]);
   const [leverStates, setLeverStates] = useState({});
   const [activatedButtons, setActivatedButtons] = useState([]);
-  const [waterDroplets, setWaterDroplets] = useState([]);
   const queryClient = useQueryClient();
 
   const { data: missions } = useQuery({
@@ -110,7 +108,6 @@ export default function Mission3DView({ gameState, setGameState }) {
     sunLight.shadow.mapSize.height = 2048;
     scene.add(sunLight);
 
-    // Kitchen counter (ground for miniaturized agents)
     const counterGeometry = new THREE.PlaneGeometry(200, 200);
     const counterTexture = new THREE.TextureLoader().load('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2Y1ZjVmNSIvPjxwYXRoIGQ9Ik0wIDAgTDIwMCAyMDAiIHN0cm9rZT0iI2UwZTBlMCIgc3Ryb2tlLXdpZHRoPSIxIi8+PHBhdGggZD0iTTAgMjAwIEwyMDAgMCIgc3Ryb2tlPSIjZTBlMGUwIiBzdHJva2Utd2lkdGg9IjEiLz48L3N2Zz4=');
     counterTexture.wrapS = counterTexture.wrapT = THREE.RepeatWrapping;
@@ -143,12 +140,12 @@ export default function Mission3DView({ gameState, setGameState }) {
     let puzzleElements = [];
     let destructibleObjects = [];
     let interactiveObjects = [];
+    let mistParticles = [];
     let missionComplete = false;
 
     if (activeMission.mission_number === 1) {
       addLog("Mission 1: Kitchen infiltration - reach the water source", 'info');
       
-      // KITCHEN BOWL (massive obstacle)
       const bowlGroup = new THREE.Group();
       const bowlRadius = 15;
       const bowlHeight = 8;
@@ -167,7 +164,6 @@ export default function Mission3DView({ gameState, setGameState }) {
       scene.add(bowlGroup);
       obstacles.push(bowl);
 
-      // SPOON (large interactive object)
       const spoonHandle = new THREE.CylinderGeometry(0.5, 0.5, 20, 16);
       const spoonHead = new THREE.SphereGeometry(2, 16, 16);
       const spoonMaterial = new THREE.MeshStandardMaterial({ 
@@ -189,7 +185,6 @@ export default function Mission3DView({ gameState, setGameState }) {
       scene.add(spoonGroup);
       obstacles.push(spoonGroup);
 
-      // COFFEE MUG (climbable)
       const mugBody = new THREE.CylinderGeometry(5, 4, 10, 32);
       const mugHandle = new THREE.TorusGeometry(3, 0.5, 16, 32, Math.PI);
       const mugMaterial = new THREE.MeshStandardMaterial({ 
@@ -209,7 +204,6 @@ export default function Mission3DView({ gameState, setGameState }) {
       scene.add(mugHandleMesh);
       obstacles.push(mug);
 
-      // BREADCRUMBS (destructible obstacles)
       for (let i = 0; i < 8; i++) {
         const crumbSize = 1 + Math.random() * 2;
         const crumbGeometry = new THREE.DodecahedronGeometry(crumbSize, 0);
@@ -234,7 +228,6 @@ export default function Mission3DView({ gameState, setGameState }) {
         }
       }
 
-      // BUTTER STICK (slippery hazard + platform)
       const butterGeometry = new THREE.BoxGeometry(8, 2, 4);
       const butterMaterial = new THREE.MeshStandardMaterial({ 
         color: 0xffdb58,
@@ -251,7 +244,6 @@ export default function Mission3DView({ gameState, setGameState }) {
       scene.add(butter);
       interactiveObjects.push(butter);
 
-      // SALT SHAKER (tall obstacle with button on top)
       const saltBase = new THREE.CylinderGeometry(3, 3, 15, 16);
       const saltTop = new THREE.ConeGeometry(3, 5, 16);
       const saltMaterial = new THREE.MeshStandardMaterial({ 
@@ -270,7 +262,6 @@ export default function Mission3DView({ gameState, setGameState }) {
       scene.add(saltTopMesh);
       obstacles.push(saltShaker);
 
-      // BUTTON ON SALT SHAKER TOP
       const buttonGeometry = new THREE.CylinderGeometry(1, 1, 0.5, 16);
       const buttonMaterial = new THREE.MeshStandardMaterial({ 
         color: activatedButtons.includes('button1') ? 0x10b981 : 0xef4444,
@@ -283,7 +274,6 @@ export default function Mission3DView({ gameState, setGameState }) {
       scene.add(button1);
       puzzleElements.push(button1);
 
-      // FORK (creates bridge when button pressed)
       if (activatedButtons.includes('button1')) {
         const forkHandle = new THREE.BoxGeometry(2, 0.5, 25);
         const forkMaterial = new THREE.MeshStandardMaterial({ 
@@ -298,7 +288,6 @@ export default function Mission3DView({ gameState, setGameState }) {
         fork.receiveShadow = true;
         scene.add(fork);
         
-        // Fork prongs
         for (let i = 0; i < 4; i++) {
           const prong = new THREE.BoxGeometry(0.5, 0.5, 5);
           const prongMesh = new THREE.Mesh(prong, forkMaterial);
@@ -307,10 +296,8 @@ export default function Mission3DView({ gameState, setGameState }) {
           prongMesh.castShadow = true;
           scene.add(prongMesh);
         }
-        obstacles.push(fork); // Add fork as an obstacle
       }
 
-      // NAPKIN (climbable cloth)
       const napkinGeometry = new THREE.BoxGeometry(12, 0.2, 12);
       const napkinMaterial = new THREE.MeshStandardMaterial({ 
         color: 0xffffff,
@@ -322,9 +309,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       napkin.rotation.y = Math.PI / 8;
       napkin.receiveShadow = true;
       scene.add(napkin);
-      obstacles.push(napkin); // Napkin can be an obstacle/platform
 
-      // PRESSURE PLATE (on napkin)
       const plateGeometry = new THREE.CylinderGeometry(2, 2, 0.3, 32);
       const plateMaterial = new THREE.MeshStandardMaterial({ 
         color: puzzleStates.plate1 ? 0x10b981 : 0x6b7280,
@@ -338,7 +323,6 @@ export default function Mission3DView({ gameState, setGameState }) {
       scene.add(plate1);
       puzzleElements.push(plate1);
 
-      // KNIFE (lever to activate)
       const knifeBlade = new THREE.BoxGeometry(1, 0.1, 15);
       const knifeHandle = new THREE.BoxGeometry(1.5, 0.5, 5);
       const knifeMaterial = new THREE.MeshStandardMaterial({ 
@@ -364,7 +348,6 @@ export default function Mission3DView({ gameState, setGameState }) {
       scene.add(knife);
       puzzleElements.push(knife);
 
-      // PLATE (platform that rises when lever activated)
       const dishGeometry = new THREE.CylinderGeometry(8, 7, 1, 32);
       const dishMaterial = new THREE.MeshStandardMaterial({ 
         color: 0xffffff,
@@ -378,9 +361,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       plate.receiveShadow = true;
       scene.add(plate);
       interactiveObjects.push(plate);
-      obstacles.push(plate); // Plate can be an obstacle/platform
 
-      // SUGAR CUBES (stackable/destructible)
       const sugarPositions = [
         { x: 20, y: 1, z: -8 },
         { x: 22, y: 1, z: -8 },
@@ -405,7 +386,6 @@ export default function Mission3DView({ gameState, setGameState }) {
         }
       });
 
-      // WATER DROPLET (objective)
       const waterGeometry = new THREE.SphereGeometry(3, 32, 32);
       const waterMaterial = new THREE.MeshStandardMaterial({ 
         color: 0x4dd0e1,
@@ -424,8 +404,6 @@ export default function Mission3DView({ gameState, setGameState }) {
       scene.add(waterDrop);
       objectives.push(waterDrop);
 
-      // STEAM/MIST (hazard near water)
-      const mistParticles = [];
       if (canReachWater) {
         for (let i = 0; i < 30; i++) {
           const mistGeometry = new THREE.SphereGeometry(0.5, 8, 8);
@@ -449,9 +427,7 @@ export default function Mission3DView({ gameState, setGameState }) {
         }
       }
 
-      // CRUMBS falling hazard
-      // Randomly spawn a falling crumb
-      if (Math.random() > 0.7) { 
+      if (Math.random() > 0.7) {
         const fallingCrumb = new THREE.Mesh(
           new THREE.DodecahedronGeometry(2, 0),
           new THREE.MeshStandardMaterial({ color: 0xf4a460 })
@@ -469,11 +445,9 @@ export default function Mission3DView({ gameState, setGameState }) {
     } else if (activeMission.mission_number === 2) {
       addLog("Mission 2: Lab infiltration and data extraction", 'warning');
       
-      // Switch to lab environment
       scene.background = new THREE.Color(0x1a1a2e);
       scene.fog = new THREE.Fog(0x1a1a2e, 30, 100);
 
-      // Lab floor
       const labFloorGeometry = new THREE.PlaneGeometry(200, 200);
       const labFloorMaterial = new THREE.MeshStandardMaterial({ 
         color: 0x2a2a4a,
@@ -495,7 +469,6 @@ export default function Mission3DView({ gameState, setGameState }) {
       keys[e.key.toLowerCase()] = true;
       
       if (e.key.toLowerCase() === 'e') {
-        // Interact with buttons, levers, pressure plates
         puzzleElements.forEach(elem => {
           const distance = player.position.distanceTo(elem.position);
           if (distance < 3) {
@@ -509,14 +482,12 @@ export default function Mission3DView({ gameState, setGameState }) {
               setLeverStates(prev => ({ ...prev, [leverId]: !prev[leverId] }));
               addLog(`Lever ${leverId} ${!leverStates[leverId] ? 'activated' : 'deactivated'}`, 'info');
             } else if (elem.userData.type === 'pressure_plate') {
-              // Pressure plates are often activated by just being on them, but 'E' can manually trigger them
               setPuzzleStates(prev => ({ ...prev, [elem.userData.id]: true }));
-              addLog(`Pressure plate ${elem.userData.id} manually activated`, 'info');
+              addLog(`Pressure plate activated`, 'info');
             }
           }
         });
 
-        // Destroy objects
         destructibleObjects.forEach((obj, index) => {
           const distance = player.position.distanceTo(obj.position);
           if (distance < 3) {
@@ -525,16 +496,14 @@ export default function Mission3DView({ gameState, setGameState }) {
               addLog(`Destroyed ${obj.userData.id}`, 'info');
               setDestroyedObjects(prev => [...prev, obj.userData.id]);
               scene.remove(obj);
-              // Remove from arrays
               destructibleObjects.splice(index, 1);
               obstacles = obstacles.filter(o => o !== obj);
             } else {
               addLog(`Hit ${obj.userData.id} - Health: ${obj.userData.health}`, 'warning');
-              // Visual feedback for hitting an object
               obj.material.emissive.setHex(0xff0000);
               obj.material.emissiveIntensity = 0.5;
               setTimeout(() => {
-                obj.material.emissive.setHex(obj.material.color.getHex()); // Revert to base color if it's not emissive by default
+                obj.material.emissive.setHex(0x000000);
                 obj.material.emissiveIntensity = 0;
               }, 200);
             }
@@ -580,26 +549,22 @@ export default function Mission3DView({ gameState, setGameState }) {
         let collision = false;
         onSlippery = false;
 
-        // Check for collisions with obstacles
         obstacles.forEach(obs => {
-          // A simple bounding box check for generic obstacles
           const obsBox = new THREE.Box3().setFromObject(obs);
           const playerBox = new THREE.Box3().setFromCenterAndSize(
             newPosition,
-            new THREE.Vector3(1, 2, 1) // Player's approximate bounding box size
+            new THREE.Vector3(1, 2, 1)
           );
           if (obsBox.intersectsBox(playerBox)) {
             collision = true;
           }
         });
 
-        // Check slippery surfaces
         interactiveObjects.forEach(obj => {
           if (obj.userData.type === 'slippery') {
             const distance = new THREE.Vector2(newPosition.x, newPosition.z)
               .distanceTo(new THREE.Vector2(obj.position.x, obj.position.z));
-            // Consider the player to be "on" the slippery object if within a certain radius
-            if (distance < 5) { // Assuming slippery objects are somewhat large
+            if (distance < 5) {
               onSlippery = true;
             }
           }
@@ -611,75 +576,64 @@ export default function Mission3DView({ gameState, setGameState }) {
         }
       }
 
-      // Check pressure plates (continuous activation)
       puzzleElements.forEach(elem => {
         if (elem.userData.type === 'pressure_plate') {
           const distance = new THREE.Vector2(player.position.x, player.position.z)
             .distanceTo(new THREE.Vector2(elem.position.x, elem.position.z));
           
-          if (distance < 2) { // If player is close enough to activate
+          if (distance < 2) {
             if (!puzzleStates[elem.userData.id]) {
               setPuzzleStates(prev => ({ ...prev, [elem.userData.id]: true }));
-              addLog(`Pressure plate ${elem.userData.id} activated by proximity`, 'info');
+              addLog(`Pressure plate ${elem.userData.id} activated`, 'info');
             }
-          } else {
-            // Optional: Deactivate if player moves off, if that's desired behavior
-            // if (puzzleStates[elem.userData.id]) {
-            //   setPuzzleStates(prev => ({ ...prev, [elem.userData.id]: false }));
-            //   addLog(`Pressure plate ${elem.userData.id} deactivated`, 'info');
-            // }
           }
         }
       });
 
-      // Check objectives
       objectives.forEach(obj => {
         if (obj.userData.type === 'water_source' && obj.userData.accessible) {
           const distance = player.position.distanceTo(obj.position);
-          if (!missionComplete && distance < 5) { // Reachable and within range
+          if (!missionComplete && distance < 5) {
             missionComplete = true;
             completeMission();
           }
         }
 
-        // Animate objectives
         obj.position.y += Math.sin(clock.elapsedTime * 2) * 0.02;
         obj.rotation.y += delta * 0.5;
       });
 
-      // Animate falling hazards and check player collision
       interactiveObjects.forEach((obj, index) => {
         if (obj.userData.type === 'falling_hazard') {
           obj.position.y += obj.userData.velocity;
           obj.rotation.x += 0.1;
           obj.rotation.y += 0.05;
           
-          if (obj.position.y < 0) { // Remove if falls below ground
+          if (obj.position.y < 0) {
             scene.remove(obj);
             interactiveObjects.splice(index, 1);
           }
           
           const distance = player.position.distanceTo(obj.position);
-          if (distance < 2 && obj.position.y < player.position.y + 1) { // Close enough and below player's head
-            addLog("Hit by falling object! Mission reset.", 'error');
-            player.position.set(0, 1, 0); // Reset player position
+          if (distance < 2) {
+            addLog("Hit by falling object!", 'error');
+            player.position.set(0, 1, 0);
           }
         }
       });
 
-      // Animate mist particles
       mistParticles.forEach(mist => {
-        mist.position.y += mist.userData.velocity.y;
-        if (mist.position.y > 20) { // Reset mist particle position if too high
-            mist.position.y = 5 + Math.random() * 5; // Reset lower, but still within the area
-            mist.position.x = 65 + Math.random() * 10;
-            mist.position.z = 0 + Math.random() * 10;
+        if (mist.userData.velocity) {
+          mist.position.y += mist.userData.velocity.y;
+          if (mist.position.y > 20) {
+            mist.position.y = 5;
+          }
         }
       });
 
       camera.position.x = player.position.x + mouseX * 8;
-      camera.position.y = player.position.y + 12; // Increased camera height
-      camera.position.z = player.position.z + 20; // Increased camera distance
+      camera.position.y = player.position.y + 12;
+      camera.position.z = player.position.z + 20;
       camera.lookAt(player.position);
 
       renderer.render(scene, camera);
