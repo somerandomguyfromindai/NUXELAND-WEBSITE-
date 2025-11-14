@@ -5,8 +5,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as THREE from "three";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, AlertTriangle, Target, FileText, Lightbulb, MoveUp, Hand, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from "lucide-react";
+import { CheckCircle, AlertTriangle, Target, FileText, Lightbulb, MoveUp, Hand, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Bot } from "lucide-react";
 import MissionBriefing from "./MissionBriefing";
+import GameAIAssistant from "./GameAIAssistant";
 
 export default function Mission3DView({ gameState, setGameState }) {
   const mountRef = useRef(null);
@@ -20,13 +21,19 @@ export default function Mission3DView({ gameState, setGameState }) {
   const [leverStates, setLeverStates] = useState({});
   const [activatedButtons, setActivatedButtons] = useState([]);
   const [showHint, setShowHint] = useState(false);
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [mobileControls, setMobileControls] = useState({
     up: false,
     down: false,
     left: false,
     right: false
   });
+  const mobileControlsRef = useRef(mobileControls);
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    mobileControlsRef.current = mobileControls;
+  }, [mobileControls]);
 
   const { data: missions } = useQuery({
     queryKey: ['missions'],
@@ -996,7 +1003,7 @@ export default function Mission3DView({ gameState, setGameState }) {
         }
       });
 
-      if ((keys[' '] || (mobileControls.up && touchingObstacle)) && touchingObstacle) { // Allow mobile up button to trigger climb
+      if ((keys[' '] || (mobileControlsRef.current.up && touchingObstacle)) && touchingObstacle) { // Allow mobile up button to trigger climb
         isClimbing = true;
         playerVelocityY = 0;
         player.position.y += climbSpeed * delta;
@@ -1033,10 +1040,10 @@ export default function Mission3DView({ gameState, setGameState }) {
       const speed = onSlippery ? baseSpeed * 1.5 : baseSpeed;
       const direction = new THREE.Vector3();
 
-      if (keys['w'] || mobileControls.up) direction.z -= 1;
-      if (keys['s'] || mobileControls.down) direction.z += 1;
-      if (keys['a'] || mobileControls.left) direction.x -= 1;
-      if (keys['d'] || mobileControls.right) direction.x += 1;
+      if (keys['w'] || mobileControlsRef.current.up) direction.z -= 1;
+      if (keys['s'] || mobileControlsRef.current.down) direction.z += 1;
+      if (keys['a'] || mobileControlsRef.current.left) direction.x -= 1;
+      if (keys['d'] || mobileControlsRef.current.right) direction.x += 1;
 
       const targetHorizontalPosition = new THREE.Vector3(player.position.x, 0, player.position.z);
 
@@ -1232,12 +1239,21 @@ export default function Mission3DView({ gameState, setGameState }) {
         />
       )}
 
+      <GameAIAssistant
+        mission={activeMission}
+        puzzleStates={puzzleStates}
+        inventory={inventory}
+        playerPosition={playerPosition}
+        isOpen={showAIAssistant}
+        onClose={() => setShowAIAssistant(false)}
+      />
+
       <div className="lg:col-span-3">
         <Card className="bg-black border-blue-500/20 overflow-hidden">
           <div className="relative">
             <div ref={mountRef} className="w-full h-[600px]" />
             
-            <div className="absolute top-4 left-4 bg-black/80 backdrop-blur-sm border border-blue-500/50 rounded p-3">
+            <div className="absolute top-4 left-4 bg-black/80 backdrop-blur-sm border border-blue-500/50 rounded p-3 z-10">
               <p className="text-blue-400 font-mono text-sm font-bold mb-1">
                 {activeMission ? `MISSION ${activeMission.mission_number}` : 'AWAITING MISSION'}
               </p>
@@ -1256,8 +1272,27 @@ export default function Mission3DView({ gameState, setGameState }) {
                 </Button>
               )}
             </div>
+
+            <div className="absolute top-4 right-4 flex gap-2 z-10">
+              <Button
+                onClick={() => setShowAIAssistant(true)}
+                className="bg-cyan-600/80 hover:bg-cyan-700/80 backdrop-blur-sm font-mono text-xs"
+                size="sm"
+              >
+                <Bot className="w-4 h-4 mr-1" />
+                AI Assistant
+              </Button>
+              <Button
+                onClick={() => setShowHint(!showHint)}
+                className="bg-yellow-600/80 hover:bg-yellow-700/80 backdrop-blur-sm font-mono text-xs hidden md:block"
+                size="sm"
+              >
+                <Lightbulb className="w-4 h-4 mr-1" />
+                {showHint ? 'Hide' : 'Show'} Hints
+              </Button>
+            </div>
             
-            <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm border border-gray-600 rounded p-2 font-mono text-xs text-gray-300 hidden md:block">
+            <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm border border-gray-600 rounded p-2 font-mono text-xs text-gray-300 hidden md:block z-10">
               <p>W/A/S/D: Move | SPACE: Jump (2x) | E: Interact | Shift: Sprint</p>
               <p className="text-green-400 mt-1 font-bold">
                 Hold SPACE while touching objects to CLIMB them!
@@ -1317,17 +1352,6 @@ export default function Mission3DView({ gameState, setGameState }) {
                   <span className="text-[10px] text-white font-bold">USE</span>
                 </button>
               </div>
-            </div>
-
-            <div className="absolute bottom-4 right-4 hidden md:block">
-              <Button
-                onClick={() => setShowHint(!showHint)}
-                className="bg-yellow-600/80 hover:bg-yellow-700/80 backdrop-blur-sm font-mono text-xs"
-                size="sm"
-              >
-                <Lightbulb className="w-4 h-4 mr-1" />
-                {showHint ? 'Hide' : 'Show'} Hints
-              </Button>
             </div>
 
             {showHint && activeMission?.mission_number === 1 && (
