@@ -24,14 +24,14 @@ export default function Shop() {
   const purchaseItemMutation = useMutation({
     mutationFn: (itemId) => {
       const item = shopItems.find(i => i.id === itemId);
-      if (user.credits >= item.price) {
-        return base44.auth.updateMe({
-          credits: user.credits - item.price,
-          purchased_items: [...(user.purchased_items || []), itemId],
-          unlocked_abilities: [...(user.unlocked_abilities || []), item.in_game_effect]
-        });
+      if (!user || user.credits < item.price) {
+        throw new Error('Insufficient credits');
       }
-      throw new Error('Insufficient credits');
+      return base44.auth.updateMe({
+        credits: user.credits - item.price,
+        purchased_items: [...(user.purchased_items || []), itemId],
+        unlocked_abilities: [...(user.unlocked_abilities || []), item.in_game_effect]
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['current-user'] });
@@ -39,6 +39,7 @@ export default function Shop() {
   });
 
   const addCredits = (amount) => {
+    if (!user) return;
     base44.auth.updateMe({
       credits: (user.credits || 0) + amount
     }).then(() => {
@@ -56,11 +57,22 @@ export default function Shop() {
     }
   };
 
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[#0A0E1A] to-[#0F1729] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white font-mono">Loading Shop...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0A0E1A] to-[#0F1729] py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div>
               <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 flex items-center gap-3">
                 <ShoppingCart className="w-10 h-10 text-blue-400" />
