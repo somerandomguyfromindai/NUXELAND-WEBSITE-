@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as THREE from "three";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, AlertTriangle, Target, FileText, Hammer } from "lucide-react";
+import { CheckCircle, AlertTriangle, Target, FileText, Hammer, Lightbulb } from "lucide-react";
 import MissionBriefing from "./MissionBriefing";
 
 export default function Mission3DView({ gameState, setGameState }) {
@@ -18,6 +18,7 @@ export default function Mission3DView({ gameState, setGameState }) {
   const [destroyedObjects, setDestroyedObjects] = useState([]);
   const [leverStates, setLeverStates] = useState({});
   const [activatedButtons, setActivatedButtons] = useState([]);
+  const [showHint, setShowHint] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: missions } = useQuery({
@@ -78,8 +79,8 @@ export default function Mission3DView({ gameState, setGameState }) {
     if (!mountRef.current || !activeMission || !missionStarted) return;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x87ceeb);
-    scene.fog = new THREE.Fog(0x87ceeb, 50, 150);
+    scene.background = new THREE.Color(0xb8d4e8);
+    scene.fog = new THREE.FogExp2(0xb8d4e8, 0.008);
 
     const camera = new THREE.PerspectiveCamera(
       75,
@@ -92,48 +93,91 @@ export default function Mission3DView({ gameState, setGameState }) {
     renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
     mountRef.current.appendChild(renderer.domElement);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
 
-    const sunLight = new THREE.DirectionalLight(0xfff8dc, 1);
+    const sunLight = new THREE.DirectionalLight(0xfff5e1, 1.5);
     sunLight.position.set(50, 100, 50);
     sunLight.castShadow = true;
     sunLight.shadow.camera.left = -100;
     sunLight.shadow.camera.right = 100;
     sunLight.shadow.camera.top = 100;
     sunLight.shadow.camera.bottom = -100;
-    sunLight.shadow.mapSize.width = 2048;
-    sunLight.shadow.mapSize.height = 2048;
+    sunLight.shadow.mapSize.width = 4096;
+    sunLight.shadow.mapSize.height = 4096;
+    sunLight.shadow.bias = -0.0001;
     scene.add(sunLight);
 
+    const fillLight = new THREE.DirectionalLight(0x87ceeb, 0.3);
+    fillLight.position.set(-50, 50, -50);
+    scene.add(fillLight);
+
+    // Realistic marble counter
     const counterGeometry = new THREE.PlaneGeometry(200, 200);
-    const counterTexture = new THREE.TextureLoader().load('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2Y1ZjVmNSIvPjxwYXRoIGQ9Ik0wIDAgTDIwMCAyMDAiIHN0cm9rZT0iI2UwZTBlMCIgc3Ryb2tlLXdpZHRoPSIxIi8+PHBhdGggZD0iTTAgMjAwIEwyMDAgMCIgc3Ryb2tlPSIjZTBlMGUwIiBzdHJva2Utd2lkdGg9IjEiLz48L3N2Zz4=');
-    counterTexture.wrapS = counterTexture.wrapT = THREE.RepeatWrapping;
-    counterTexture.repeat.set(20, 20);
     const counterMaterial = new THREE.MeshStandardMaterial({ 
-      map: counterTexture,
-      roughness: 0.4,
-      metalness: 0.1
+      color: 0xf5f5f0,
+      roughness: 0.3,
+      metalness: 0.2,
+      envMapIntensity: 1
     });
     const counter = new THREE.Mesh(counterGeometry, counterMaterial);
     counter.rotation.x = -Math.PI / 2;
     counter.receiveShadow = true;
     scene.add(counter);
 
-    const playerGeometry = new THREE.CapsuleGeometry(0.5, 1, 8, 16);
-    const playerMaterial = new THREE.MeshStandardMaterial({ 
-      color: 0x3b82f6,
-      emissive: 0x3b82f6,
-      emissiveIntensity: 0.3,
+    // Add subtle grid pattern
+    const gridHelper = new THREE.GridHelper(200, 40, 0xe0e0e0, 0xf0f0f0);
+    gridHelper.position.y = 0.01;
+    scene.add(gridHelper);
+
+    // Realistic player (ant-sized agent)
+    const playerGroup = new THREE.Group();
+    
+    const bodyGeometry = new THREE.CapsuleGeometry(0.4, 0.8, 8, 16);
+    const bodyMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0x1e40af,
+      roughness: 0.4,
       metalness: 0.6,
-      roughness: 0.2
+      emissive: 0x1e3a8a,
+      emissiveIntensity: 0.2
     });
-    const player = new THREE.Mesh(playerGeometry, playerMaterial);
-    player.position.set(0, 1, 0);
-    player.castShadow = true;
-    scene.add(player);
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    body.castShadow = true;
+    playerGroup.add(body);
+
+    // Helmet
+    const helmetGeometry = new THREE.SphereGeometry(0.35, 16, 16);
+    const helmetMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0x60a5fa,
+      roughness: 0.1,
+      metalness: 0.9,
+      transparent: true,
+      opacity: 0.8
+    });
+    const helmet = new THREE.Mesh(helmetGeometry, helmetMaterial);
+    helmet.position.y = 0.9;
+    helmet.castShadow = true;
+    playerGroup.add(helmet);
+
+    // Visor glow
+    const visorGeometry = new THREE.RingGeometry(0.15, 0.2, 16);
+    const visorMaterial = new THREE.MeshBasicMaterial({ 
+      color: 0x00ffff,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.8
+    });
+    const visor = new THREE.Mesh(visorGeometry, visorMaterial);
+    visor.position.set(0, 0.9, 0.3);
+    playerGroup.add(visor);
+
+    playerGroup.position.set(0, 1, 0);
+    scene.add(playerGroup);
+    const player = playerGroup;
 
     let objectives = [];
     let obstacles = [];
@@ -144,72 +188,91 @@ export default function Mission3DView({ gameState, setGameState }) {
     let missionComplete = false;
 
     if (activeMission.mission_number === 1) {
-      addLog("Mission 1: Kitchen infiltration - reach the water source", 'info');
+      addLog("Mission 1: Navigate kitchen obstacles and reach the water source", 'info');
       
+      // CERAMIC BOWL - realistic china
       const bowlGroup = new THREE.Group();
       const bowlRadius = 15;
-      const bowlHeight = 8;
-      const bowlGeometry = new THREE.SphereGeometry(bowlRadius, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+      const bowlGeometry = new THREE.SphereGeometry(bowlRadius, 64, 32, 0, Math.PI * 2, 0, Math.PI / 2);
       const bowlMaterial = new THREE.MeshStandardMaterial({ 
         color: 0xffffff,
-        roughness: 0.2,
-        metalness: 0.8,
+        roughness: 0.15,
+        metalness: 0.1,
         side: THREE.DoubleSide
       });
       const bowl = new THREE.Mesh(bowlGeometry, bowlMaterial);
-      bowl.position.set(30, bowlHeight / 2, 20);
+      bowl.position.set(30, 4, 20);
       bowl.castShadow = true;
       bowl.receiveShadow = true;
+      
+      // Bowl rim detail
+      const rimGeometry = new THREE.TorusGeometry(bowlRadius, 0.5, 16, 64);
+      const rim = new THREE.Mesh(rimGeometry, bowlMaterial);
+      rim.position.set(30, 8, 20);
+      rim.rotation.x = Math.PI / 2;
+      scene.add(rim);
+      
       bowlGroup.add(bowl);
       scene.add(bowlGroup);
       obstacles.push(bowl);
 
-      const spoonHandle = new THREE.CylinderGeometry(0.5, 0.5, 20, 16);
-      const spoonHead = new THREE.SphereGeometry(2, 16, 16);
-      const spoonMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0xc0c0c0,
-        metalness: 0.9,
-        roughness: 0.1
-      });
+      // REALISTIC SPOON with reflection
       const spoonGroup = new THREE.Group();
-      const handle = new THREE.Mesh(spoonHandle, spoonMaterial);
+      const handleGeometry = new THREE.CylinderGeometry(0.4, 0.5, 18, 16);
+      const headGeometry = new THREE.SphereGeometry(2.5, 32, 32);
+      const spoonMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xe8e8e8,
+        metalness: 0.95,
+        roughness: 0.05,
+        envMapIntensity: 1.5
+      });
+      
+      const handle = new THREE.Mesh(handleGeometry, spoonMaterial);
       handle.rotation.z = Math.PI / 2;
-      const head = new THREE.Mesh(spoonHead, spoonMaterial);
+      handle.castShadow = true;
+      
+      const head = new THREE.Mesh(headGeometry, spoonMaterial);
       head.position.x = 10;
-      head.scale.set(1, 0.5, 1);
+      head.scale.set(1, 0.4, 1);
+      head.castShadow = true;
+      
       spoonGroup.add(handle);
       spoonGroup.add(head);
-      spoonGroup.position.set(-15, 1, -10);
+      spoonGroup.position.set(-15, 1.2, -10);
       spoonGroup.rotation.y = Math.PI / 4;
-      spoonGroup.castShadow = true;
       scene.add(spoonGroup);
       obstacles.push(spoonGroup);
 
-      const mugBody = new THREE.CylinderGeometry(5, 4, 10, 32);
-      const mugHandle = new THREE.TorusGeometry(3, 0.5, 16, 32, Math.PI);
+      // CERAMIC COFFEE MUG with handle
+      const mugGeometry = new THREE.CylinderGeometry(5, 4.2, 10, 32);
       const mugMaterial = new THREE.MeshStandardMaterial({ 
         color: 0x8b4513,
-        roughness: 0.7,
-        metalness: 0.2
+        roughness: 0.6,
+        metalness: 0.1
       });
-      const mug = new THREE.Mesh(mugBody, mugMaterial);
+      const mug = new THREE.Mesh(mugGeometry, mugMaterial);
       mug.position.set(50, 5, -20);
       mug.castShadow = true;
       mug.receiveShadow = true;
       scene.add(mug);
-      const mugHandleMesh = new THREE.Mesh(mugHandle, mugMaterial);
+      
+      const handleTorusGeometry = new THREE.TorusGeometry(3, 0.6, 16, 32, Math.PI);
+      const mugHandleMesh = new THREE.Mesh(handleTorusGeometry, mugMaterial);
       mugHandleMesh.position.set(50, 5, -20);
       mugHandleMesh.rotation.y = -Math.PI / 2;
       mugHandleMesh.rotation.x = Math.PI / 2;
+      mugHandleMesh.castShadow = true;
       scene.add(mugHandleMesh);
       obstacles.push(mug);
 
+      // BREADCRUMBS - realistic texture
       for (let i = 0; i < 8; i++) {
-        const crumbSize = 1 + Math.random() * 2;
-        const crumbGeometry = new THREE.DodecahedronGeometry(crumbSize, 0);
+        const crumbSize = 1.2 + Math.random() * 1.8;
+        const crumbGeometry = new THREE.DodecahedronGeometry(crumbSize, 1);
         const crumbMaterial = new THREE.MeshStandardMaterial({ 
-          color: 0xf4a460,
-          roughness: 0.9
+          color: 0xdaa520,
+          roughness: 0.95,
+          metalness: 0
         });
         const crumb = new THREE.Mesh(crumbGeometry, crumbMaterial);
         crumb.position.set(
@@ -228,13 +291,12 @@ export default function Mission3DView({ gameState, setGameState }) {
         }
       }
 
+      // BUTTER STICK - glossy realistic
       const butterGeometry = new THREE.BoxGeometry(8, 2, 4);
       const butterMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0xffdb58,
-        roughness: 0.1,
-        metalness: 0.2,
-        emissive: 0xffdb58,
-        emissiveIntensity: 0.1
+        color: 0xffd700,
+        roughness: 0.2,
+        metalness: 0.1
       });
       const butter = new THREE.Mesh(butterGeometry, butterMaterial);
       butter.position.set(-25, 1, 15);
@@ -244,124 +306,164 @@ export default function Mission3DView({ gameState, setGameState }) {
       scene.add(butter);
       interactiveObjects.push(butter);
 
-      const saltBase = new THREE.CylinderGeometry(3, 3, 15, 16);
-      const saltTop = new THREE.ConeGeometry(3, 5, 16);
-      const saltMaterial = new THREE.MeshStandardMaterial({ 
+      // GLASS SALT SHAKER - transparent
+      const saltBaseGeometry = new THREE.CylinderGeometry(3, 3, 15, 32);
+      const saltMaterial = new THREE.MeshPhysicalMaterial({ 
         color: 0xffffff,
-        roughness: 0.3,
-        metalness: 0.5,
+        roughness: 0.05,
+        metalness: 0,
         transparent: true,
-        opacity: 0.9
+        opacity: 0.3,
+        transmission: 0.9,
+        thickness: 0.5
       });
-      const saltShaker = new THREE.Mesh(saltBase, saltMaterial);
+      const saltShaker = new THREE.Mesh(saltBaseGeometry, saltMaterial);
       saltShaker.position.set(-5, 7.5, -25);
       saltShaker.castShadow = true;
+      saltShaker.receiveShadow = true;
       scene.add(saltShaker);
-      const saltTopMesh = new THREE.Mesh(saltTop, saltMaterial);
-      saltTopMesh.position.set(-5, 17.5, -25);
-      scene.add(saltTopMesh);
+      
+      const saltTopGeometry = new THREE.ConeGeometry(3, 5, 32);
+      const saltTopMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xc0c0c0,
+        roughness: 0.4,
+        metalness: 0.8
+      });
+      const saltTop = new THREE.Mesh(saltTopGeometry, saltTopMaterial);
+      saltTop.position.set(-5, 17.5, -25);
+      saltTop.castShadow = true;
+      scene.add(saltTop);
       obstacles.push(saltShaker);
 
-      const buttonGeometry = new THREE.CylinderGeometry(1, 1, 0.5, 16);
+      // INTERACTIVE BUTTON on salt shaker
+      const buttonGeometry = new THREE.CylinderGeometry(1.2, 1.2, 0.6, 32);
       const buttonMaterial = new THREE.MeshStandardMaterial({ 
         color: activatedButtons.includes('button1') ? 0x10b981 : 0xef4444,
         emissive: activatedButtons.includes('button1') ? 0x10b981 : 0xef4444,
-        emissiveIntensity: 0.6
+        emissiveIntensity: activatedButtons.includes('button1') ? 0.8 : 0.6,
+        roughness: 0.3,
+        metalness: 0.7
       });
       const button1 = new THREE.Mesh(buttonGeometry, buttonMaterial);
       button1.position.set(-5, 20.5, -25);
       button1.userData = { type: 'button', id: 'button1' };
+      button1.castShadow = true;
       scene.add(button1);
       puzzleElements.push(button1);
 
+      // Indicator light ring
       if (activatedButtons.includes('button1')) {
-        const forkHandle = new THREE.BoxGeometry(2, 0.5, 25);
+        const ringGeometry = new THREE.TorusGeometry(1.5, 0.1, 16, 32);
+        const ringMaterial = new THREE.MeshBasicMaterial({ color: 0x10b981 });
+        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+        ring.position.set(-5, 20.5, -25);
+        ring.rotation.x = Math.PI / 2;
+        scene.add(ring);
+      }
+
+      // METAL FORK - activated bridge
+      if (activatedButtons.includes('button1')) {
+        const forkHandleGeometry = new THREE.BoxGeometry(2, 0.6, 25);
         const forkMaterial = new THREE.MeshStandardMaterial({ 
-          color: 0xc0c0c0,
+          color: 0xd3d3d3,
           metalness: 0.9,
           roughness: 0.1
         });
-        const fork = new THREE.Mesh(forkHandle, forkMaterial);
-        fork.position.set(15, 1, -15);
+        const fork = new THREE.Mesh(forkHandleGeometry, forkMaterial);
+        fork.position.set(15, 1.3, -15);
         fork.rotation.y = Math.PI / 6;
         fork.castShadow = true;
         fork.receiveShadow = true;
         scene.add(fork);
         
         for (let i = 0; i < 4; i++) {
-          const prong = new THREE.BoxGeometry(0.5, 0.5, 5);
-          const prongMesh = new THREE.Mesh(prong, forkMaterial);
-          prongMesh.position.set(15 + (i - 1.5) * 0.7, 1, -27);
-          prongMesh.rotation.y = Math.PI / 6;
-          prongMesh.castShadow = true;
-          scene.add(prongMesh);
+          const prongGeometry = new THREE.BoxGeometry(0.5, 0.5, 6);
+          const prong = new THREE.Mesh(prongGeometry, forkMaterial);
+          prong.position.set(15 + (i - 1.5) * 0.8, 1.3, -27);
+          prong.rotation.y = Math.PI / 6;
+          prong.castShadow = true;
+          scene.add(prong);
         }
       }
 
-      const napkinGeometry = new THREE.BoxGeometry(12, 0.2, 12);
+      // CLOTH NAPKIN
+      const napkinGeometry = new THREE.BoxGeometry(12, 0.3, 12);
       const napkinMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0xffffff,
-        roughness: 0.8,
-        side: THREE.DoubleSide
+        color: 0xfafafa,
+        roughness: 0.9,
+        metalness: 0
       });
       const napkin = new THREE.Mesh(napkinGeometry, napkinMaterial);
-      napkin.position.set(35, 0.1, -5);
+      napkin.position.set(35, 0.15, -5);
       napkin.rotation.y = Math.PI / 8;
       napkin.receiveShadow = true;
+      napkin.castShadow = true;
       scene.add(napkin);
 
-      const plateGeometry = new THREE.CylinderGeometry(2, 2, 0.3, 32);
+      // PRESSURE PLATE
+      const plateDiscGeometry = new THREE.CylinderGeometry(2.2, 2.2, 0.4, 64);
       const plateMaterial = new THREE.MeshStandardMaterial({ 
         color: puzzleStates.plate1 ? 0x10b981 : 0x6b7280,
         emissive: puzzleStates.plate1 ? 0x10b981 : 0x000000,
-        emissiveIntensity: 0.5,
-        metalness: 0.7
+        emissiveIntensity: puzzleStates.plate1 ? 0.6 : 0,
+        metalness: 0.8,
+        roughness: 0.2
       });
-      const plate1 = new THREE.Mesh(plateGeometry, plateMaterial);
-      plate1.position.set(35, 0.3, -5);
+      const plate1 = new THREE.Mesh(plateDiscGeometry, plateMaterial);
+      plate1.position.set(35, 0.35, -5);
       plate1.userData = { type: 'pressure_plate', id: 'plate1' };
+      plate1.castShadow = true;
       scene.add(plate1);
       puzzleElements.push(plate1);
 
-      const knifeBlade = new THREE.BoxGeometry(1, 0.1, 15);
-      const knifeHandle = new THREE.BoxGeometry(1.5, 0.5, 5);
-      const knifeMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0xc0c0c0,
-        metalness: 0.9,
-        roughness: 0.1
+      // KNIFE LEVER
+      const knifeBladeGeometry = new THREE.BoxGeometry(1.2, 0.2, 16);
+      const knifeHandleGeometry = new THREE.CylinderGeometry(0.7, 0.7, 5, 16);
+      const knifeBladeMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xe0e0e0,
+        metalness: 0.95,
+        roughness: 0.05
       });
       const knifeHandleMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x654321,
-        roughness: 0.7
+        color: 0x4a2511,
+        roughness: 0.8,
+        metalness: 0.1
       });
+      
       const knife = new THREE.Group();
-      const blade = new THREE.Mesh(knifeBlade, knifeMaterial);
-      blade.position.z = 7.5;
-      const handleMesh = new THREE.Mesh(knifeHandle, knifeHandleMaterial);
+      const blade = new THREE.Mesh(knifeBladeGeometry, knifeBladeMaterial);
+      blade.position.z = 8;
+      blade.castShadow = true;
+      
+      const handleMesh = new THREE.Mesh(knifeHandleGeometry, knifeHandleMaterial);
+      handleMesh.rotation.x = Math.PI / 2;
       handleMesh.position.z = -2.5;
+      handleMesh.castShadow = true;
+      
       knife.add(blade);
       knife.add(handleMesh);
-      knife.position.set(40, 0.5, 10);
+      knife.position.set(40, 0.6, 10);
       knife.rotation.y = -Math.PI / 4;
-      knife.castShadow = true;
       knife.userData = { type: 'lever', id: 'lever1' };
       scene.add(knife);
       puzzleElements.push(knife);
 
-      const dishGeometry = new THREE.CylinderGeometry(8, 7, 1, 32);
+      // CERAMIC PLATE (rises when lever activated)
+      const dishGeometry = new THREE.CylinderGeometry(8, 7, 1.2, 64);
       const dishMaterial = new THREE.MeshStandardMaterial({ 
         color: 0xffffff,
-        roughness: 0.3,
-        metalness: 0.6
+        roughness: 0.25,
+        metalness: 0.1
       });
       const plate = new THREE.Mesh(dishGeometry, dishMaterial);
-      const plateHeight = leverStates.lever1 ? 8 : 0.5;
+      const plateHeight = leverStates.lever1 ? 8 : 0.6;
       plate.position.set(55, plateHeight, 0);
       plate.castShadow = true;
       plate.receiveShadow = true;
       scene.add(plate);
       interactiveObjects.push(plate);
 
+      // SUGAR CUBES - white crystalline
       const sugarPositions = [
         { x: 20, y: 1, z: -8 },
         { x: 22, y: 1, z: -8 },
@@ -372,7 +474,8 @@ export default function Mission3DView({ gameState, setGameState }) {
         const cubeGeometry = new THREE.BoxGeometry(2, 2, 2);
         const cubeMaterial = new THREE.MeshStandardMaterial({ 
           color: 0xffffff,
-          roughness: 0.8
+          roughness: 0.7,
+          metalness: 0.1
         });
         const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
         cube.position.set(pos.x, pos.y, pos.z);
@@ -386,15 +489,17 @@ export default function Mission3DView({ gameState, setGameState }) {
         }
       });
 
-      const waterGeometry = new THREE.SphereGeometry(3, 32, 32);
-      const waterMaterial = new THREE.MeshStandardMaterial({ 
+      // WATER DROPLET OBJECTIVE - glowing liquid
+      const waterGeometry = new THREE.SphereGeometry(3, 64, 64);
+      const waterMaterial = new THREE.MeshPhysicalMaterial({ 
         color: 0x4dd0e1,
         transparent: true,
-        opacity: 0.8,
-        emissive: 0x4dd0e1,
-        emissiveIntensity: 0.4,
-        roughness: 0.1,
-        metalness: 0.2
+        opacity: 0.7,
+        transmission: 0.95,
+        roughness: 0,
+        metalness: 0,
+        thickness: 2,
+        envMapIntensity: 1.5
       });
       const waterDrop = new THREE.Mesh(waterGeometry, waterMaterial);
       const canReachWater = activatedButtons.includes('button1') && puzzleStates.plate1 && leverStates.lever1;
@@ -404,13 +509,25 @@ export default function Mission3DView({ gameState, setGameState }) {
       scene.add(waterDrop);
       objectives.push(waterDrop);
 
+      // Add glow effect around water
+      const glowGeometry = new THREE.SphereGeometry(3.5, 32, 32);
+      const glowMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x4dd0e1,
+        transparent: true,
+        opacity: 0.3
+      });
+      const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+      glow.position.copy(waterDrop.position);
+      scene.add(glow);
+
+      // MIST PARTICLES
       if (canReachWater) {
-        for (let i = 0; i < 30; i++) {
-          const mistGeometry = new THREE.SphereGeometry(0.5, 8, 8);
+        for (let i = 0; i < 40; i++) {
+          const mistGeometry = new THREE.SphereGeometry(0.4, 8, 8);
           const mistMaterial = new THREE.MeshBasicMaterial({ 
             color: 0xffffff,
             transparent: true,
-            opacity: 0.3
+            opacity: 0.4
           });
           const mist = new THREE.Mesh(mistGeometry, mistMaterial);
           mist.position.set(
@@ -425,21 +542,6 @@ export default function Mission3DView({ gameState, setGameState }) {
           scene.add(mist);
           mistParticles.push(mist);
         }
-      }
-
-      if (Math.random() > 0.7) {
-        const fallingCrumb = new THREE.Mesh(
-          new THREE.DodecahedronGeometry(2, 0),
-          new THREE.MeshStandardMaterial({ color: 0xf4a460 })
-        );
-        fallingCrumb.position.set(
-          Math.random() * 60 - 30,
-          30,
-          Math.random() * 40 - 20
-        );
-        fallingCrumb.userData = { type: 'falling_hazard', velocity: -0.2 };
-        scene.add(fallingCrumb);
-        interactiveObjects.push(fallingCrumb);
       }
 
     } else if (activeMission.mission_number === 2) {
@@ -475,15 +577,15 @@ export default function Mission3DView({ gameState, setGameState }) {
             if (elem.userData.type === 'button') {
               if (!activatedButtons.includes(elem.userData.id)) {
                 setActivatedButtons(prev => [...prev, elem.userData.id]);
-                addLog(`Button ${elem.userData.id} activated!`, 'success');
+                addLog(`✓ Button activated! Fork bridge appeared.`, 'success');
               }
             } else if (elem.userData.type === 'lever') {
               const leverId = elem.userData.id;
               setLeverStates(prev => ({ ...prev, [leverId]: !prev[leverId] }));
-              addLog(`Lever ${leverId} ${!leverStates[leverId] ? 'activated' : 'deactivated'}`, 'info');
+              addLog(`✓ Lever ${!leverStates[leverId] ? 'activated' : 'deactivated'}! Plate moved.`, 'info');
             } else if (elem.userData.type === 'pressure_plate') {
               setPuzzleStates(prev => ({ ...prev, [elem.userData.id]: true }));
-              addLog(`Pressure plate activated`, 'info');
+              addLog(`✓ Pressure plate activated!`, 'info');
             }
           }
         });
@@ -584,7 +686,7 @@ export default function Mission3DView({ gameState, setGameState }) {
           if (distance < 2) {
             if (!puzzleStates[elem.userData.id]) {
               setPuzzleStates(prev => ({ ...prev, [elem.userData.id]: true }));
-              addLog(`Pressure plate ${elem.userData.id} activated`, 'info');
+              addLog(`✓ Pressure plate activated!`, 'info');
             }
           }
         }
@@ -632,8 +734,8 @@ export default function Mission3DView({ gameState, setGameState }) {
       });
 
       camera.position.x = player.position.x + mouseX * 8;
-      camera.position.y = player.position.y + 12;
-      camera.position.z = player.position.z + 20;
+      camera.position.y = player.position.y + 15;
+      camera.position.z = player.position.z + 22;
       camera.lookAt(player.position);
 
       renderer.render(scene, camera);
@@ -699,9 +801,41 @@ export default function Mission3DView({ gameState, setGameState }) {
               <p>W/A/S/D: Move | E: Interact/Destroy | Shift: Sprint</p>
               <p className="text-yellow-400 mt-1">
                 <Hammer className="w-3 h-3 inline mr-1" />
-                Hit objects multiple times to destroy them
+                Hit objects multiple times to destroy
               </p>
             </div>
+
+            <div className="absolute bottom-4 right-4">
+              <Button
+                onClick={() => setShowHint(!showHint)}
+                className="bg-yellow-600/80 hover:bg-yellow-700/80 backdrop-blur-sm font-mono text-xs"
+                size="sm"
+              >
+                <Lightbulb className="w-4 h-4 mr-1" />
+                {showHint ? 'Hide' : 'Show'} Hints
+              </Button>
+            </div>
+
+            {showHint && activeMission?.mission_number === 1 && (
+              <div className="absolute top-20 left-4 bg-yellow-900/90 backdrop-blur-sm border border-yellow-500/50 rounded p-4 max-w-md">
+                <h4 className="text-yellow-300 font-mono font-bold mb-2 flex items-center gap-2">
+                  <Lightbulb className="w-4 h-4" />
+                  Mission 1 Solution:
+                </h4>
+                <ol className="text-yellow-100 font-mono text-xs space-y-1 list-decimal list-inside">
+                  <li>Climb the SALT SHAKER (cylindrical white object)</li>
+                  <li>Press button [E] on top (turns green)</li>
+                  <li>Fork bridge appears - cross it</li>
+                  <li>Step on PRESSURE PLATE on napkin</li>
+                  <li>Go to KNIFE, press [E] to activate lever</li>
+                  <li>White plate rises up</li>
+                  <li>Climb plate to reach WATER DROPLET</li>
+                </ol>
+                <p className="text-yellow-200 text-xs mt-2 italic">
+                  All 3 puzzles must be completed to lower the water droplet!
+                </p>
+              </div>
+            )}
 
             {!activeMission && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/70">
@@ -721,35 +855,25 @@ export default function Mission3DView({ gameState, setGameState }) {
           <div className="p-4 border-b border-gray-700">
             <h3 className="text-white font-mono font-bold flex items-center gap-2">
               <Target className="w-5 h-5 text-orange-400" />
-              OBJECTIVES
+              PUZZLE STATUS
             </h3>
           </div>
-          <div className="p-4 space-y-3">
-            {activeMission ? (
+          <div className="p-4 space-y-2">
+            {activeMission?.mission_number === 1 && (
               <>
-                <div className="bg-orange-900/20 border border-orange-500/30 rounded p-3">
-                  <p className="text-orange-300 text-xs font-mono leading-relaxed">
-                    {activeMission.briefing}
-                  </p>
+                <div className={`flex items-center gap-2 p-2 rounded ${activatedButtons.includes('button1') ? 'bg-green-900/20' : 'bg-gray-800/20'}`}>
+                  <CheckCircle className={`w-4 h-4 ${activatedButtons.includes('button1') ? 'text-green-400' : 'text-gray-600'}`} />
+                  <span className="text-sm font-mono text-white">Salt Shaker Button</span>
                 </div>
-                {activeMission.objectives?.map((obj, i) => (
-                  <div key={i} className="flex items-start gap-2">
-                    <CheckCircle className={`w-4 h-4 mt-0.5 ${
-                      obj.completed ? 'text-green-400' : 'text-gray-600'
-                    }`} />
-                    <span className={`text-sm font-mono ${
-                      obj.completed ? 'text-gray-500 line-through' : 'text-white'
-                    }`}>
-                      {obj.description}
-                    </span>
-                  </div>
-                ))}
+                <div className={`flex items-center gap-2 p-2 rounded ${puzzleStates.plate1 ? 'bg-green-900/20' : 'bg-gray-800/20'}`}>
+                  <CheckCircle className={`w-4 h-4 ${puzzleStates.plate1 ? 'text-green-400' : 'text-gray-600'}`} />
+                  <span className="text-sm font-mono text-white">Pressure Plate</span>
+                </div>
+                <div className={`flex items-center gap-2 p-2 rounded ${leverStates.lever1 ? 'bg-green-900/20' : 'bg-gray-800/20'}`}>
+                  <CheckCircle className={`w-4 h-4 ${leverStates.lever1 ? 'text-green-400' : 'text-gray-600'}`} />
+                  <span className="text-sm font-mono text-white">Knife Lever</span>
+                </div>
               </>
-            ) : (
-              <div className="text-center py-8">
-                <AlertTriangle className="w-8 h-8 text-gray-600 mx-auto mb-2" />
-                <p className="text-gray-500 font-mono text-sm">No active mission</p>
-              </div>
             )}
           </div>
         </Card>
