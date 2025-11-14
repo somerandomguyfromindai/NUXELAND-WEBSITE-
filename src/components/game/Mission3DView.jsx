@@ -1,10 +1,12 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as THREE from "three";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, AlertTriangle, Target, Play, Lock, Zap, Key } from "lucide-react";
+import { CheckCircle, AlertTriangle, Target, Play, Lock, Zap, Key, FileText } from "lucide-react";
+import MissionBriefing from "./MissionBriefing";
 
 export default function Mission3DView({ gameState, setGameState }) {
   const mountRef = useRef(null);
@@ -13,6 +15,8 @@ export default function Mission3DView({ gameState, setGameState }) {
   const [inventory, setInventory] = useState([]);
   const [puzzleStates, setPuzzleStates] = useState({});
   const [showPuzzleUI, setShowPuzzleUI] = useState(null);
+  const [showBriefing, setShowBriefing] = useState(true);
+  const [missionStarted, setMissionStarted] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: missions } = useQuery({
@@ -57,13 +61,15 @@ export default function Mission3DView({ gameState, setGameState }) {
             data: { status: 'active' }
           });
           addLog(`Mission ${nextMission.mission_number} UNLOCKED`, 'warning');
+          setShowBriefing(true);
+          setMissionStarted(false);
         }, 2000);
       }
     }
   };
 
   useEffect(() => {
-    if (!mountRef.current || !activeMission) return;
+    if (!mountRef.current || !activeMission || !missionStarted) return;
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x1a0f2e);
@@ -546,7 +552,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       
       renderer.dispose();
     };
-  }, [activeMission, puzzleStates, inventory]);
+  }, [activeMission, puzzleStates, inventory, missionStarted]);
 
   const solveWirePuzzle = (wireColor) => {
     const correctWire = 'red'; // Mission 3 correct wire
@@ -564,6 +570,19 @@ export default function Mission3DView({ gameState, setGameState }) {
 
   return (
     <div className="grid lg:grid-cols-4 gap-4 p-6">
+      {showBriefing && activeMission && (
+        <MissionBriefing
+          mission={activeMission}
+          onStart={() => {
+            setShowBriefing(false);
+            setMissionStarted(true);
+            addLog(`Mission ${activeMission.mission_number} started`, 'info');
+          }}
+          puzzleStates={puzzleStates}
+          inventory={inventory}
+        />
+      )}
+
       <div className="lg:col-span-3">
         <Card className="bg-black border-blue-500/20 overflow-hidden">
           <div className="relative">
@@ -576,6 +595,17 @@ export default function Mission3DView({ gameState, setGameState }) {
               <p className="text-gray-300 font-mono text-xs">
                 {activeMission?.title || 'No active mission'}
               </p>
+              {activeMission && !missionStarted && (
+                <Button
+                  onClick={() => setShowBriefing(true)}
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 w-full font-mono text-xs"
+                >
+                  <FileText className="w-3 h-3 mr-1" />
+                  View Briefing
+                </Button>
+              )}
             </div>
 
             {inventory.length > 0 && (
