@@ -853,7 +853,8 @@ export default function Mission3DView({ gameState, setGameState }) {
               addLog(`✓ Pressure plate activated!`, 'info');
             }
           }
-        });
+        }
+      });
 
       interactiveObjects.forEach(obj => {
         if (obj.userData.type === 'slippery') {
