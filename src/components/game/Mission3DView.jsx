@@ -20,7 +20,7 @@ export default function Mission3DView({ gameState, setGameState }) {
   const [leverStates, setLeverStates] = useState({});
   const [activatedButtons, setActivatedButtons] = useState([]);
   const [showHint, setShowHint] = useState(false);
-  queryClient = useQueryClient();
+  const queryClient = useQueryClient();
 
   const { data: missions } = useQuery({
     queryKey: ['missions'],
