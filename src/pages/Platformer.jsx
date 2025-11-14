@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import * as THREE from "three";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Terminal, Lock, CheckCircle, AlertTriangle, FileText, HardDrive, Eye, ChevronRight } from "lucide-react";
+import { Terminal, Lock, CheckCircle, AlertTriangle, FileText, HardDrive, Eye, ChevronRight, Heart, Zap, Skull } from "lucide-react";
 import EnhancedHackingTerminal from "../components/platformer/EnhancedHackingTerminal";
 import { getLevel, getAllLevelIds } from "../components/platformer/LevelDesigns";
 
@@ -15,6 +15,10 @@ export default function Platformer() {
   const [collectedIntel, setCollectedIntel] = useState([]);
   const [hackedTerminals, setHackedTerminals] = useState([]);
   const [showLevelComplete, setShowLevelComplete] = useState(false);
+  const [health, setHealth] = useState(100);
+  const [energy, setEnergy] = useState(100);
+  const [hasDoubleJump, setHasDoubleJump] = useState(false);
+  const [deaths, setDeaths] = useState(0);
 
   useEffect(() => {
     if (!mountRef.current) return;
@@ -42,10 +46,7 @@ export default function Platformer() {
     mountRef.current.appendChild(renderer.domElement);
 
     // Lighting
-    const ambientLight = new THREE.AmbientLight(
-      levelConfig.environment.ambient,
-      0.6
-    );
+    const ambientLight = new THREE.AmbientLight(levelConfig.environment.ambient, 0.6);
     scene.add(ambientLight);
 
     const directionalLight = new THREE.DirectionalLight(
@@ -71,10 +72,8 @@ export default function Platformer() {
     ground.receiveShadow = true;
     scene.add(ground);
 
-    // Create detailed humanoid player
+    // Player
     const playerGroup = new THREE.Group();
-
-    // Body with texture
     const bodyGeometry = new THREE.BoxGeometry(1, 1.5, 0.5);
     const bodyMaterial = new THREE.MeshStandardMaterial({
       color: 0x2563eb,
@@ -86,7 +85,6 @@ export default function Platformer() {
     body.castShadow = true;
     playerGroup.add(body);
 
-    // Head
     const headGeometry = new THREE.SphereGeometry(0.4, 32, 32);
     const headMaterial = new THREE.MeshStandardMaterial({
       color: 0xffdbac,
@@ -98,7 +96,6 @@ export default function Platformer() {
     head.castShadow = true;
     playerGroup.add(head);
 
-    // Eyes
     const eyeGeometry = new THREE.SphereGeometry(0.08, 16, 16);
     const eyeMaterial = new THREE.MeshStandardMaterial({ color: 0x000000 });
     const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
@@ -108,37 +105,31 @@ export default function Platformer() {
     rightEye.position.set(0.15, 2.7, 0.35);
     playerGroup.add(rightEye);
 
-    // Arms
     const armGeometry = new THREE.CapsuleGeometry(0.15, 1.2, 8, 16);
     const armMaterial = new THREE.MeshStandardMaterial({
       color: 0x2563eb,
       metalness: 0.3,
       roughness: 0.7
     });
-
     const leftArm = new THREE.Mesh(armGeometry, armMaterial);
     leftArm.position.set(-0.65, 1.5, 0);
     leftArm.castShadow = true;
     playerGroup.add(leftArm);
-
     const rightArm = new THREE.Mesh(armGeometry, armMaterial);
     rightArm.position.set(0.65, 1.5, 0);
     rightArm.castShadow = true;
     playerGroup.add(rightArm);
 
-    // Legs
     const legGeometry = new THREE.CapsuleGeometry(0.2, 1, 8, 16);
     const legMaterial = new THREE.MeshStandardMaterial({
       color: 0x1e40af,
       metalness: 0.3,
       roughness: 0.7
     });
-
     const leftLeg = new THREE.Mesh(legGeometry, legMaterial);
     leftLeg.position.set(-0.3, 0.5, 0);
     leftLeg.castShadow = true;
     playerGroup.add(leftLeg);
-
     const rightLeg = new THREE.Mesh(legGeometry, legMaterial);
     rightLeg.position.set(0.3, 0.5, 0);
     rightLeg.castShadow = true;
@@ -164,20 +155,92 @@ export default function Platformer() {
       platforms.push({ mesh: platform, ...p });
     });
 
-    // Obstacles
+    // Moving platforms
+    const movingPlatforms = [];
+    if (levelConfig.platforms.length > 3) {
+      for (let i = 0; i < 2; i++) {
+        const movingGeometry = new THREE.BoxGeometry(4, 0.5, 4);
+        const movingMaterial = new THREE.MeshStandardMaterial({
+          color: 0x3b82f6,
+          emissive: 0x3b82f6,
+          emissiveIntensity: 0.3
+        });
+        const movingPlatform = new THREE.Mesh(movingGeometry, movingMaterial);
+        movingPlatform.position.set(20 + i * 15, 5 + i * 2, 0);
+        movingPlatform.castShadow = true;
+        movingPlatform.receiveShadow = true;
+        movingPlatform.userData = { 
+          startX: 20 + i * 15, 
+          range: 10, 
+          speed: 0.5 + i * 0.2,
+          type: 'moving'
+        };
+        scene.add(movingPlatform);
+        movingPlatforms.push(movingPlatform);
+        platforms.push({ mesh: movingPlatform, x: movingPlatform.position.x, y: movingPlatform.position.y, z: 0, w: 4, h: 0.5, d: 4 });
+      }
+    }
+
+    // Deadly obstacles
+    const obstacles = [];
     levelConfig.obstacles.forEach(obs => {
       if (obs.type === 'laser') {
         const laserGeometry = new THREE.BoxGeometry(0.1, 3, 0.1);
         const laserMaterial = new THREE.MeshStandardMaterial({
           color: obs.color,
           emissive: obs.color,
-          emissiveIntensity: 1
+          emissiveIntensity: 1,
+          transparent: true,
+          opacity: 0.8
         });
         const laser = new THREE.Mesh(laserGeometry, laserMaterial);
         laser.position.set(obs.x, obs.y + 1.5, obs.z);
+        laser.userData = { type: 'laser', deadly: true };
         scene.add(laser);
+        obstacles.push(laser);
       }
     });
+
+    // Spikes
+    for (let i = 0; i < 5; i++) {
+      const spikeGeometry = new THREE.ConeGeometry(0.3, 1.5, 4);
+      const spikeMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+      const spike = new THREE.Mesh(spikeGeometry, spikeMaterial);
+      spike.position.set(15 + i * 5, 0.75, 5);
+      spike.rotation.y = Math.PI / 4;
+      spike.userData = { type: 'spike', deadly: true };
+      scene.add(spike);
+      obstacles.push(spike);
+    }
+
+    // Power-ups
+    const powerups = [];
+    const doubleJumpGeometry = new THREE.TorusGeometry(0.5, 0.2, 16, 32);
+    const doubleJumpMaterial = new THREE.MeshStandardMaterial({
+      color: 0x10b981,
+      emissive: 0x10b981,
+      emissiveIntensity: 0.8
+    });
+    const doubleJumpPowerup = new THREE.Mesh(doubleJumpGeometry, doubleJumpMaterial);
+    doubleJumpPowerup.position.set(30, 8, 0);
+    doubleJumpPowerup.userData = { type: 'double_jump' };
+    scene.add(doubleJumpPowerup);
+    powerups.push(doubleJumpPowerup);
+
+    const healthPacks = [];
+    for (let i = 0; i < 3; i++) {
+      const healthGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+      const healthMaterial = new THREE.MeshStandardMaterial({
+        color: 0xef4444,
+        emissive: 0xef4444,
+        emissiveIntensity: 0.6
+      });
+      const healthPack = new THREE.Mesh(healthGeometry, healthMaterial);
+      healthPack.position.set(10 + i * 8, 3, -5);
+      healthPack.userData = { type: 'health' };
+      scene.add(healthPack);
+      healthPacks.push(healthPack);
+    }
 
     // Terminals
     const terminalObjects = [];
@@ -258,6 +321,10 @@ export default function Platformer() {
     const velocity = new THREE.Vector3();
     let isJumping = false;
     let jumpVelocity = 0;
+    let canDoubleJump = false;
+    let lastDamageTime = 0;
+    let currentHealth = health;
+    let currentEnergy = energy;
 
     const handleKeyDown = (e) => { keys[e.key.toLowerCase()] = true; };
     const handleKeyUp = (e) => { keys[e.key.toLowerCase()] = false; };
@@ -269,20 +336,63 @@ export default function Platformer() {
     const clock = new THREE.Clock();
     let walkCycle = 0;
 
+    const respawnPlayer = () => {
+      playerGroup.position.set(0, 0, 0);
+      currentHealth = 100;
+      setHealth(100);
+      setDeaths(prev => prev + 1);
+      isJumping = false;
+      jumpVelocity = 0;
+    };
+
     const animate = () => {
       const delta = clock.getDelta();
 
-      // Player movement
-      const speed = 12;
-      const direction = new THREE.Vector3();
+      // Regenerate energy
+      if (currentEnergy < 100) {
+        currentEnergy = Math.min(100, currentEnergy + delta * 10);
+        setEnergy(currentEnergy);
+      }
 
+      // Player movement
+      const isSprinting = keys['shift'] && currentEnergy > 0;
+      const speed = isSprinting ? 18 : 12;
+      
+      if (isSprinting) {
+        currentEnergy = Math.max(0, currentEnergy - delta * 20);
+        setEnergy(currentEnergy);
+      }
+
+      const direction = new THREE.Vector3();
       if (keys['a']) direction.x -= 1;
       if (keys['d']) direction.x += 1;
 
       if (direction.length() > 0) {
         direction.normalize();
-        velocity.x = direction.x * speed * delta;
-        playerGroup.position.x += velocity.x;
+        
+        // Wall collision detection
+        const newX = playerGroup.position.x + direction.x * speed * delta;
+        let collision = false;
+        
+        platforms.forEach(platform => {
+          if (platform.userData?.type !== 'moving') {
+            const platformBox = new THREE.Box3().setFromCenterAndSize(
+              new THREE.Vector3(platform.x, platform.y, platform.z),
+              new THREE.Vector3(platform.w, platform.h, platform.d)
+            );
+            const playerBox = new THREE.Box3().setFromCenterAndSize(
+              new THREE.Vector3(newX, playerGroup.position.y + 1, playerGroup.position.z),
+              new THREE.Vector3(1, 2.5, 1)
+            );
+            if (platformBox.intersectsBox(playerBox)) {
+              collision = true;
+            }
+          }
+        });
+
+        if (!collision) {
+          playerGroup.position.x = newX;
+        }
 
         // Walking animation
         walkCycle += delta * 10;
@@ -297,33 +407,89 @@ export default function Platformer() {
         rightArm.rotation.x = 0;
       }
 
-      // Jumping
+      // Jumping with double jump
       if (keys[' '] && !isJumping) {
         isJumping = true;
         jumpVelocity = 15;
+        canDoubleJump = hasDoubleJump;
+        keys[' '] = false;
+      } else if (keys[' '] && canDoubleJump && isJumping && jumpVelocity < 5) {
+        jumpVelocity = 12;
+        canDoubleJump = false;
+        keys[' '] = false;
       }
 
       if (isJumping) {
         jumpVelocity -= 35 * delta;
         playerGroup.position.y += jumpVelocity * delta;
 
+        // Platform collision
         platforms.forEach(platform => {
-          if (Math.abs(playerGroup.position.x - platform.x) < platform.w / 2 &&
-            Math.abs(playerGroup.position.z - platform.z) < platform.d / 2) {
-            if (playerGroup.position.y <= platform.y + platform.h / 2 + 0.5 && jumpVelocity < 0) {
-              playerGroup.position.y = platform.y + platform.h / 2 + 0.5;
+          const platX = platform.userData?.type === 'moving' ? platform.mesh.position.x : platform.x;
+          const platY = platform.userData?.type === 'moving' ? platform.mesh.position.y : platform.y;
+          const platZ = platform.userData?.type === 'moving' ? platform.mesh.position.z : platform.z;
+          
+          if (Math.abs(playerGroup.position.x - platX) < platform.w / 2 &&
+            Math.abs(playerGroup.position.z - platZ) < platform.d / 2) {
+            if (playerGroup.position.y <= platY + platform.h / 2 + 0.5 && jumpVelocity < 0) {
+              playerGroup.position.y = platY + platform.h / 2 + 0.5;
               isJumping = false;
               jumpVelocity = 0;
             }
           }
         });
 
+        // Ground collision
         if (playerGroup.position.y <= 0) {
           playerGroup.position.y = 0;
           isJumping = false;
           jumpVelocity = 0;
         }
       }
+
+      // Death from falling
+      if (playerGroup.position.y < -20) {
+        respawnPlayer();
+      }
+
+      // Obstacle collision
+      const currentTime = clock.elapsedTime;
+      obstacles.forEach(obs => {
+        const distance = playerGroup.position.distanceTo(obs.position);
+        if (distance < 1.5 && currentTime - lastDamageTime > 1) {
+          currentHealth = Math.max(0, currentHealth - 25);
+          setHealth(currentHealth);
+          lastDamageTime = currentTime;
+          
+          if (currentHealth <= 0) {
+            respawnPlayer();
+          }
+        }
+      });
+
+      // Power-up collection
+      [...powerups, ...healthPacks].forEach((powerup, index) => {
+        const distance = playerGroup.position.distanceTo(powerup.position);
+        if (distance < 2) {
+          if (powerup.userData.type === 'double_jump') {
+            setHasDoubleJump(true);
+          } else if (powerup.userData.type === 'health') {
+            currentHealth = Math.min(100, currentHealth + 30);
+            setHealth(currentHealth);
+          }
+          scene.remove(powerup);
+        }
+        
+        // Animate
+        powerup.rotation.y += delta * 3;
+        powerup.position.y += Math.sin(clock.elapsedTime * 3 + index) * 0.02;
+      });
+
+      // Moving platforms
+      movingPlatforms.forEach(platform => {
+        const userData = platform.userData;
+        platform.position.x = userData.startX + Math.sin(clock.elapsedTime * userData.speed) * userData.range;
+      });
 
       // Terminal interaction
       terminalObjects.forEach(terminal => {
@@ -365,7 +531,7 @@ export default function Platformer() {
         setShowLevelComplete(true);
       }
 
-      // Camera follow with smooth interpolation
+      // Camera follow
       const targetX = playerGroup.position.x + 8;
       const targetY = playerGroup.position.y + 10;
       const targetZ = playerGroup.position.z + 18;
@@ -389,7 +555,7 @@ export default function Platformer() {
       }
       renderer.dispose();
     };
-  }, [currentLevel, hackedTerminals]);
+  }, [currentLevel, hackedTerminals, hasDoubleJump]);
 
   const levelConfig = getLevel(currentLevel);
   const allLevels = getAllLevelIds();
@@ -399,6 +565,8 @@ export default function Platformer() {
     if (currentLevelIndex < allLevels.length - 1) {
       setCurrentLevel(allLevels[currentLevelIndex + 1]);
       setShowLevelComplete(false);
+      setHealth(100);
+      setEnergy(100);
     }
   };
 
@@ -422,7 +590,7 @@ export default function Platformer() {
             {levelConfig.description}
           </p>
           <p className="text-yellow-300 font-mono text-xs mt-2">
-            Mission: Extract intel from all terminals • Level {currentLevelIndex + 1}/{allLevels.length}
+            Mission: Extract intel from all terminals • Level {currentLevelIndex + 1}/{allLevels.length} • Deaths: {deaths}
           </p>
         </div>
 
@@ -431,9 +599,41 @@ export default function Platformer() {
             <Card className="bg-black border-blue-500/20 overflow-hidden">
               <div className="relative">
                 <div ref={mountRef} className="w-full h-[600px]" />
+                
+                {/* HUD */}
+                <div className="absolute top-4 left-4 space-y-2">
+                  <div className="bg-black/80 backdrop-blur-sm border border-red-500/50 rounded p-2 flex items-center gap-2">
+                    <Heart className="w-4 h-4 text-red-400" />
+                    <div className="w-32 h-3 bg-gray-800 rounded overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-red-600 to-red-400 transition-all duration-300"
+                        style={{ width: `${health}%` }}
+                      />
+                    </div>
+                    <span className="text-white font-mono text-xs">{Math.round(health)}</span>
+                  </div>
+                  
+                  <div className="bg-black/80 backdrop-blur-sm border border-blue-500/50 rounded p-2 flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-blue-400" />
+                    <div className="w-32 h-3 bg-gray-800 rounded overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-blue-600 to-blue-400 transition-all duration-300"
+                        style={{ width: `${energy}%` }}
+                      />
+                    </div>
+                    <span className="text-white font-mono text-xs">{Math.round(energy)}</span>
+                  </div>
+
+                  {hasDoubleJump && (
+                    <div className="bg-black/80 backdrop-blur-sm border border-green-500/50 rounded p-2">
+                      <span className="text-green-400 font-mono text-xs">🚀 DOUBLE JUMP UNLOCKED</span>
+                    </div>
+                  )}
+                </div>
+                
                 <div className="absolute bottom-4 left-4 bg-black/90 backdrop-blur-sm border border-gray-600 rounded p-3 font-mono text-xs text-gray-300">
-                  <p className="mb-1"><strong>A/D:</strong> Move | <strong>Space:</strong> Jump | <strong>E:</strong> Interact</p>
-                  <p className="text-yellow-400">Collect intel and hack terminals to progress</p>
+                  <p className="mb-1"><strong>A/D:</strong> Move | <strong>Space:</strong> Jump{hasDoubleJump && ' (x2)'} | <strong>E:</strong> Interact | <strong>Shift:</strong> Sprint</p>
+                  <p className="text-yellow-400">Avoid lasers & spikes! Collect powerups!</p>
                 </div>
               </div>
             </Card>
@@ -444,7 +644,7 @@ export default function Platformer() {
               <CardContent className="p-4">
                 <h3 className="text-white font-mono font-bold mb-3 flex items-center gap-2">
                   <FileText className="w-5 h-5 text-purple-400" />
-                  Intel Collected ({collectedIntel.length})
+                  Intel ({collectedIntel.length})
                 </h3>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {collectedIntel.map((item, i) => (
@@ -514,8 +714,11 @@ export default function Platformer() {
                 <h2 className="text-2xl font-bold text-green-400 font-mono mb-2">
                   LEVEL COMPLETE
                 </h2>
-                <p className="text-gray-400 font-mono text-sm mb-6">
+                <p className="text-gray-400 font-mono text-sm mb-2">
                   All terminals hacked. Intel extracted successfully.
+                </p>
+                <p className="text-yellow-400 font-mono text-xs mb-6">
+                  Deaths: {deaths} • Intel: {collectedIntel.length}
                 </p>
                 {currentLevelIndex < allLevels.length - 1 ? (
                   <Button
