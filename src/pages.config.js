@@ -7,6 +7,7 @@ import Shop from './pages/Shop';
 import Platformer from './pages/Platformer';
 import Map from './pages/Map';
 import MissionTimeline from './pages/MissionTimeline';
+import Resources from './pages/Resources';
 import Layout from './Layout.jsx';
 
 
@@ -20,6 +21,7 @@ export const PAGES = {
     "Platformer": Platformer,
     "Map": Map,
     "MissionTimeline": MissionTimeline,
+    "Resources": Resources,
 }
 
 export const pagesConfig = {

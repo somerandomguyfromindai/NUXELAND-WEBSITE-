@@ -182,6 +182,7 @@ export default function Mission3DView({ gameState, setGameState }) {
     let interactiveObjects = [];
     let mistParticles = [];
     let missionComplete = false;
+    let resourceObjects = [];
     
     let playerVelocityY = 0;
     let isOnGround = true;
@@ -508,6 +509,32 @@ export default function Mission3DView({ gameState, setGameState }) {
         }
       });
 
+      // RESOURCE COLLECTIBLES
+      const resourcePositions = [
+        { name: 'Metal Scrap', x: -30, y: 1, z: 10, color: 0xc0c0c0 },
+        { name: 'Energy Cell', x: 40, y: 1, z: -10, color: 0xffff00 },
+        { name: 'Data Chip', x: 60, y: 1, z: 15, color: 0x00ffff },
+        { name: 'Chemical Sample', x: -20, y: 1, z: -15, color: 0x00ff00 },
+        { name: 'Nano Circuit', x: 45, y: 5, z: 5, color: 0xff00ff },
+      ];
+
+      resourcePositions.forEach((res, i) => {
+        const resourceGeometry = new THREE.OctahedronGeometry(0.8, 0);
+        const resourceMaterial = new THREE.MeshStandardMaterial({
+          color: res.color,
+          emissive: res.color,
+          emissiveIntensity: 0.5,
+          metalness: 0.8,
+          roughness: 0.2
+        });
+        const resourceMesh = new THREE.Mesh(resourceGeometry, resourceMaterial);
+        resourceMesh.position.set(res.x, res.y, res.z);
+        resourceMesh.userData = { type: 'resource', resourceName: res.name, id: `resource_${i}` };
+        resourceMesh.castShadow = true;
+        scene.add(resourceMesh);
+        resourceObjects.push(resourceMesh);
+      });
+
       // WATER DROPLET OBJECTIVE
       const waterDrop = new THREE.Mesh(
         new THREE.SphereGeometry(3, 64, 64),
@@ -589,6 +616,24 @@ export default function Mission3DView({ gameState, setGameState }) {
       }
       
       if (e.key.toLowerCase() === 'e') {
+        // Resource collection
+        resourceObjects.forEach((obj, index) => {
+          const distance = player.position.distanceTo(obj.position);
+          if (distance < 3) {
+            base44.auth.me().then(user => {
+              const inventory = user.resource_inventory || {};
+              inventory[obj.userData.resourceName] = (inventory[obj.userData.resourceName] || 0) + 1;
+              base44.auth.updateMe({ resource_inventory: inventory });
+            }).catch(() => {
+              addLog("Error updating user inventory.", 'error');
+            });
+            
+            addLog(`Collected: ${obj.userData.resourceName}`, 'success');
+            scene.remove(obj);
+            resourceObjects.splice(index, 1); // Remove from our local tracking array
+          }
+        });
+
         puzzleElements.forEach(elem => {
           const distance = player.position.distanceTo(elem.position);
           if (distance < 3) {

@@ -1,16 +1,16 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Atom, Home, FlaskConical, BarChart3, Users, Menu, X } from "lucide-react";
+import { Atom, Home, FlaskConical, BarChart3, Users, Menu, X, Clock, MapPin, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 
 const navigationItems = [
   { title: "Home", url: createPageUrl("Home"), icon: Home },
   { title: "A.N.T. Console", url: createPageUrl("Simulator"), icon: FlaskConical },
-  { title: "Timeline", url: createPageUrl("MissionTimeline"), icon: BarChart3 },
-  { title: "Map", url: createPageUrl("Map"), icon: BarChart3 },
+  { title: "Timeline", url: createPageUrl("MissionTimeline"), icon: Clock },
+  { title: "Map", url: createPageUrl("Map"), icon: MapPin },
+  { title: "Resources", url: createPageUrl("Resources"), icon: Package },
   { title: "Shop", url: createPageUrl("Shop"), icon: BarChart3 },
   { title: "Dashboard", url: createPageUrl("Dashboard"), icon: BarChart3 },
   { title: "Community", url: createPageUrl("Community"), icon: Users },
