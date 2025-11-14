@@ -20,7 +20,7 @@ export default function Mission3DView({ gameState, setGameState }) {
   const [leverStates, setLeverStates] = useState({});
   const [activatedButtons, setActivatedButtons] = useState([]);
   const [showHint, setShowHint] = useState(false);
-  const queryClient = useQueryClient();
+  queryClient = useQueryClient();
 
   const { data: missions } = useQuery({
     queryKey: ['missions'],
@@ -517,7 +517,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       puzzleElements.push(plateDisc);
       obstacles.push(plateDisc);
 
-      // LARGE DINNER PLATE
+      // LARGE DINNER PLATE (STATIC - NO RISING)
       const dinnerPlate = new THREE.Mesh(
         new THREE.CylinderGeometry(8, 7, 1.2, 64),
         new THREE.MeshStandardMaterial({ 
@@ -526,8 +526,7 @@ export default function Mission3DView({ gameState, setGameState }) {
           metalness: 0.1
         })
       );
-      const plateHeight = leverStates.lever1 ? 8 : 0.6;
-      dinnerPlate.position.set(55, plateHeight, 0);
+      dinnerPlate.position.set(55, 0.6, 0); // Changed y-position to be static
       dinnerPlate.castShadow = true;
       scene.add(dinnerPlate);
       obstacles.push(dinnerPlate);
@@ -584,7 +583,7 @@ export default function Mission3DView({ gameState, setGameState }) {
         resourceObjects.push(resourceMesh);
       });
 
-      // WATER DROPLET OBJECTIVE
+      // WATER DROPLET OBJECTIVE (ON GROUND WHEN ALL PUZZLES COMPLETE)
       const waterDrop = new THREE.Mesh(
         new THREE.SphereGeometry(3, 64, 64),
         new THREE.MeshPhysicalMaterial({ 
@@ -599,7 +598,7 @@ export default function Mission3DView({ gameState, setGameState }) {
         })
       );
       const canReachWater = activatedButtons.includes('button1') && puzzleStates.plate1 && leverStates.lever1;
-      waterDrop.position.set(70, canReachWater ? 10 : 25, 5);
+      waterDrop.position.set(70, canReachWater ? 3 : 25, 5); // Changed y-position to be lower when accessible
       waterDrop.userData = { type: 'water_source', accessible: canReachWater };
       waterDrop.castShadow = true;
       scene.add(waterDrop);
@@ -626,7 +625,7 @@ export default function Mission3DView({ gameState, setGameState }) {
               opacity: 0.4
             })
           );
-          mist.position.set(65 + Math.random() * 10, 5 + Math.random() * 15, 0 + Math.random() * 10);
+          mist.position.set(65 + Math.random() * 10, 1 + Math.random() * 6, 0 + Math.random() * 10); // Adjusted mist y-position
           mist.userData = { type: 'mist', velocity: { y: Math.random() * 0.02 + 0.01 } };
           scene.add(mist);
           mistParticles.push(mist);
