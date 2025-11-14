@@ -1,17 +1,14 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Atom, Home, FlaskConical, Clock, BarChart3, Users, Menu, X, Zap } from "lucide-react";
+import { Atom, Home, FlaskConical, BarChart3, Users, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 
 const navigationItems = [
   { title: "Home", url: createPageUrl("Home"), icon: Home },
   { title: "A.N.T. Console", url: createPageUrl("Simulator"), icon: FlaskConical },
-  { title: "Platformer", url: createPageUrl("Platformer"), icon: Clock },
   { title: "Shop", url: createPageUrl("Shop"), icon: BarChart3 },
-  { title: "Timeline", url: createPageUrl("Timeline"), icon: Clock },
   { title: "Dashboard", url: createPageUrl("Dashboard"), icon: BarChart3 },
   { title: "Community", url: createPageUrl("Community"), icon: Users },
 ];
@@ -143,19 +140,10 @@ export default function Layout({ children, currentPageName }) {
                   </div>
                   <div className="text-sm">
                     <p className="text-white font-medium">{user.full_name || 'Explorer'}</p>
-                    <p className="text-gray-400 text-xs">Level {user.achievement_level || 1}</p>
+                    <p className="text-gray-400 text-xs">Credits: {user.credits || 0}</p>
                   </div>
                 </div>
               )}
-              <Link to={createPageUrl("Simulator")}>
-                <Button 
-                  size="sm" 
-                  className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 animate-pulse-glow"
-                >
-                  <Zap className="w-4 h-4 mr-2" />
-                  New Experiment
-                </Button>
-              </Link>
             </div>
 
             <button
