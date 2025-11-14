@@ -635,6 +635,9 @@ export default function Mission3DView({ gameState, setGameState }) {
     } else if (activeMission.mission_number === 2) {
       addLog("Mission 2: Lab infiltration and data extraction", 'warning');
       
+      // Spawn player in clear area
+      player.position.set(-80, 1, 80);
+      
       obstacles = [];
       
       scene.background = new THREE.Color(0x1a1a2e);
