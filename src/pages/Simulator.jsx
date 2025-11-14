@@ -3,13 +3,11 @@ import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Monitor, Folder, Radio, AlertTriangle, Shield, Clock, MapPin } from "lucide-react";
+import { Monitor, Folder, Radio, AlertTriangle, Shield } from "lucide-react";
 import Mission3DView from "../components/game/Mission3DView";
 import FileBrowser from "../components/game/FileBrowser";
 import CommsPanel from "../components/game/CommsPanel";
 import GamepassMenu from "../components/game/GamepassMenu";
-import MissionTimeline from "../components/game/MissionTimeline";
-import NuxelandMap from "../components/game/NuxelandMap";
 import FinalChoice from "../components/game/FinalChoice";
 import MatrixEscape from "../components/game/MatrixEscape";
 
@@ -83,30 +81,13 @@ export default function Simulator() {
 
         <Card className="bg-[#0F1729] border-gray-700">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="w-full bg-[#1A1F2E] border-b border-gray-700 rounded-none flex-wrap">
+            <TabsList className="w-full bg-[#1A1F2E] border-b border-gray-700 rounded-none">
               <TabsTrigger 
                 value="monitor" 
                 className="flex-1 data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-400"
               >
                 <Monitor className="w-4 h-4 mr-2" />
-                <span className="hidden sm:inline">Agent Monitor (3D)</span>
-                <span className="sm:hidden">Monitor</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="timeline"
-                className="flex-1 data-[state=active]:bg-cyan-900/30 data-[state=active]:text-cyan-400"
-              >
-                <Clock className="w-4 h-4 mr-2" />
-                <span className="hidden sm:inline">Timeline</span>
-                <span className="sm:hidden">Timeline</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="map"
-                className="flex-1 data-[state=active]:bg-teal-900/30 data-[state=active]:text-teal-400"
-              >
-                <MapPin className="w-4 h-4 mr-2" />
-                <span className="hidden sm:inline">Map</span>
-                <span className="sm:hidden">Map</span>
+                <span className="hidden sm:inline">Agent Monitor</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="files"
@@ -114,7 +95,6 @@ export default function Simulator() {
               >
                 <Folder className="w-4 h-4 mr-2" />
                 <span className="hidden sm:inline">Files</span>
-                <span className="sm:hidden">Files</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="comms"
@@ -122,28 +102,18 @@ export default function Simulator() {
               >
                 <Radio className="w-4 h-4 mr-2" />
                 <span className="hidden sm:inline">Comms</span>
-                <span className="sm:hidden">Comms</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="gamepasses"
                 className="flex-1 data-[state=active]:bg-orange-900/30 data-[state=active]:text-orange-400"
               >
                 <Shield className="w-4 h-4 mr-2" />
-                <span className="hidden sm:inline">Gamepasses</span>
-                <span className="sm:hidden">Passes</span>
+                <span className="hidden sm:inline">Passes</span>
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="monitor" className="p-0">
               <Mission3DView gameState={gameState} setGameState={setGameState} />
-            </TabsContent>
-
-            <TabsContent value="timeline" className="p-0">
-              <MissionTimeline />
-            </TabsContent>
-
-            <TabsContent value="map" className="p-0">
-              <NuxelandMap />
             </TabsContent>
 
             <TabsContent value="files" className="p-0">

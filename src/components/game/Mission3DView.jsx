@@ -196,148 +196,64 @@ export default function Mission3DView({ gameState, setGameState }) {
     if (activeMission.mission_number === 1) {
       addLog("Mission 1: Hold SPACE near objects to climb them!", 'info');
       
-      const bowlGroup = new THREE.Group();
-      const bowlRadius = 15;
-      const bowlGeometry = new THREE.SphereGeometry(bowlRadius, 64, 32, 0, Math.PI * 2, 0, Math.PI / 2);
-      const bowlMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0xffffff,
-        roughness: 0.15,
-        metalness: 0.1,
-        side: THREE.DoubleSide
-      });
-      const bowl = new THREE.Mesh(bowlGeometry, bowlMaterial);
-      bowl.position.set(30, 4, 20);
-      bowl.castShadow = true;
-      bowl.receiveShadow = true;
+      // REALISTIC KITCHEN WALLS AND CABINETS
+      const wallHeight = 50;
+      const wallMaterial = new THREE.MeshStandardMaterial({ color: 0xd4c5b9, roughness: 0.8 });
       
-      const rimGeometry = new THREE.TorusGeometry(bowlRadius, 0.5, 16, 64);
-      const rim = new THREE.Mesh(rimGeometry, bowlMaterial);
-      rim.position.set(30, 8, 20);
-      rim.rotation.x = Math.PI / 2;
-      scene.add(rim);
-      obstacles.push(rim);
+      const backWall = new THREE.Mesh(new THREE.BoxGeometry(200, wallHeight, 2), wallMaterial);
+      backWall.position.set(0, wallHeight/2, -100);
+      backWall.receiveShadow = true;
+      scene.add(backWall);
       
-      bowlGroup.add(bowl);
-      scene.add(bowlGroup);
-      obstacles.push(bowl);
-
-      const spoonGroup = new THREE.Group();
-      const handleGeometry = new THREE.CylinderGeometry(0.4, 0.5, 18, 16);
-      const headGeometry = new THREE.SphereGeometry(2.5, 32, 32);
-      const spoonMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0xe8e8e8,
-        metalness: 0.95,
-        roughness: 0.05,
-        envMapIntensity: 1.5
-      });
+      const leftWall = new THREE.Mesh(new THREE.BoxGeometry(2, wallHeight, 200), wallMaterial);
+      leftWall.position.set(-100, wallHeight/2, 0);
+      leftWall.receiveShadow = true;
+      scene.add(leftWall);
       
-      const handle = new THREE.Mesh(handleGeometry, spoonMaterial);
-      handle.rotation.z = Math.PI / 2;
-      handle.castShadow = true;
+      const rightWall = new THREE.Mesh(new THREE.BoxGeometry(2, wallHeight, 200), wallMaterial);
+      rightWall.position.set(100, wallHeight/2, 0);
+      rightWall.receiveShadow = true;
+      scene.add(rightWall);
       
-      const head = new THREE.Mesh(headGeometry, spoonMaterial);
-      head.position.x = 10;
-      head.scale.set(1, 0.4, 1);
-      head.castShadow = true;
-      
-      spoonGroup.add(handle);
-      spoonGroup.add(head);
-      spoonGroup.position.set(-15, 1.2, -10);
-      spoonGroup.rotation.y = Math.PI / 4;
-      scene.add(spoonGroup);
-      obstacles.push(spoonGroup);
-
-      const mugGeometry = new THREE.CylinderGeometry(5, 4.2, 10, 32);
-      const mugMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x8b4513,
-        roughness: 0.6,
-        metalness: 0.1
-      });
-      const mug = new THREE.Mesh(mugGeometry, mugMaterial);
-      mug.position.set(50, 5, -20);
-      mug.castShadow = true;
-      mug.receiveShadow = true;
-      scene.add(mug);
-      
-      const handleTorusGeometry = new THREE.TorusGeometry(3, 0.6, 16, 32, Math.PI);
-      const mugHandleMesh = new THREE.Mesh(handleTorusGeometry, mugMaterial);
-      mugHandleMesh.position.set(50, 5, -20);
-      mugHandleMesh.rotation.y = -Math.PI / 2;
-      mugHandleMesh.rotation.x = Math.PI / 2;
-      mugHandleMesh.castShadow = true;
-      scene.add(mugHandleMesh);
-      obstacles.push(mug);
-      obstacles.push(mugHandleMesh);
-
-      for (let i = 0; i < 8; i++) {
-        const crumbSize = 1.2 + Math.random() * 1.8;
-        const crumbGeometry = new THREE.DodecahedronGeometry(crumbSize, 1);
-        const crumbMaterial = new THREE.MeshStandardMaterial({ 
-          color: 0xdaa520,
-          roughness: 0.95,
-          metalness: 0
-        });
-        const crumb = new THREE.Mesh(crumbGeometry, crumbMaterial);
-        crumb.position.set(
-          10 + i * 4 + Math.random() * 2,
-          crumbSize / 2,
-          5 + Math.random() * 4
-        );
-        crumb.rotation.set(Math.random(), Math.random(), Math.random());
-        crumb.castShadow = true;
-        crumb.receiveShadow = true;
-        crumb.userData = { type: 'destructible', id: `crumb_${i}`, health: 3 };
-        if (!destroyedObjects.includes(`crumb_${i}`)) {
-          scene.add(crumb);
-          destructibleObjects.push(crumb);
-          obstacles.push(crumb);
-        }
+      // Upper cabinets
+      const cabinetMaterial = new THREE.MeshStandardMaterial({ color: 0x5d4e37, roughness: 0.6 });
+      for (let i = 0; i < 4; i++) {
+        const cabinet = new THREE.Mesh(new THREE.BoxGeometry(30, 15, 10), cabinetMaterial);
+        cabinet.position.set(-60 + i * 40, 35, -95);
+        cabinet.castShadow = true;
+        scene.add(cabinet);
+        obstacles.push(cabinet);
       }
-
-      const butterGeometry = new THREE.BoxGeometry(8, 2, 4);
-      const butterMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0xffd700,
-        roughness: 0.2,
-        metalness: 0.1
-      });
-      const butter = new THREE.Mesh(butterGeometry, butterMaterial);
-      butter.position.set(-25, 1, 15);
-      butter.castShadow = true;
-      butter.receiveShadow = true;
-      butter.userData = { type: 'slippery', slipFactor: 3 };
-      scene.add(butter);
-      interactiveObjects.push(butter);
-      obstacles.push(butter);
-
-      const saltBaseGeometry = new THREE.CylinderGeometry(3, 3, 15, 32);
-      const saltMaterial = new THREE.MeshPhysicalMaterial({ 
-        color: 0xffffff,
-        roughness: 0.05,
-        metalness: 0,
-        transparent: true,
-        opacity: 0.3,
-        transmission: 0.9,
-        thickness: 0.5
-      });
-      const saltShaker = new THREE.Mesh(saltBaseGeometry, saltMaterial);
-      saltShaker.position.set(-5, 7.5, -25);
-      saltShaker.castShadow = true;
-      saltShaker.receiveShadow = true;
-      scene.add(saltShaker);
-      obstacles.push(saltShaker);
       
-      const saltTopGeometry = new THREE.ConeGeometry(3, 5, 32);
-      const saltTopMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0xc0c0c0,
-        roughness: 0.4,
-        metalness: 0.8
-      });
-      const saltTop = new THREE.Mesh(saltTopGeometry, saltTopMaterial);
-      saltTop.position.set(-5, 17.5, -25);
-      saltTop.castShadow = true;
-      scene.add(saltTop);
-      obstacles.push(saltTop);
-
+      // Window
+      const windowFrame = new THREE.Mesh(
+        new THREE.BoxGeometry(40, 25, 1),
+        new THREE.MeshStandardMaterial({ color: 0x87ceeb, transparent: true, opacity: 0.3 })
+      );
+      windowFrame.position.set(50, 30, -99);
+      scene.add(windowFrame);
+      
+      // LARGE STAINLESS STEEL SINK
+      const sinkBasin = new THREE.Mesh(
+        new THREE.BoxGeometry(25, 8, 18),
+        new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.9, roughness: 0.1 })
+      );
+      sinkBasin.position.set(-5, 4, -25);
+      sinkBasin.castShadow = true;
+      sinkBasin.receiveShadow = true;
+      scene.add(sinkBasin);
+      obstacles.push(sinkBasin);
+      
+      const sinkRim = new THREE.Mesh(
+        new THREE.BoxGeometry(27, 0.5, 20),
+        new THREE.MeshStandardMaterial({ color: 0xe0e0e0, metalness: 0.95, roughness: 0.05 })
+      );
+      sinkRim.position.set(-5, 8.5, -25);
+      sinkRim.castShadow = true;
+      scene.add(sinkRim);
+      obstacles.push(sinkRim);
+      
+      // Button on sink rim
       const buttonGeometry = new THREE.CylinderGeometry(1.2, 1.2, 0.6, 32);
       const buttonMaterial = new THREE.MeshStandardMaterial({ 
         color: activatedButtons.includes('button1') ? 0x10b981 : 0xef4444,
@@ -347,78 +263,23 @@ export default function Mission3DView({ gameState, setGameState }) {
         metalness: 0.7
       });
       const button1 = new THREE.Mesh(buttonGeometry, buttonMaterial);
-      button1.position.set(-5, 20.5, -25);
+      button1.position.set(-5, 9.2, -25);
       button1.userData = { type: 'button', id: 'button1' };
       button1.castShadow = true;
       scene.add(button1);
       puzzleElements.push(button1);
       obstacles.push(button1);
-
+      
       if (activatedButtons.includes('button1')) {
         const ringGeometry = new THREE.TorusGeometry(1.5, 0.1, 16, 32);
         const ringMaterial = new THREE.MeshBasicMaterial({ color: 0x10b981 });
         const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-        ring.position.set(-5, 20.5, -25);
+        ring.position.set(-5, 9.2, -25);
         ring.rotation.x = Math.PI / 2;
         scene.add(ring);
       }
 
-      if (activatedButtons.includes('button1')) {
-        const forkHandleGeometry = new THREE.BoxGeometry(2, 0.6, 25);
-        const forkMaterial = new THREE.MeshStandardMaterial({ 
-          color: 0xd3d3d3,
-          metalness: 0.9,
-          roughness: 0.1
-        });
-        const fork = new THREE.Mesh(forkHandleGeometry, forkMaterial);
-        fork.position.set(15, 1.3, -15);
-        fork.rotation.y = Math.PI / 6;
-        fork.castShadow = true;
-        fork.receiveShadow = true;
-        scene.add(fork);
-        obstacles.push(fork);
-        
-        for (let i = 0; i < 4; i++) {
-          const prongGeometry = new THREE.BoxGeometry(0.5, 0.5, 6);
-          const prong = new THREE.Mesh(prongGeometry, forkMaterial);
-          prong.position.set(15 + (i - 1.5) * 0.8, 1.3, -27);
-          prong.rotation.y = Math.PI / 6;
-          prong.castShadow = true;
-          scene.add(prong);
-          obstacles.push(prong);
-        }
-      }
-
-      const napkinGeometry = new THREE.BoxGeometry(12, 0.3, 12);
-      const napkinMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0xfafafa,
-        roughness: 0.9,
-        metalness: 0
-      });
-      const napkin = new THREE.Mesh(napkinGeometry, napkinMaterial);
-      napkin.position.set(35, 0.15, -5);
-      napkin.rotation.y = Math.PI / 8;
-      napkin.receiveShadow = true;
-      napkin.castShadow = true;
-      scene.add(napkin);
-      obstacles.push(napkin);
-
-      const plateDiscGeometry = new THREE.CylinderGeometry(2.2, 2.2, 0.4, 64);
-      const plateMaterial = new THREE.MeshStandardMaterial({ 
-        color: puzzleStates.plate1 ? 0x10b981 : 0x6b7280,
-        emissive: puzzleStates.plate1 ? 0x10b981 : 0x000000,
-        emissiveIntensity: puzzleStates.plate1 ? 0.6 : 0,
-        metalness: 0.8,
-        roughness: 0.2
-      });
-      const plate1 = new THREE.Mesh(plateDiscGeometry, plateMaterial);
-      plate1.position.set(35, 0.35, -5);
-      plate1.userData = { type: 'pressure_plate', id: 'plate1' };
-      plate1.castShadow = true;
-      scene.add(plate1);
-      puzzleElements.push(plate1);
-      obstacles.push(plate1);
-
+      // KNIFE - OUTSIDE NEAR EDGE
       const knifeBladeGeometry = new THREE.BoxGeometry(1.2, 0.2, 16);
       const knifeHandleGeometry = new THREE.CylinderGeometry(0.7, 0.7, 5, 16);
       const knifeBladeMaterial = new THREE.MeshStandardMaterial({ 
@@ -444,27 +305,184 @@ export default function Mission3DView({ gameState, setGameState }) {
       
       knife.add(blade);
       knife.add(handleMesh);
-      knife.position.set(40, 0.6, 10);
+      knife.position.set(80, 0.6, 35);
       knife.rotation.y = -Math.PI / 4;
       knife.userData = { type: 'lever', id: 'lever1' };
       scene.add(knife);
       puzzleElements.push(knife);
       obstacles.push(knife);
 
-      const dishGeometry = new THREE.CylinderGeometry(8, 7, 1.2, 64);
-      const dishMaterial = new THREE.MeshStandardMaterial({ 
+      // BOWL
+      const bowlRadius = 15;
+      const bowlGeometry = new THREE.SphereGeometry(bowlRadius, 64, 32, 0, Math.PI * 2, 0, Math.PI / 2);
+      const bowlMaterial = new THREE.MeshStandardMaterial({ 
         color: 0xffffff,
-        roughness: 0.25,
-        metalness: 0.1
+        roughness: 0.15,
+        metalness: 0.1,
+        side: THREE.DoubleSide
       });
-      const plate = new THREE.Mesh(dishGeometry, dishMaterial);
-      const plateHeight = leverStates.lever1 ? 8 : 0.6;
-      plate.position.set(55, plateHeight, 0);
-      plate.castShadow = true;
-      plate.receiveShadow = true;
-      scene.add(plate);
-      obstacles.push(plate);
+      const bowl = new THREE.Mesh(bowlGeometry, bowlMaterial);
+      bowl.position.set(30, 4, 20);
+      bowl.castShadow = true;
+      bowl.receiveShadow = true;
+      scene.add(bowl);
+      obstacles.push(bowl);
+      
+      const rimGeometry = new THREE.TorusGeometry(bowlRadius, 0.5, 16, 64);
+      const rim = new THREE.Mesh(rimGeometry, bowlMaterial);
+      rim.position.set(30, 8, 20);
+      rim.rotation.x = Math.PI / 2;
+      scene.add(rim);
+      obstacles.push(rim);
 
+      // SPOON
+      const spoonGroup = new THREE.Group();
+      const spoonHandleGeometry = new THREE.CylinderGeometry(0.4, 0.5, 18, 16);
+      const spoonHeadGeometry = new THREE.SphereGeometry(2.5, 32, 32);
+      const spoonMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xe8e8e8,
+        metalness: 0.95,
+        roughness: 0.05
+      });
+      
+      const spoonHandle = new THREE.Mesh(spoonHandleGeometry, spoonMaterial);
+      spoonHandle.rotation.z = Math.PI / 2;
+      spoonHandle.castShadow = true;
+      
+      const spoonHead = new THREE.Mesh(spoonHeadGeometry, spoonMaterial);
+      spoonHead.position.x = 10;
+      spoonHead.scale.set(1, 0.4, 1);
+      spoonHead.castShadow = true;
+      
+      spoonGroup.add(spoonHandle);
+      spoonGroup.add(spoonHead);
+      spoonGroup.position.set(-15, 1.2, -10);
+      spoonGroup.rotation.y = Math.PI / 4;
+      scene.add(spoonGroup);
+      obstacles.push(spoonGroup);
+
+      // MUG WITH COFFEE
+      const mugGeometry = new THREE.CylinderGeometry(5, 4.2, 10, 32);
+      const mugMaterial = new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 0.6 });
+      const mug = new THREE.Mesh(mugGeometry, mugMaterial);
+      mug.position.set(50, 5, -20);
+      mug.castShadow = true;
+      scene.add(mug);
+      obstacles.push(mug);
+      
+      const mugHandleGeometry = new THREE.TorusGeometry(3, 0.6, 16, 32, Math.PI);
+      const mugHandle = new THREE.Mesh(mugHandleGeometry, mugMaterial);
+      mugHandle.position.set(50, 5, -20);
+      mugHandle.rotation.y = -Math.PI / 2;
+      mugHandle.rotation.x = Math.PI / 2;
+      mugHandle.castShadow = true;
+      scene.add(mugHandle);
+      obstacles.push(mugHandle);
+      
+      const coffee = new THREE.Mesh(
+        new THREE.CylinderGeometry(4.8, 4, 0.5, 32),
+        new THREE.MeshStandardMaterial({ color: 0x3e2723 })
+      );
+      coffee.position.set(50, 9.5, -20);
+      scene.add(coffee);
+
+      // CRUMBS
+      for (let i = 0; i < 8; i++) {
+        const crumbSize = 1.2 + Math.random() * 1.8;
+        const crumb = new THREE.Mesh(
+          new THREE.DodecahedronGeometry(crumbSize, 1),
+          new THREE.MeshStandardMaterial({ color: 0xdaa520, roughness: 0.95 })
+        );
+        crumb.position.set(10 + i * 4 + Math.random() * 2, crumbSize / 2, 5 + Math.random() * 4);
+        crumb.rotation.set(Math.random(), Math.random(), Math.random());
+        crumb.castShadow = true;
+        crumb.userData = { type: 'destructible', id: `crumb_${i}`, health: 2 };
+        if (!destroyedObjects.includes(`crumb_${i}`)) {
+          scene.add(crumb);
+          destructibleObjects.push(crumb);
+          obstacles.push(crumb);
+        }
+      }
+
+      // BUTTER STICK
+      const butter = new THREE.Mesh(
+        new THREE.BoxGeometry(8, 2, 4),
+        new THREE.MeshStandardMaterial({ color: 0xffd700, roughness: 0.2 })
+      );
+      butter.position.set(-25, 1, 15);
+      butter.castShadow = true;
+      butter.userData = { type: 'slippery' };
+      scene.add(butter);
+      interactiveObjects.push(butter);
+      obstacles.push(butter);
+
+      // FORK BRIDGE
+      if (activatedButtons.includes('button1')) {
+        const forkMaterial = new THREE.MeshStandardMaterial({ color: 0xd3d3d3, metalness: 0.9, roughness: 0.1 });
+        const forkHandle = new THREE.Mesh(new THREE.BoxGeometry(2, 0.6, 25), forkMaterial);
+        forkHandle.position.set(15, 1.3, -15);
+        forkHandle.rotation.y = Math.PI / 6;
+        forkHandle.castShadow = true;
+        scene.add(forkHandle);
+        obstacles.push(forkHandle);
+        
+        for (let i = 0; i < 4; i++) {
+          const prong = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 6), forkMaterial);
+          prong.position.set(15 + (i - 1.5) * 0.8, 1.3, -27);
+          prong.rotation.y = Math.PI / 6;
+          prong.castShadow = true;
+          scene.add(prong);
+          obstacles.push(prong);
+        }
+      }
+
+      // NAPKIN WITH PRESSURE PLATE
+      const napkin = new THREE.Mesh(
+        new THREE.BoxGeometry(12, 0.3, 12),
+        new THREE.MeshStandardMaterial({ 
+          color: 0xfafafa,
+          roughness: 0.9,
+          metalness: 0
+        })
+      );
+      napkin.position.set(35, 0.15, -5);
+      napkin.rotation.y = Math.PI / 8;
+      napkin.castShadow = true;
+      scene.add(napkin);
+      obstacles.push(napkin);
+
+      const plateDisc = new THREE.Mesh(
+        new THREE.CylinderGeometry(2.2, 2.2, 0.4, 64),
+        new THREE.MeshStandardMaterial({ 
+          color: puzzleStates.plate1 ? 0x10b981 : 0x6b7280,
+          emissive: puzzleStates.plate1 ? 0x10b981 : 0x000000,
+          emissiveIntensity: puzzleStates.plate1 ? 0.6 : 0,
+          metalness: 0.8
+        })
+      );
+      plateDisc.position.set(35, 0.35, -5);
+      plateDisc.userData = { type: 'pressure_plate', id: 'plate1' };
+      plateDisc.castShadow = true;
+      scene.add(plateDisc);
+      puzzleElements.push(plateDisc);
+      obstacles.push(plateDisc);
+
+      // LARGE DINNER PLATE
+      const dinnerPlate = new THREE.Mesh(
+        new THREE.CylinderGeometry(8, 7, 1.2, 64),
+        new THREE.MeshStandardMaterial({ 
+          color: 0xffffff,
+          roughness: 0.25,
+          metalness: 0.1
+        })
+      );
+      const plateHeight = leverStates.lever1 ? 8 : 0.6;
+      dinnerPlate.position.set(55, plateHeight, 0);
+      dinnerPlate.castShadow = true;
+      scene.add(dinnerPlate);
+      obstacles.push(dinnerPlate);
+
+      // SUGAR CUBES
       const sugarPositions = [
         { x: 20, y: 1, z: -8 },
         { x: 22, y: 1, z: -8 },
@@ -472,16 +490,16 @@ export default function Mission3DView({ gameState, setGameState }) {
         { x: 24, y: 1, z: -6 }
       ];
       sugarPositions.forEach((pos, i) => {
-        const cubeGeometry = new THREE.BoxGeometry(2, 2, 2);
-        const cubeMaterial = new THREE.MeshStandardMaterial({ 
-          color: 0xffffff,
-          roughness: 0.7,
-          metalness: 0.1
-        });
-        const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+        const cube = new THREE.Mesh(
+          new THREE.BoxGeometry(2, 2, 2),
+          new THREE.MeshStandardMaterial({ 
+            color: 0xffffff,
+            roughness: 0.7,
+            metalness: 0.1
+          })
+        );
         cube.position.set(pos.x, pos.y, pos.z);
         cube.castShadow = true;
-        cube.receiveShadow = true;
         cube.userData = { type: 'destructible', id: `sugar_${i}`, health: 3 };
         if (!destroyedObjects.includes(`sugar_${i}`)) {
           scene.add(cube);
@@ -490,18 +508,20 @@ export default function Mission3DView({ gameState, setGameState }) {
         }
       });
 
-      const waterGeometry = new THREE.SphereGeometry(3, 64, 64);
-      const waterMaterial = new THREE.MeshPhysicalMaterial({ 
-        color: 0x4dd0e1,
-        transparent: true,
-        opacity: 0.7,
-        transmission: 0.95,
-        roughness: 0,
-        metalness: 0,
-        thickness: 2,
-        envMapIntensity: 1.5
-      });
-      const waterDrop = new THREE.Mesh(waterGeometry, waterMaterial);
+      // WATER DROPLET OBJECTIVE
+      const waterDrop = new THREE.Mesh(
+        new THREE.SphereGeometry(3, 64, 64),
+        new THREE.MeshPhysicalMaterial({ 
+          color: 0x4dd0e1,
+          transparent: true,
+          opacity: 0.7,
+          transmission: 0.95,
+          roughness: 0,
+          metalness: 0,
+          thickness: 2,
+          envMapIntensity: 1.5
+        })
+      );
       const canReachWater = activatedButtons.includes('button1') && puzzleStates.plate1 && leverStates.lever1;
       waterDrop.position.set(70, canReachWater ? 10 : 25, 5);
       waterDrop.userData = { type: 'water_source', accessible: canReachWater };
@@ -509,34 +529,29 @@ export default function Mission3DView({ gameState, setGameState }) {
       scene.add(waterDrop);
       objectives.push(waterDrop);
 
-      const glowGeometry = new THREE.SphereGeometry(3.5, 32, 32);
-      const glowMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0x4dd0e1,
-        transparent: true,
-        opacity: 0.3
-      });
-      const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+      const glow = new THREE.Mesh(
+        new THREE.SphereGeometry(3.5, 32, 32),
+        new THREE.MeshBasicMaterial({ 
+          color: 0x4dd0e1,
+          transparent: true,
+          opacity: 0.3
+        })
+      );
       glow.position.copy(waterDrop.position);
       scene.add(glow);
 
       if (canReachWater) {
         for (let i = 0; i < 40; i++) {
-          const mistGeometry = new THREE.SphereGeometry(0.4, 8, 8);
-          const mistMaterial = new THREE.MeshBasicMaterial({ 
-            color: 0xffffff,
-            transparent: true,
-            opacity: 0.4
-          });
-          const mist = new THREE.Mesh(mistGeometry, mistMaterial);
-          mist.position.set(
-            65 + Math.random() * 10,
-            5 + Math.random() * 15,
-            0 + Math.random() * 10
+          const mist = new THREE.Mesh(
+            new THREE.SphereGeometry(0.4, 8, 8),
+            new THREE.MeshBasicMaterial({ 
+              color: 0xffffff,
+              transparent: true,
+              opacity: 0.4
+            })
           );
-          mist.userData = { 
-            type: 'mist',
-            velocity: { y: Math.random() * 0.02 + 0.01 }
-          };
+          mist.position.set(65 + Math.random() * 10, 5 + Math.random() * 15, 0 + Math.random() * 10);
+          mist.userData = { type: 'mist', velocity: { y: Math.random() * 0.02 + 0.01 } };
           scene.add(mist);
           mistParticles.push(mist);
         }
@@ -868,7 +883,7 @@ export default function Mission3DView({ gameState, setGameState }) {
                   Mission 1 Solution:
                 </h4>
                 <ol className="text-yellow-100 font-mono text-xs space-y-1 list-decimal list-inside">
-                  <li>Walk to SALT SHAKER, hold SPACE to climb</li>
+                  <li>Walk to SINK RIM, hold SPACE to climb</li>
                   <li>Press [E] on button on top (turns green)</li>
                   <li>Climb down and cross fork bridge</li>
                   <li>Walk onto PRESSURE PLATE on napkin</li>
@@ -908,7 +923,7 @@ export default function Mission3DView({ gameState, setGameState }) {
               <>
                 <div className={`flex items-center gap-2 p-2 rounded ${activatedButtons.includes('button1') ? 'bg-green-900/20' : 'bg-gray-800/20'}`}>
                   <CheckCircle className={`w-4 h-4 ${activatedButtons.includes('button1') ? 'text-green-400' : 'text-gray-600'}`} />
-                  <span className="text-sm font-mono text-white">Salt Shaker Button</span>
+                  <span className="text-sm font-mono text-white">Sink Button</span>
                 </div>
                 <div className={`flex items-center gap-2 p-2 rounded ${puzzleStates.plate1 ? 'bg-green-900/20' : 'bg-gray-800/20'}`}>
                   <CheckCircle className={`w-4 h-4 ${puzzleStates.plate1 ? 'text-green-400' : 'text-gray-600'}`} />
