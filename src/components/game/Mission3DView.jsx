@@ -133,6 +133,38 @@ export default function Mission3DView({ gameState, setGameState }) {
     gridHelper.position.y = 0.01;
     scene.add(gridHelper);
 
+    // VISIBLE COUNTER BORDER
+    const borderMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0x8b7355, 
+      roughness: 0.8,
+      metalness: 0.1
+    });
+    const borderHeight = 3;
+    
+    const frontBorder = new THREE.Mesh(new THREE.BoxGeometry(200, borderHeight, 2), borderMaterial);
+    frontBorder.position.set(0, borderHeight/2, 100);
+    frontBorder.castShadow = true;
+    scene.add(frontBorder);
+    obstacles.push(frontBorder);
+    
+    const backBorder = new THREE.Mesh(new THREE.BoxGeometry(200, borderHeight, 2), borderMaterial);
+    backBorder.position.set(0, borderHeight/2, -100);
+    backBorder.castShadow = true;
+    scene.add(backBorder);
+    obstacles.push(backBorder);
+    
+    const leftBorder = new THREE.Mesh(new THREE.BoxGeometry(2, borderHeight, 200), borderMaterial);
+    leftBorder.position.set(-100, borderHeight/2, 0);
+    leftBorder.castShadow = true;
+    scene.add(leftBorder);
+    obstacles.push(leftBorder);
+    
+    const rightBorder = new THREE.Mesh(new THREE.BoxGeometry(2, borderHeight, 200), borderMaterial);
+    rightBorder.position.set(100, borderHeight/2, 0);
+    rightBorder.castShadow = true;
+    scene.add(rightBorder);
+    obstacles.push(rightBorder);
+    
     const playerGroup = new THREE.Group();
     
     const bodyGeometry = new THREE.CapsuleGeometry(0.4, 0.8, 8, 16);
@@ -234,25 +266,24 @@ export default function Mission3DView({ gameState, setGameState }) {
       windowFrame.position.set(50, 30, -99);
       scene.add(windowFrame);
       
-      // LARGE STAINLESS STEEL SINK
+      // LARGE FLAT SINK (GOING DOWN)
+      const sinkOuterRim = new THREE.Mesh(
+        new THREE.BoxGeometry(30, 0.8, 22),
+        new THREE.MeshStandardMaterial({ color: 0xe0e0e0, metalness: 0.95, roughness: 0.05 })
+      );
+      sinkOuterRim.position.set(-5, 0.4, -25);
+      sinkOuterRim.castShadow = true;
+      scene.add(sinkOuterRim);
+      obstacles.push(sinkOuterRim);
+      
       const sinkBasin = new THREE.Mesh(
-        new THREE.BoxGeometry(25, 8, 18),
+        new THREE.BoxGeometry(26, 6, 18),
         new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.9, roughness: 0.1 })
       );
-      sinkBasin.position.set(-5, 4, -25);
+      sinkBasin.position.set(-5, -2.6, -25);
       sinkBasin.castShadow = true;
       sinkBasin.receiveShadow = true;
       scene.add(sinkBasin);
-      obstacles.push(sinkBasin);
-      
-      const sinkRim = new THREE.Mesh(
-        new THREE.BoxGeometry(27, 0.5, 20),
-        new THREE.MeshStandardMaterial({ color: 0xe0e0e0, metalness: 0.95, roughness: 0.05 })
-      );
-      sinkRim.position.set(-5, 8.5, -25);
-      sinkRim.castShadow = true;
-      scene.add(sinkRim);
-      obstacles.push(sinkRim);
       
       // Button on sink rim
       const buttonGeometry = new THREE.CylinderGeometry(1.2, 1.2, 0.6, 32);
@@ -264,7 +295,7 @@ export default function Mission3DView({ gameState, setGameState }) {
         metalness: 0.7
       });
       const button1 = new THREE.Mesh(buttonGeometry, buttonMaterial);
-      button1.position.set(-5, 9.2, -25);
+      button1.position.set(-5, 1.1, -25);
       button1.userData = { type: 'button', id: 'button1' };
       button1.castShadow = true;
       scene.add(button1);
@@ -275,43 +306,58 @@ export default function Mission3DView({ gameState, setGameState }) {
         const ringGeometry = new THREE.TorusGeometry(1.5, 0.1, 16, 32);
         const ringMaterial = new THREE.MeshBasicMaterial({ color: 0x10b981 });
         const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-        ring.position.set(-5, 9.2, -25);
+        ring.position.set(-5, 1.1, -25);
         ring.rotation.x = Math.PI / 2;
         scene.add(ring);
       }
 
-      // KNIFE - OUTSIDE NEAR EDGE
-      const knifeBladeGeometry = new THREE.BoxGeometry(1.2, 0.2, 16);
-      const knifeHandleGeometry = new THREE.CylinderGeometry(0.7, 0.7, 5, 16);
+      // KNIFE - BIGGER AND MORE VISIBLE
+      const knifeBladeGeometry = new THREE.BoxGeometry(2, 0.4, 20);
+      const knifeHandleGeometry = new THREE.CylinderGeometry(1, 1, 7, 16);
       const knifeBladeMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0xe0e0e0,
-        metalness: 0.95,
-        roughness: 0.05
+        color: 0xf0f0f0,
+        metalness: 0.98,
+        roughness: 0.02,
+        emissive: 0xffffff,
+        emissiveIntensity: 0.1
       });
       const knifeHandleMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x4a2511,
+        color: 0x2a1810,
         roughness: 0.8,
         metalness: 0.1
       });
       
       const knife = new THREE.Group();
       const blade = new THREE.Mesh(knifeBladeGeometry, knifeBladeMaterial);
-      blade.position.z = 8;
+      blade.position.z = 10;
       blade.castShadow = true;
       
       const handleMesh = new THREE.Mesh(knifeHandleGeometry, knifeHandleMaterial);
       handleMesh.rotation.x = Math.PI / 2;
-      handleMesh.position.z = -2.5;
+      handleMesh.position.z = -3.5;
       handleMesh.castShadow = true;
       
       knife.add(blade);
       knife.add(handleMesh);
-      knife.position.set(80, 0.6, 35);
+      knife.position.set(80, 0.8, 35);
       knife.rotation.y = -Math.PI / 4;
       knife.userData = { type: 'lever', id: 'lever1' };
       scene.add(knife);
       puzzleElements.push(knife);
       obstacles.push(knife);
+      
+      // Glowing indicator for knife
+      const knifeGlow = new THREE.Mesh(
+        new THREE.SphereGeometry(2, 16, 16),
+        new THREE.MeshBasicMaterial({ 
+          color: leverStates.lever1 ? 0x10b981 : 0xffff00, 
+          transparent: true, 
+          opacity: 0.2 
+        })
+      );
+      knifeGlow.position.copy(knife.position);
+      knifeGlow.position.y += 2;
+      scene.add(knifeGlow);
 
       // BOWL
       const bowlRadius = 15;
