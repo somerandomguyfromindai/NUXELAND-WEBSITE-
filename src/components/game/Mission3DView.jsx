@@ -4,12 +4,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as THREE from "three";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, AlertTriangle, Target, Play } from "lucide-react";
+import { CheckCircle, AlertTriangle, Target, Play, Lock, Zap, Key } from "lucide-react";
 
 export default function Mission3DView({ gameState, setGameState }) {
   const mountRef = useRef(null);
   const [missionLog, setMissionLog] = useState([]);
   const [playerPosition, setPlayerPosition] = useState({ x: 0, y: 1, z: 0 });
+  const [inventory, setInventory] = useState([]);
+  const [puzzleStates, setPuzzleStates] = useState({});
+  const [showPuzzleUI, setShowPuzzleUI] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: missions } = useQuery({
@@ -62,10 +65,9 @@ export default function Mission3DView({ gameState, setGameState }) {
   useEffect(() => {
     if (!mountRef.current || !activeMission) return;
 
-    // Scene setup
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x1a0f2e);
-    scene.fog = new THREE.Fog(0x1a0f2e, 30, 80);
+    scene.fog = new THREE.Fog(0x1a0f2e, 30, 100);
 
     const camera = new THREE.PerspectiveCamera(
       75,
@@ -80,7 +82,7 @@ export default function Mission3DView({ gameState, setGameState }) {
     mountRef.current.appendChild(renderer.domElement);
 
     // Lighting
-    const ambientLight = new THREE.AmbientLight(0x404070, 0.5);
+    const ambientLight = new THREE.AmbientLight(0x404070, 0.4);
     scene.add(ambientLight);
 
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
@@ -88,7 +90,7 @@ export default function Mission3DView({ gameState, setGameState }) {
     directionalLight.castShadow = true;
     scene.add(directionalLight);
 
-    // Add point lights for atmosphere
+    // Point lights
     const blueLight = new THREE.PointLight(0x3b82f6, 2, 20);
     blueLight.position.set(-10, 5, -10);
     scene.add(blueLight);
@@ -97,7 +99,7 @@ export default function Mission3DView({ gameState, setGameState }) {
     redLight.position.set(10, 5, 10);
     scene.add(redLight);
 
-    // Ground - massive to show miniaturization scale
+    // Ground
     const groundGeometry = new THREE.PlaneGeometry(200, 200);
     const groundMaterial = new THREE.MeshStandardMaterial({ 
       color: 0x2a2a4a,
@@ -109,11 +111,10 @@ export default function Mission3DView({ gameState, setGameState }) {
     ground.receiveShadow = true;
     scene.add(ground);
 
-    // Grid for scale reference
     const gridHelper = new THREE.GridHelper(200, 100, 0x3b82f6, 0x1a1a3a);
     scene.add(gridHelper);
 
-    // Player (you - the operative)
+    // Player
     const playerGeometry = new THREE.CapsuleGeometry(0.5, 1, 8, 16);
     const playerMaterial = new THREE.MeshStandardMaterial({ 
       color: 0x3b82f6,
@@ -127,14 +128,72 @@ export default function Mission3DView({ gameState, setGameState }) {
     player.castShadow = true;
     scene.add(player);
 
-    // Mission-specific objects
+    // Mission-specific puzzles and obstacles
     let objectives = [];
+    let obstacles = [];
+    let puzzleElements = [];
+    let missionComplete = false;
 
     if (activeMission.mission_number === 1) {
-      // MISSION 1: Water Source
-      addLog("Mission 1: Navigate to water source", 'info');
+      addLog("Mission 1: Navigate maze to water source", 'info');
       
-      // Giant water droplet (goal)
+      // Create maze walls
+      const wallPositions = [
+        { x: 10, z: 0, w: 2, d: 20 },
+        { x: 20, z: 10, w: 2, d: 15 },
+        { x: 15, z: -10, w: 15, d: 2 },
+        { x: 30, z: 5, w: 2, d: 25 }
+      ];
+
+      wallPositions.forEach(wall => {
+        const wallGeometry = new THREE.BoxGeometry(wall.w, 5, wall.d);
+        const wallMaterial = new THREE.MeshStandardMaterial({ 
+          color: 0x1a1a3a,
+          roughness: 0.8
+        });
+        const wallMesh = new THREE.Mesh(wallGeometry, wallMaterial);
+        wallMesh.position.set(wall.x, 2.5, wall.z);
+        wallMesh.castShadow = true;
+        wallMesh.receiveShadow = true;
+        scene.add(wallMesh);
+        obstacles.push(wallMesh);
+      });
+
+      // Pressure plates puzzle
+      const platePositions = [
+        { x: 15, z: 15, order: 1 },
+        { x: 25, z: 20, order: 2 },
+        { x: 35, z: 15, order: 3 }
+      ];
+
+      platePositions.forEach(pos => {
+        const plateGeometry = new THREE.CylinderGeometry(1.5, 1.5, 0.2, 32);
+        const plateMaterial = new THREE.MeshStandardMaterial({ 
+          color: puzzleStates[`plate_${pos.order}`] ? 0x10b981 : 0x6b7280,
+          emissive: puzzleStates[`plate_${pos.order}`] ? 0x10b981 : 0x000000,
+          emissiveIntensity: 0.5
+        });
+        const plate = new THREE.Mesh(plateGeometry, plateMaterial);
+        plate.position.set(pos.x, 0.1, pos.z);
+        plate.userData = { type: 'pressure_plate', order: pos.order };
+        scene.add(plate);
+        puzzleElements.push(plate);
+      });
+
+      // Locked door to water source
+      const doorGeometry = new THREE.BoxGeometry(5, 6, 1);
+      const doorMaterial = new THREE.MeshStandardMaterial({ 
+        color: puzzleStates.all_plates_pressed ? 0x10b981 : 0xef4444,
+        emissive: puzzleStates.all_plates_pressed ? 0x10b981 : 0xef4444,
+        emissiveIntensity: 0.5
+      });
+      const door = new THREE.Mesh(doorGeometry, doorMaterial);
+      door.position.set(40, 3, 25);
+      door.userData = { type: 'door', locked: !puzzleStates.all_plates_pressed };
+      scene.add(door);
+      obstacles.push(door);
+
+      // Water source behind door
       const waterGeometry = new THREE.SphereGeometry(2, 32, 32);
       const waterMaterial = new THREE.MeshStandardMaterial({ 
         color: 0x60a5fa,
@@ -144,12 +203,12 @@ export default function Mission3DView({ gameState, setGameState }) {
         emissiveIntensity: 0.5
       });
       const waterDrop = new THREE.Mesh(waterGeometry, waterMaterial);
-      waterDrop.position.set(25, 2, 25);
+      waterDrop.position.set(50, 2, 25);
       waterDrop.userData.type = 'water_source';
       scene.add(waterDrop);
       objectives.push(waterDrop);
 
-      // Floating text "NUXELAND" (password hint)
+      // Password hint
       const canvas = document.createElement('canvas');
       const context = canvas.getContext('2d');
       canvas.width = 512;
@@ -161,13 +220,61 @@ export default function Mission3DView({ gameState, setGameState }) {
       const texture = new THREE.CanvasTexture(canvas);
       const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
       const sprite = new THREE.Sprite(spriteMaterial);
-      sprite.position.set(15, 5, 15);
+      sprite.position.set(25, 8, 10);
       sprite.scale.set(10, 2.5, 1);
       scene.add(sprite);
+
     } else if (activeMission.mission_number === 2) {
-      // MISSION 2: Spider Threat
-      addLog("Mission 2: Neutralize hostile threat", 'warning');
+      addLog("Mission 2: Collect keycard, avoid lasers, neutralize hostile", 'warning');
       
+      // Laser grid obstacles
+      const laserPositions = [
+        { x: 10, z: 10 }, { x: 15, z: 15 }, { x: 20, z: 12 }, { x: 25, z: 18 }
+      ];
+
+      laserPositions.forEach((pos, i) => {
+        const laserGeometry = new THREE.BoxGeometry(0.2, 5, 0.2);
+        const laserMaterial = new THREE.MeshStandardMaterial({ 
+          color: 0xff0000,
+          emissive: 0xff0000,
+          emissiveIntensity: 1,
+          transparent: true,
+          opacity: 0.8
+        });
+        const laser = new THREE.Mesh(laserGeometry, laserMaterial);
+        laser.position.set(pos.x, 2.5, pos.z);
+        laser.userData = { type: 'laser', deadly: true, index: i };
+        scene.add(laser);
+        obstacles.push(laser);
+      });
+
+      // Keycard
+      const keycardGeometry = new THREE.BoxGeometry(0.6, 0.05, 1);
+      const keycardMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xfbbf24,
+        emissive: 0xfbbf24,
+        emissiveIntensity: 0.6,
+        metalness: 0.8
+      });
+      const keycard = new THREE.Mesh(keycardGeometry, keycardMaterial);
+      keycard.position.set(30, 1, 15);
+      keycard.userData = { type: 'keycard', collected: inventory.includes('keycard') };
+      if (!inventory.includes('keycard')) scene.add(keycard);
+      puzzleElements.push(keycard);
+
+      // Locked terminal
+      const terminalGeometry = new THREE.BoxGeometry(2, 2, 1);
+      const terminalMaterial = new THREE.MeshStandardMaterial({ 
+        color: inventory.includes('keycard') ? 0x10b981 : 0x6b7280,
+        emissive: inventory.includes('keycard') ? 0x00ff00 : 0xff0000,
+        emissiveIntensity: 0.5
+      });
+      const terminal = new THREE.Mesh(terminalGeometry, terminalMaterial);
+      terminal.position.set(35, 1, 20);
+      terminal.userData = { type: 'terminal', locked: !inventory.includes('keycard') };
+      scene.add(terminal);
+      puzzleElements.push(terminal);
+
       // Giant spider (hostile)
       const spiderBody = new THREE.SphereGeometry(2.5, 16, 16);
       const spiderMaterial = new THREE.MeshStandardMaterial({ 
@@ -175,7 +282,7 @@ export default function Mission3DView({ gameState, setGameState }) {
         roughness: 0.8
       });
       const spider = new THREE.Mesh(spiderBody, spiderMaterial);
-      spider.position.set(20, 2.5, 20);
+      spider.position.set(40, 2.5, 25);
       spider.userData.type = 'hostile';
       scene.add(spider);
 
@@ -195,23 +302,39 @@ export default function Mission3DView({ gameState, setGameState }) {
 
       objectives.push(spider);
 
-      // CS-Gas marker
-      const gasMarker = new THREE.BoxGeometry(1, 1, 1);
-      const gasMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0xef4444,
-        emissive: 0xef4444,
-        emissiveIntensity: 0.5
-      });
-      const gas = new THREE.Mesh(gasMarker, gasMaterial);
-      gas.position.set(-10, 0.5, -10);
-      gas.userData.type = 'gas_pellet';
-      scene.add(gas);
-      objectives.push(gas);
     } else if (activeMission.mission_number === 3) {
-      // MISSION 3: Specimen Retrieval (moral dilemma)
-      addLog("Mission 3: Retrieve specimen - WARNING: High bio-stress", 'error');
+      addLog("Mission 3: Wire puzzle + specimen retrieval - ETHICAL DECISION", 'error');
       
-      // Giant specimen (fly)
+      // Wire puzzle control box
+      const boxGeometry = new THREE.BoxGeometry(3, 3, 1.5);
+      const boxMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x2a2a4a,
+        metalness: 0.6
+      });
+      const controlBox = new THREE.Mesh(boxGeometry, boxMaterial);
+      controlBox.position.set(20, 1.5, 20);
+      controlBox.userData = { type: 'wire_puzzle', solved: puzzleStates.wire_solved };
+      scene.add(controlBox);
+      puzzleElements.push(controlBox);
+
+      // Electric barrier
+      for (let i = 0; i < 8; i++) {
+        const barrierGeometry = new THREE.BoxGeometry(0.5, 6, 0.5);
+        const barrierMaterial = new THREE.MeshStandardMaterial({ 
+          color: puzzleStates.wire_solved ? 0x6b7280 : 0x3b82f6,
+          emissive: puzzleStates.wire_solved ? 0x000000 : 0x3b82f6,
+          emissiveIntensity: puzzleStates.wire_solved ? 0 : 1,
+          transparent: true,
+          opacity: puzzleStates.wire_solved ? 0.3 : 0.8
+        });
+        const barrier = new THREE.Mesh(barrierGeometry, barrierMaterial);
+        barrier.position.set(30 + i * 2, 3, 25);
+        barrier.userData = { type: 'barrier', active: !puzzleStates.wire_solved };
+        scene.add(barrier);
+        if (!puzzleStates.wire_solved) obstacles.push(barrier);
+      }
+
+      // Specimen (moral dilemma)
       const specimenGeometry = new THREE.SphereGeometry(3, 16, 16);
       const specimenMaterial = new THREE.MeshStandardMaterial({ 
         color: 0x10b981,
@@ -219,7 +342,7 @@ export default function Mission3DView({ gameState, setGameState }) {
         emissiveIntensity: 0.4
       });
       const specimen = new THREE.Mesh(specimenGeometry, specimenMaterial);
-      specimen.position.set(30, 3, 30);
+      specimen.position.set(50, 3, 25);
       specimen.userData.type = 'specimen';
       scene.add(specimen);
       objectives.push(specimen);
@@ -242,8 +365,26 @@ export default function Mission3DView({ gameState, setGameState }) {
     // Player controls
     const keys = {};
     const velocity = new THREE.Vector3();
+    let pressedPlates = [];
     
-    const handleKeyDown = (e) => { keys[e.key.toLowerCase()] = true; };
+    const handleKeyDown = (e) => { 
+      keys[e.key.toLowerCase()] = true;
+      
+      // Interaction key
+      if (e.key.toLowerCase() === 'e') {
+        puzzleElements.forEach(elem => {
+          const distance = player.position.distanceTo(elem.position);
+          if (distance < 4) {
+            if (elem.userData.type === 'wire_puzzle' && !puzzleStates.wire_solved) {
+              setShowPuzzleUI('wire_puzzle');
+            } else if (elem.userData.type === 'terminal' && inventory.includes('keycard')) {
+              addLog("Terminal activated - Gas deployment ready", 'success');
+              setPuzzleStates(prev => ({ ...prev, terminal_active: true }));
+            }
+          }
+        });
+      }
+    };
     const handleKeyUp = (e) => { keys[e.key.toLowerCase()] = false; };
     
     window.addEventListener('keydown', handleKeyDown);
@@ -258,7 +399,6 @@ export default function Mission3DView({ gameState, setGameState }) {
 
     // Animation loop
     const clock = new THREE.Clock();
-    let missionComplete = false;
     
     const animate = () => {
       const delta = clock.getDelta();
@@ -274,21 +414,105 @@ export default function Mission3DView({ gameState, setGameState }) {
 
       if (direction.length() > 0) {
         direction.normalize();
-        velocity.x = direction.x * speed * delta;
-        velocity.z = direction.z * speed * delta;
-        player.position.add(velocity);
-        setPlayerPosition({ x: player.position.x, y: player.position.y, z: player.position.z });
+        const newVelocity = new THREE.Vector3(
+          direction.x * speed * delta,
+          0,
+          direction.z * speed * delta
+        );
+        
+        const newPosition = player.position.clone().add(newVelocity);
+        
+        // Collision detection
+        let collision = false;
+        obstacles.forEach(obs => {
+          if (obs.userData.type === 'laser' && obs.userData.deadly) {
+            const dist = new THREE.Vector2(newPosition.x, newPosition.z)
+              .distanceTo(new THREE.Vector2(obs.position.x, obs.position.z));
+            if (dist < 1) {
+              collision = true;
+              addLog("LASER HIT - Mission failed! Restarting...", 'error');
+              player.position.set(0, 1, 0);
+            }
+          } else if (obs.userData.type === 'door' && obs.userData.locked) {
+            const dist = new THREE.Vector2(newPosition.x, newPosition.z)
+              .distanceTo(new THREE.Vector2(obs.position.x, obs.position.z));
+            if (dist < 3) {
+              collision = true;
+            }
+          } else if (obs.userData.type === 'barrier' && obs.userData.active) {
+            const dist = new THREE.Vector2(newPosition.x, newPosition.z)
+              .distanceTo(new THREE.Vector2(obs.position.x, obs.position.z));
+            if (dist < 1) {
+              collision = true;
+            }
+          } else {
+            const obsBox = new THREE.Box3().setFromObject(obs);
+            const playerBox = new THREE.Box3().setFromCenterAndSize(
+              newPosition,
+              new THREE.Vector3(1, 2, 1)
+            );
+            if (obsBox.intersectsBox(playerBox)) {
+              collision = true;
+            }
+          }
+        });
+
+        if (!collision) {
+          player.position.add(newVelocity);
+          setPlayerPosition({ x: player.position.x, y: player.position.y, z: player.position.z });
+        }
       }
 
       // Camera follow
       camera.position.x = player.position.x + mouseX * 8;
-      camera.position.y = player.position.y + 8;
-      camera.position.z = player.position.z + 15;
+      camera.position.y = player.position.y + 10;
+      camera.position.z = player.position.z + 18;
       camera.lookAt(player.position);
+
+      // Pressure plate detection
+      puzzleElements.forEach(elem => {
+        if (elem.userData.type === 'pressure_plate') {
+          const distance = new THREE.Vector2(player.position.x, player.position.z)
+            .distanceTo(new THREE.Vector2(elem.position.x, elem.position.z));
+          
+          if (distance < 1.5) {
+            const plateKey = `plate_${elem.userData.order}`;
+            if (!puzzleStates[plateKey]) {
+              addLog(`Pressure plate ${elem.userData.order} activated`, 'info');
+              setPuzzleStates(prev => ({ ...prev, [plateKey]: true }));
+              
+              if (!pressedPlates.includes(elem.userData.order)) {
+                pressedPlates.push(elem.userData.order);
+              }
+              
+              if (pressedPlates.length === 3) {
+                addLog("All pressure plates activated - Door unlocked!", 'success');
+                setPuzzleStates(prev => ({ ...prev, all_plates_pressed: true }));
+              }
+            }
+          }
+        }
+
+        // Keycard collection
+        if (elem.userData.type === 'keycard' && !elem.userData.collected) {
+          const distance = player.position.distanceTo(elem.position);
+          if (distance < 2) {
+            addLog("Keycard collected", 'success');
+            setInventory(prev => [...prev, 'keycard']);
+            elem.userData.collected = true;
+            scene.remove(elem);
+          }
+        }
+      });
 
       // Check objectives
       objectives.forEach(obj => {
-        if (!missionComplete && player.position.distanceTo(obj.position) < 4) {
+        const canComplete = 
+          (activeMission.mission_number === 1 && puzzleStates.all_plates_pressed) ||
+          (activeMission.mission_number === 2 && puzzleStates.terminal_active) ||
+          (activeMission.mission_number === 3 && puzzleStates.wire_solved);
+
+        if (!missionComplete && canComplete && player.position.distanceTo(obj.position) < 4) {
           missionComplete = true;
           completeMission();
         }
@@ -298,13 +522,19 @@ export default function Mission3DView({ gameState, setGameState }) {
         obj.rotation.y += delta;
       });
 
+      // Animate lasers
+      obstacles.forEach(obs => {
+        if (obs.userData.type === 'laser') {
+          obs.material.opacity = 0.6 + Math.sin(clock.elapsedTime * 10) * 0.2;
+        }
+      });
+
       renderer.render(scene, camera);
       requestAnimationFrame(animate);
     };
 
     animate();
 
-    // Cleanup
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
@@ -316,18 +546,29 @@ export default function Mission3DView({ gameState, setGameState }) {
       
       renderer.dispose();
     };
-  }, [activeMission]);
+  }, [activeMission, puzzleStates, inventory]);
+
+  const solveWirePuzzle = (wireColor) => {
+    const correctWire = 'red'; // Mission 3 correct wire
+    if (wireColor === correctWire) {
+      addLog("Wire puzzle solved! Barrier deactivated", 'success');
+      setPuzzleStates(prev => ({ ...prev, wire_solved: true }));
+      setShowPuzzleUI(null);
+    } else {
+      addLog("Wrong wire! System locked for 5 seconds", 'error');
+      setTimeout(() => {
+        addLog("System reset - try again", 'warning');
+      }, 5000);
+    }
+  };
 
   return (
     <div className="grid lg:grid-cols-4 gap-4 p-6">
-      {/* 3D View */}
       <div className="lg:col-span-3">
         <Card className="bg-black border-blue-500/20 overflow-hidden">
           <div className="relative">
-            <div 
-              ref={mountRef} 
-              className="w-full h-[600px]"
-            />
+            <div ref={mountRef} className="w-full h-[600px]" />
+            
             <div className="absolute top-4 left-4 bg-black/80 backdrop-blur-sm border border-blue-500/50 rounded p-3">
               <p className="text-blue-400 font-mono text-sm font-bold mb-1">
                 {activeMission ? `MISSION ${activeMission.mission_number}` : 'AWAITING MISSION'}
@@ -336,9 +577,22 @@ export default function Mission3DView({ gameState, setGameState }) {
                 {activeMission?.title || 'No active mission'}
               </p>
             </div>
+
+            {inventory.length > 0 && (
+              <div className="absolute top-4 right-4 bg-black/80 backdrop-blur-sm border border-yellow-500/50 rounded p-3">
+                <p className="text-yellow-400 font-mono text-xs font-bold mb-2">INVENTORY</p>
+                {inventory.map(item => (
+                  <div key={item} className="flex items-center gap-2 text-gray-300 text-xs font-mono">
+                    <Key className="w-3 h-3" /> {item}
+                  </div>
+                ))}
+              </div>
+            )}
+            
             <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm border border-gray-600 rounded p-2 font-mono text-xs text-gray-300">
-              W/A/S/D: Move | Mouse: Look | Shift: Sprint
+              W/A/S/D: Move | Mouse: Look | E: Interact | Shift: Sprint
             </div>
+
             {!activeMission && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/70">
                 <div className="text-center">
@@ -352,7 +606,6 @@ export default function Mission3DView({ gameState, setGameState }) {
         </Card>
       </div>
 
-      {/* Mission Info */}
       <div className="space-y-4">
         <Card className="bg-[#0F1729] border-gray-700">
           <div className="p-4 border-b border-gray-700">
@@ -412,6 +665,41 @@ export default function Mission3DView({ gameState, setGameState }) {
           </div>
         </Card>
       </div>
+
+      {showPuzzleUI === 'wire_puzzle' && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="max-w-md w-full bg-[#0F1729] border-red-500/50">
+            <div className="p-6">
+              <h3 className="text-red-400 font-mono font-bold text-lg mb-4 flex items-center gap-2">
+                <Zap className="w-5 h-5" />
+                WIRE PUZZLE - CUT THE CORRECT WIRE
+              </h3>
+              <p className="text-gray-400 font-mono text-sm mb-6">
+                Hint: The red wire has slightly higher voltage fluctuation
+              </p>
+              <div className="space-y-3">
+                {['red', 'blue', 'green', 'yellow'].map(color => (
+                  <Button
+                    key={color}
+                    onClick={() => solveWirePuzzle(color)}
+                    className={`w-full bg-${color}-600 hover:bg-${color}-700 font-mono`}
+                    style={{ backgroundColor: color === 'red' ? '#dc2626' : color === 'blue' ? '#2563eb' : color === 'green' ? '#16a34a' : '#ca8a04' }}
+                  >
+                    Cut {color.toUpperCase()} Wire
+                  </Button>
+                ))}
+              </div>
+              <Button
+                onClick={() => setShowPuzzleUI(null)}
+                variant="outline"
+                className="w-full mt-4 font-mono"
+              >
+                Cancel
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
