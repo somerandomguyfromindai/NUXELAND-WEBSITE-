@@ -635,8 +635,10 @@ export default function Mission3DView({ gameState, setGameState }) {
     } else if (activeMission.mission_number === 2) {
       addLog("Mission 2: Lab infiltration and data extraction", 'warning');
       
+      obstacles = [];
+      
       scene.background = new THREE.Color(0x1a1a2e);
-      scene.fog = new THREE.Fog(0x1a1a2e, 30, 100);
+      scene.fog = new THREE.Fog(0x1a1a2e, 30, 150);
 
       const labFloorGeometry = new THREE.PlaneGeometry(200, 200);
       const labFloorMaterial = new THREE.MeshStandardMaterial({ 
@@ -649,7 +651,225 @@ export default function Mission3DView({ gameState, setGameState }) {
       labFloor.receiveShadow = true;
       scene.add(labFloor);
 
-      addLog("Advanced security systems active", 'warning');
+      // Lab walls
+      const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x3a3a5a, roughness: 0.8 });
+      const wallHeight = 40;
+      
+      const backWall = new THREE.Mesh(new THREE.BoxGeometry(200, wallHeight, 2), wallMaterial);
+      backWall.position.set(0, wallHeight/2, -100);
+      backWall.receiveShadow = true;
+      scene.add(backWall);
+      
+      const leftWall = new THREE.Mesh(new THREE.BoxGeometry(2, wallHeight, 200), wallMaterial);
+      leftWall.position.set(-100, wallHeight/2, 0);
+      leftWall.receiveShadow = true;
+      scene.add(leftWall);
+      
+      const rightWall = new THREE.Mesh(new THREE.BoxGeometry(2, wallHeight, 200), wallMaterial);
+      rightWall.position.set(100, wallHeight/2, 0);
+      rightWall.receiveShadow = true;
+      scene.add(rightWall);
+
+      // Server racks
+      for (let i = 0; i < 6; i++) {
+        const serverRack = new THREE.Mesh(
+          new THREE.BoxGeometry(15, 25, 8),
+          new THREE.MeshStandardMaterial({ color: 0x1a1a2a, roughness: 0.7, metalness: 0.3 })
+        );
+        serverRack.position.set(-60 + i * 25, 12.5, -90);
+        serverRack.castShadow = true;
+        scene.add(serverRack);
+        obstacles.push(serverRack);
+        
+        // Server lights
+        for (let j = 0; j < 5; j++) {
+          const light = new THREE.Mesh(
+            new THREE.BoxGeometry(1, 0.5, 0.5),
+            new THREE.MeshBasicMaterial({ 
+              color: Math.random() > 0.5 ? 0x00ff00 : 0xff0000,
+              emissive: Math.random() > 0.5 ? 0x00ff00 : 0xff0000,
+              emissiveIntensity: 0.8
+            })
+          );
+          light.position.set(-60 + i * 25, 5 + j * 4, -85.5);
+          scene.add(light);
+        }
+      }
+
+      // Lab tables with equipment
+      const tablePositions = [
+        { x: -40, z: -30 },
+        { x: 0, z: -30 },
+        { x: 40, z: -30 },
+        { x: -40, z: 30 },
+        { x: 40, z: 30 }
+      ];
+
+      tablePositions.forEach(pos => {
+        const table = new THREE.Mesh(
+          new THREE.BoxGeometry(20, 1, 15),
+          new THREE.MeshStandardMaterial({ color: 0x4a4a6a, roughness: 0.6 })
+        );
+        table.position.set(pos.x, 6, pos.z);
+        table.castShadow = true;
+        scene.add(table);
+        obstacles.push(table);
+        
+        // Table legs
+        for (let i = 0; i < 4; i++) {
+          const leg = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.5, 0.5, 6, 16),
+            new THREE.MeshStandardMaterial({ color: 0x3a3a5a })
+          );
+          leg.position.set(
+            pos.x + (i % 2 === 0 ? -8 : 8),
+            3,
+            pos.z + (i < 2 ? -6 : 6)
+          );
+          leg.castShadow = true;
+          scene.add(leg);
+          obstacles.push(leg);
+        }
+
+        // Equipment on tables
+        const equipment = new THREE.Mesh(
+          new THREE.BoxGeometry(8, 5, 6),
+          new THREE.MeshStandardMaterial({ 
+            color: 0x6a6a8a,
+            emissive: 0x0066cc,
+            emissiveIntensity: 0.3
+          })
+        );
+        equipment.position.set(pos.x, 9, pos.z);
+        equipment.castShadow = true;
+        scene.add(equipment);
+        obstacles.push(equipment);
+      });
+
+      // Central terminal (objective)
+      const terminal = new THREE.Mesh(
+        new THREE.BoxGeometry(12, 15, 8),
+        new THREE.MeshStandardMaterial({ 
+          color: 0x2a2a4a,
+          emissive: 0x00ccff,
+          emissiveIntensity: 0.5,
+          metalness: 0.6
+        })
+      );
+      terminal.position.set(0, 7.5, 0);
+      terminal.castShadow = true;
+      terminal.userData = { type: 'terminal', id: 'main_terminal' };
+      scene.add(terminal);
+      puzzleElements.push(terminal);
+      obstacles.push(terminal);
+
+      // Terminal screen
+      const screen = new THREE.Mesh(
+        new THREE.PlaneGeometry(8, 6),
+        new THREE.MeshBasicMaterial({ 
+          color: 0x00ff00,
+          emissive: 0x00ff00,
+          emissiveIntensity: 0.8
+        })
+      );
+      screen.position.set(0, 10, 4.1);
+      scene.add(screen);
+
+      // Data objective (glowing cube)
+      const dataCore = new THREE.Mesh(
+        new THREE.BoxGeometry(4, 4, 4),
+        new THREE.MeshPhysicalMaterial({ 
+          color: 0x00ffff,
+          emissive: 0x00ffff,
+          emissiveIntensity: 1,
+          transparent: true,
+          opacity: 0.8,
+          transmission: 0.5
+        })
+      );
+      dataCore.position.set(0, 16, 0);
+      dataCore.userData = { type: 'data_core', accessible: true };
+      dataCore.castShadow = true;
+      scene.add(dataCore);
+      objectives.push(dataCore);
+
+      const dataCoreGlow = new THREE.Mesh(
+        new THREE.SphereGeometry(5, 32, 32),
+        new THREE.MeshBasicMaterial({ 
+          color: 0x00ffff,
+          transparent: true,
+          opacity: 0.2
+        })
+      );
+      dataCoreGlow.position.copy(dataCore.position);
+      scene.add(dataCoreGlow);
+
+      // Laser security barriers
+      for (let i = 0; i < 3; i++) {
+        const laser = new THREE.Mesh(
+          new THREE.BoxGeometry(0.2, 8, 60),
+          new THREE.MeshBasicMaterial({ 
+            color: 0xff0000,
+            transparent: true,
+            opacity: 0.6
+          })
+        );
+        laser.position.set(-60 + i * 30, 4, 20);
+        laser.userData = { type: 'laser', deadly: true };
+        scene.add(laser);
+        interactiveObjects.push(laser);
+      }
+
+      // Crates for cover
+      const cratePositions = [
+        { x: -70, z: 40 },
+        { x: -50, z: 60 },
+        { x: 50, z: 60 },
+        { x: 70, z: 40 },
+        { x: -30, z: -60 },
+        { x: 30, z: -60 }
+      ];
+
+      cratePositions.forEach(pos => {
+        const crate = new THREE.Mesh(
+          new THREE.BoxGeometry(10, 10, 10),
+          new THREE.MeshStandardMaterial({ 
+            color: 0x4a3a2a,
+            roughness: 0.9
+          })
+        );
+        crate.position.set(pos.x, 5, pos.z);
+        crate.castShadow = true;
+        scene.add(crate);
+        obstacles.push(crate);
+      });
+
+      // Resource collectibles
+      const labResources = [
+        { name: 'Research Data', x: -70, y: 1, z: -70, color: 0x00ffff },
+        { name: 'Security Key', x: 70, y: 1, z: -70, color: 0xffaa00 },
+        { name: 'Lab Sample', x: -70, y: 1, z: 70, color: 0xff00ff },
+        { name: 'Prototype Chip', x: 70, y: 1, z: 70, color: 0x00ff00 }
+      ];
+
+      labResources.forEach((res, i) => {
+        const resourceGeometry = new THREE.OctahedronGeometry(0.8, 0);
+        const resourceMaterial = new THREE.MeshStandardMaterial({
+          color: res.color,
+          emissive: res.color,
+          emissiveIntensity: 0.6,
+          metalness: 0.8,
+          roughness: 0.2
+        });
+        const resourceMesh = new THREE.Mesh(resourceGeometry, resourceMaterial);
+        resourceMesh.position.set(res.x, res.y, res.z);
+        resourceMesh.userData = { type: 'resource', resourceName: res.name, id: `lab_resource_${i}` };
+        resourceMesh.castShadow = true;
+        scene.add(resourceMesh);
+        resourceObjects.push(resourceMesh);
+      });
+
+      addLog("Advanced security systems active - avoid lasers!", 'warning');
     }
 
     const keys = {};
@@ -694,6 +914,9 @@ export default function Mission3DView({ gameState, setGameState }) {
               const leverId = elem.userData.id;
               setLeverStates(prev => ({ ...prev, [leverId]: !prev[leverId] }));
               addLog(`✓ Lever ${!leverStates[leverId] ? 'activated' : 'deactivated'}! Plate moved.`, 'info');
+            } else if (elem.userData.type === 'terminal') {
+                addLog(`Interacted with terminal ${elem.userData.id}`, 'info');
+                // Potentially update puzzleStates based on terminal interaction
             }
           }
         });
@@ -862,6 +1085,13 @@ export default function Mission3DView({ gameState, setGameState }) {
           if (distance < 5) {
             onSlippery = true;
           }
+        } else if (obj.userData.type === 'laser' && obj.userData.deadly) {
+          const distance = player.position.distanceTo(obj.position);
+          // Simplified laser collision check (could be more precise with bounding boxes)
+          if (distance < 5 && player.position.y < obj.position.y + 4 && player.position.y > obj.position.y - 4) {
+            addLog("Laser detected! Avoiding...", 'error');
+            // Implement player damage or mission failure logic here
+          }
         }
       });
 
@@ -872,6 +1102,12 @@ export default function Mission3DView({ gameState, setGameState }) {
             missionComplete = true;
             completeMission();
           }
+        } else if (obj.userData.type === 'data_core' && obj.userData.accessible) {
+            const distance = player.position.distanceTo(obj.position);
+            if (!missionComplete && distance < 5) {
+                missionComplete = true;
+                completeMission();
+            }
         }
 
         obj.position.y += Math.sin(clock.elapsedTime * 2) * 0.02;
@@ -1025,6 +1261,18 @@ export default function Mission3DView({ gameState, setGameState }) {
                 <div className={`flex items-center gap-2 p-2 rounded ${leverStates.lever1 ? 'bg-green-900/20' : 'bg-gray-800/20'}`}>
                   <CheckCircle className={`w-4 h-4 ${leverStates.lever1 ? 'text-green-400' : 'text-gray-600'}`} />
                   <span className="text-sm font-mono text-white">Knife Lever</span>
+                </div>
+              </>
+            )}
+             {activeMission?.mission_number === 2 && (
+              <>
+                <div className={`flex items-center gap-2 p-2 rounded ${inventory.some(item => item.name === 'Security Key') ? 'bg-green-900/20' : 'bg-gray-800/20'}`}>
+                  <CheckCircle className={`w-4 h-4 ${inventory.some(item => item.name === 'Security Key') ? 'text-green-400' : 'text-gray-600'}`} />
+                  <span className="text-sm font-mono text-white">Security Key Acquired</span>
+                </div>
+                <div className={`flex items-center gap-2 p-2 rounded ${false ? 'bg-green-900/20' : 'bg-gray-800/20'}`}>
+                  <CheckCircle className={`w-4 h-4 ${false ? 'text-green-400' : 'text-gray-600'}`} />
+                  <span className="text-sm font-mono text-white">Terminal Hacked</span>
                 </div>
               </>
             )}
