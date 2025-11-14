@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as THREE from "three";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, AlertTriangle, Target, FileText, Lightbulb } from "lucide-react";
+import { CheckCircle, AlertTriangle, Target, FileText, Lightbulb, MoveUp, Hand, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from "lucide-react";
 import MissionBriefing from "./MissionBriefing";
 
 export default function Mission3DView({ gameState, setGameState }) {
@@ -20,6 +20,12 @@ export default function Mission3DView({ gameState, setGameState }) {
   const [leverStates, setLeverStates] = useState({});
   const [activatedButtons, setActivatedButtons] = useState([]);
   const [showHint, setShowHint] = useState(false);
+  const [mobileControls, setMobileControls] = useState({
+    up: false,
+    down: false,
+    left: false,
+    right: false
+  });
   const queryClient = useQueryClient();
 
   const { data: missions } = useQuery({
@@ -990,17 +996,32 @@ export default function Mission3DView({ gameState, setGameState }) {
         }
       });
 
-      if (keys[' '] && touchingObstacle) {
+      if ((keys[' '] || (mobileControls.up && touchingObstacle)) && touchingObstacle) { // Allow mobile up button to trigger climb
         isClimbing = true;
         playerVelocityY = 0;
         player.position.y += climbSpeed * delta;
         isOnGround = false;
         
         const touchedBox = new THREE.Box3().setFromObject(touchingObstacle);
-        if (player.position.x < touchedBox.min.x) player.position.x = touchedBox.min.x - playerRadius;
-        if (player.position.x > touchedBox.max.x) player.position.x = touchedBox.max.x + playerRadius;
-        if (player.position.z < touchedBox.min.z) player.position.z = touchedBox.min.z - playerRadius;
-        if (player.position.z > touchedBox.max.z) player.position.z = touchedBox.max.z + playerRadius;
+        // Simple collision response for climbing - prevent moving through object
+        // This is a basic example, more robust climbing would involve raycasting
+        const playerBBox = new THREE.Box3().setFromCenterAndSize(
+          new THREE.Vector3(player.position.x, player.position.y, player.position.z),
+          new THREE.Vector3(playerRadius * 2, playerHalfHeight * 2, playerRadius * 2)
+        );
+        if (playerBBox.intersectsBox(touchedBox)) {
+            // Adjust position to be outside the obstacle in XZ plane if it intersects
+            const penetrationX = Math.min(playerBBox.max.x - touchedBox.min.x, touchedBox.max.x - playerBBox.min.x);
+            const penetrationZ = Math.min(playerBBox.max.z - touchedBox.min.z, touchedBox.max.z - playerBBox.min.z);
+
+            if (penetrationX < penetrationZ) {
+                if (player.position.x < touchedBox.min.x) player.position.x -= penetrationX + 0.01;
+                else player.position.x += penetrationX + 0.01;
+            } else {
+                if (player.position.z < touchedBox.min.z) player.position.z -= penetrationZ + 0.01;
+                else player.position.z += penetrationZ + 0.01;
+            }
+        }
       } else {
         isClimbing = false;
         if (!isOnGround) {
@@ -1012,10 +1033,10 @@ export default function Mission3DView({ gameState, setGameState }) {
       const speed = onSlippery ? baseSpeed * 1.5 : baseSpeed;
       const direction = new THREE.Vector3();
 
-      if (keys['w']) direction.z -= 1;
-      if (keys['s']) direction.z += 1;
-      if (keys['a']) direction.x -= 1;
-      if (keys['d']) direction.x += 1;
+      if (keys['w'] || mobileControls.up) direction.z -= 1;
+      if (keys['s'] || mobileControls.down) direction.z += 1;
+      if (keys['a'] || mobileControls.left) direction.x -= 1;
+      if (keys['d'] || mobileControls.right) direction.x += 1;
 
       const targetHorizontalPosition = new THREE.Vector3(player.position.x, 0, player.position.z);
 
@@ -1170,7 +1191,31 @@ export default function Mission3DView({ gameState, setGameState }) {
       
       renderer.dispose();
     };
-  }, [activeMission, puzzleStates, inventory, missionStarted, destroyedObjects, leverStates, activatedButtons]);
+  }, [activeMission, puzzleStates, inventory, missionStarted, destroyedObjects, leverStates, activatedButtons, mobileControls]);
+
+  const handleMobileJump = () => {
+    // Dispatch a synthetic keyboard event for ' ' (spacebar)
+    // This allows the existing jump logic in handleKeyDown to be reused.
+    // The event needs to be active for a short duration to simulate holding, if needed for climbing.
+    const keyEventDown = new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true });
+    window.dispatchEvent(keyEventDown);
+    // Simulate keyup after a very short delay for single jump
+    setTimeout(() => {
+        const keyEventUp = new KeyboardEvent('keyup', { key: ' ', code: 'Space', bubbles: true });
+        window.dispatchEvent(keyEventUp);
+    }, 100); // Adjust delay as needed
+  };
+
+  const handleMobileInteract = () => {
+    // Dispatch a synthetic keyboard event for 'e'
+    const keyEvent = new KeyboardEvent('keydown', { key: 'e', code: 'KeyE', bubbles: true });
+    window.dispatchEvent(keyEvent);
+    // Simulate keyup immediately as 'e' is typically a tap for interact
+    setTimeout(() => {
+        const keyEventUp = new KeyboardEvent('keyup', { key: 'e', code: 'KeyE', bubbles: true });
+        window.dispatchEvent(keyEventUp);
+    }, 50);
+  };
 
   return (
     <div className="grid lg:grid-cols-4 gap-4 p-6">
@@ -1212,14 +1257,69 @@ export default function Mission3DView({ gameState, setGameState }) {
               )}
             </div>
             
-            <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm border border-gray-600 rounded p-2 font-mono text-xs text-gray-300">
-              <p>W/A/S/D: Move | SPACE: Jump/Climb | E: Interact | Shift: Sprint</p>
+            <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm border border-gray-600 rounded p-2 font-mono text-xs text-gray-300 hidden md:block">
+              <p>W/A/S/D: Move | SPACE: Jump (2x) | E: Interact | Shift: Sprint</p>
               <p className="text-green-400 mt-1 font-bold">
                 Hold SPACE while touching objects to CLIMB them!
               </p>
             </div>
 
-            <div className="absolute bottom-4 right-4">
+            {/* Mobile Controls */}
+            <div className="absolute bottom-4 left-4 right-4 md:hidden flex justify-between items-end gap-4 z-10">
+              <div className="flex flex-col gap-2">
+                <div className="grid grid-cols-3 gap-1">
+                  <div></div>
+                  <button
+                    onTouchStart={() => setMobileControls(prev => ({ ...prev, up: true }))}
+                    onTouchEnd={() => setMobileControls(prev => ({ ...prev, up: false }))}
+                    className="w-12 h-12 bg-blue-500/80 rounded flex items-center justify-center active:bg-blue-600"
+                  >
+                    <ArrowUp className="w-6 h-6 text-white" />
+                  </button>
+                  <div></div>
+                  <button
+                    onTouchStart={() => setMobileControls(prev => ({ ...prev, left: true }))}
+                    onTouchEnd={() => setMobileControls(prev => ({ ...prev, left: false }))}
+                    className="w-12 h-12 bg-blue-500/80 rounded flex items-center justify-center active:bg-blue-600"
+                  >
+                    <ArrowLeft className="w-6 h-6 text-white" />
+                  </button>
+                  <button
+                    onTouchStart={() => setMobileControls(prev => ({ ...prev, down: true }))}
+                    onTouchEnd={() => setMobileControls(prev => ({ ...prev, down: false }))}
+                    className="w-12 h-12 bg-blue-500/80 rounded flex items-center justify-center active:bg-blue-600"
+                  >
+                    <ArrowDown className="w-6 h-6 text-white" />
+                  </button>
+                  <button
+                    onTouchStart={() => setMobileControls(prev => ({ ...prev, right: true }))}
+                    onTouchEnd={() => setMobileControls(prev => ({ ...prev, right: false }))}
+                    className="w-12 h-12 bg-blue-500/80 rounded flex items-center justify-center active:bg-blue-600"
+                  >
+                    <ArrowRight className="w-6 h-6 text-white" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onTouchStart={handleMobileJump}
+                  className="w-16 h-16 bg-green-500/80 rounded-full flex items-center justify-center active:bg-green-600 flex-col"
+                >
+                  <MoveUp className="w-8 h-8 text-white" />
+                  <span className="text-[10px] text-white font-bold">JUMP</span>
+                </button>
+                <button
+                  onTouchStart={handleMobileInteract}
+                  className="w-16 h-16 bg-yellow-500/80 rounded-full flex items-center justify-center active:bg-yellow-600 flex-col"
+                >
+                  <Hand className="w-7 h-7 text-white" />
+                  <span className="text-[10px] text-white font-bold">USE</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="absolute bottom-4 right-4 hidden md:block">
               <Button
                 onClick={() => setShowHint(!showHint)}
                 className="bg-yellow-600/80 hover:bg-yellow-700/80 backdrop-blur-sm font-mono text-xs"
@@ -1231,28 +1331,28 @@ export default function Mission3DView({ gameState, setGameState }) {
             </div>
 
             {showHint && activeMission?.mission_number === 1 && (
-              <div className="absolute top-20 left-4 bg-yellow-900/90 backdrop-blur-sm border border-yellow-500/50 rounded p-4 max-w-md">
+              <div className="absolute top-20 left-4 bg-yellow-900/90 backdrop-blur-sm border border-yellow-500/50 rounded p-4 max-w-md z-20">
                 <h4 className="text-yellow-300 font-mono font-bold mb-2 flex items-center gap-2">
                   <Lightbulb className="w-4 h-4" />
                   Mission 1 Solution:
                 </h4>
                 <ol className="text-yellow-100 font-mono text-xs space-y-1 list-decimal list-inside">
-                  <li>Walk to SINK RIM, hold SPACE to climb</li>
-                  <li>Press [E] on button on top (turns green)</li>
+                  <li>Walk to SINK RIM, hold JUMP to climb</li>
+                  <li>Press USE on button on top (turns green)</li>
                   <li>Climb down and cross fork bridge</li>
                   <li>Walk onto PRESSURE PLATE on napkin</li>
-                  <li>Go to KNIFE, press [E] to activate lever</li>
+                  <li>Go to KNIFE, press USE to activate lever</li>
                   <li>Water droplet drops to ground - walk to it!</li>
                   <li>Reach WATER DROPLET to complete mission</li>
                 </ol>
                 <p className="text-yellow-200 text-xs mt-2 italic font-bold">
-                  Hold SPACE while touching objects to climb up!
+                  Hold JUMP while touching objects to climb up!
                 </p>
               </div>
             )}
 
             {!activeMission && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/70">
+              <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-20">
                 <div className="text-center">
                   <AlertTriangle className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
                   <p className="text-white font-mono text-xl mb-2">ALL MISSIONS COMPLETE</p>
