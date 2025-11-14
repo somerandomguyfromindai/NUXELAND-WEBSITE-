@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -184,13 +185,16 @@ export default function Mission3DView({ gameState, setGameState }) {
     
     let playerVelocityY = 0;
     let isOnGround = true;
+    let isClimbing = false;
+    let touchingObstacle = null;
     const gravity = -25;
     const jumpForce = 10;
+    const climbSpeed = 5;
     const playerHalfHeight = 0.8;
     const playerRadius = 0.4;
 
     if (activeMission.mission_number === 1) {
-      addLog("Mission 1: Navigate kitchen - Use SPACE to jump and climb!", 'info');
+      addLog("Mission 1: Hold SPACE near objects to climb them!", 'info');
       
       const bowlGroup = new THREE.Group();
       const bowlRadius = 15;
@@ -211,6 +215,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       rim.position.set(30, 8, 20);
       rim.rotation.x = Math.PI / 2;
       scene.add(rim);
+      obstacles.push(rim); // Added to obstacles
       
       bowlGroup.add(bowl);
       scene.add(bowlGroup);
@@ -262,6 +267,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       mugHandleMesh.castShadow = true;
       scene.add(mugHandleMesh);
       obstacles.push(mug);
+      obstacles.push(mugHandleMesh); // Added to obstacles
 
       for (let i = 0; i < 8; i++) {
         const crumbSize = 1.2 + Math.random() * 1.8;
@@ -280,7 +286,7 @@ export default function Mission3DView({ gameState, setGameState }) {
         crumb.rotation.set(Math.random(), Math.random(), Math.random());
         crumb.castShadow = true;
         crumb.receiveShadow = true;
-        crumb.userData = { type: 'destructible', id: `crumb_${i}`, health: 2 };
+        crumb.userData = { type: 'destructible', id: `crumb_${i}`, health: 3 };
         if (!destroyedObjects.includes(`crumb_${i}`)) {
           scene.add(crumb);
           destructibleObjects.push(crumb);
@@ -301,6 +307,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       butter.userData = { type: 'slippery', slipFactor: 3 };
       scene.add(butter);
       interactiveObjects.push(butter);
+      obstacles.push(butter); // Added to obstacles
 
       const saltBaseGeometry = new THREE.CylinderGeometry(3, 3, 15, 32);
       const saltMaterial = new THREE.MeshPhysicalMaterial({ 
@@ -345,6 +352,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       button1.castShadow = true;
       scene.add(button1);
       puzzleElements.push(button1);
+      obstacles.push(button1); // Added to obstacles
 
       if (activatedButtons.includes('button1')) {
         const ringGeometry = new THREE.TorusGeometry(1.5, 0.1, 16, 32);
@@ -409,6 +417,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       plate1.castShadow = true;
       scene.add(plate1);
       puzzleElements.push(plate1);
+      obstacles.push(plate1); // Added to obstacles
 
       const knifeBladeGeometry = new THREE.BoxGeometry(1.2, 0.2, 16);
       const knifeHandleGeometry = new THREE.CylinderGeometry(0.7, 0.7, 5, 16);
@@ -440,6 +449,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       knife.userData = { type: 'lever', id: 'lever1' };
       scene.add(knife);
       puzzleElements.push(knife);
+      obstacles.push(knife); // Added to obstacles
 
       const dishGeometry = new THREE.CylinderGeometry(8, 7, 1.2, 64);
       const dishMaterial = new THREE.MeshStandardMaterial({ 
@@ -558,10 +568,9 @@ export default function Mission3DView({ gameState, setGameState }) {
     const handleKeyDown = (e) => { 
       keys[e.key.toLowerCase()] = true;
       
-      if (e.key === ' ' && isOnGround) {
+      if (e.key === ' ' && isOnGround && !isClimbing) {
         playerVelocityY = jumpForce;
         isOnGround = false;
-        addLog("Jump!", 'info');
       }
       
       if (e.key.toLowerCase() === 'e') {
@@ -620,7 +629,60 @@ export default function Mission3DView({ gameState, setGameState }) {
     const animate = () => {
       const delta = clock.getDelta();
 
-      playerVelocityY += gravity * delta;
+      touchingObstacle = null;
+      const climbDetectionDistance = playerRadius + 0.1; // Small buffer for detection
+      
+      const playerBBox = new THREE.Box3().setFromCenterAndSize(
+        player.position,
+        new THREE.Vector3(playerRadius * 2, playerHalfHeight * 2, playerRadius * 2)
+      );
+
+      obstacles.forEach(obs => {
+        const obsBox = new THREE.Box3().setFromObject(obs);
+        // Expand player BBox slightly to detect nearby obstacles for climbing
+        const playerClimbDetectBBox = playerBBox.clone().expandByScalar(climbDetectionDistance);
+
+        if (playerClimbDetectBBox.intersectsBox(obsBox)) {
+          // A more refined check to see if player is *against* the obstacle horizontally
+          const playerXZ = new THREE.Vector2(player.position.x, player.position.z);
+          const obsMinXZ = new THREE.Vector2(obsBox.min.x, obsBox.min.z);
+          const obsMaxXZ = new THREE.Vector2(obsBox.max.x, obsBox.max.z);
+
+          // Check if player is horizontally close to obstacle
+          if (
+              (player.position.x + playerRadius > obsBox.min.x && player.position.x - playerRadius < obsBox.max.x) &&
+              (player.position.z + playerRadius > obsBox.min.z && player.position.z - playerRadius < obsBox.max.z)
+          ) {
+            // Check if player's Y is below the top of the object, and within climbing reach
+            if (player.position.y - playerHalfHeight < obsBox.max.y - 0.5) { // Can't climb if already on top
+                touchingObstacle = obs;
+            }
+          }
+        }
+      });
+      
+
+      if (keys[' '] && touchingObstacle && !isOnGround) {
+        isClimbing = true;
+        playerVelocityY = 0;
+        player.position.y += climbSpeed * delta;
+        
+        // Optional: Keep player snapped to the obstacle's horizontal plane
+        const touchedBox = new THREE.Box3().setFromObject(touchingObstacle);
+        const playerCenter = player.position.clone();
+        
+        // Clamp player X and Z position to stay within a reasonable range of the object's face
+        // This is a simplified clamping, a more robust solution would consider which face is being climbed
+        playerCenter.x = Math.max(touchedBox.min.x, Math.min(touchedBox.max.x, playerCenter.x));
+        playerCenter.z = Math.max(touchedBox.min.z, Math.min(touchedBox.max.z, playerCenter.z));
+        
+        player.position.x = playerCenter.x;
+        player.position.z = playerCenter.z;
+
+      } else {
+        isClimbing = false;
+        playerVelocityY += gravity * delta;
+      }
       
       const baseSpeed = keys['shift'] ? 20 : 10;
       const speed = onSlippery ? baseSpeed * 1.5 : baseSpeed;
@@ -633,7 +695,7 @@ export default function Mission3DView({ gameState, setGameState }) {
 
       const targetHorizontalPosition = new THREE.Vector3(player.position.x, 0, player.position.z);
 
-      if (direction.length() > 0) {
+      if (direction.length() > 0 && !isClimbing) {
         direction.normalize();
         targetHorizontalPosition.x += direction.x * speed * delta;
         targetHorizontalPosition.z += direction.z * speed * delta;
@@ -645,9 +707,9 @@ export default function Mission3DView({ gameState, setGameState }) {
       isOnGround = false;
 
       if (newPlayerPositionY - playerHalfHeight <= 0) {
-          newPlayerPositionY = playerHalfHeight;
-          playerVelocityY = 0;
-          isOnGround = true;
+        newPlayerPositionY = playerHalfHeight;
+        playerVelocityY = 0;
+        isOnGround = true;
       }
 
       let actualHorizontalPosition = new THREE.Vector3(targetHorizontalPosition.x, player.position.y, targetHorizontalPosition.z);
@@ -656,36 +718,40 @@ export default function Mission3DView({ gameState, setGameState }) {
         const obsBox = new THREE.Box3().setFromObject(obs);
 
         const playerBoxAtTargetPos = new THREE.Box3().setFromCenterAndSize(
-            new THREE.Vector3(targetHorizontalPosition.x, newPlayerPositionY, targetHorizontalPosition.z),
-            new THREE.Vector3(playerRadius * 2, playerHalfHeight * 2, playerRadius * 2)
+          new THREE.Vector3(targetHorizontalPosition.x, newPlayerPositionY, targetHorizontalPosition.z),
+          new THREE.Vector3(playerRadius * 2, playerHalfHeight * 2, playerRadius * 2)
         );
 
         if (playerVelocityY < 0 && 
-            (player.position.y - playerHalfHeight) >= (obsBox.max.y - 0.1) &&
-            (newPlayerPositionY - playerHalfHeight) < (obsBox.max.y + 0.1) &&
-            playerBoxAtTargetPos.intersectsBox(obsBox)
+          (player.position.y - playerHalfHeight) >= (obsBox.max.y - 0.1) &&
+          (newPlayerPositionY - playerHalfHeight) < (obsBox.max.y + 0.1) &&
+          playerBoxAtTargetPos.intersectsBox(obsBox)
         ) {
-            newPlayerPositionY = obsBox.max.y + playerHalfHeight;
-            playerVelocityY = 0;
-            isOnGround = true;
+          newPlayerPositionY = obsBox.max.y + playerHalfHeight;
+          playerVelocityY = 0;
+          isOnGround = true;
         }
         else if (playerVelocityY > 0 && 
-            (player.position.y + playerHalfHeight) <= (obsBox.min.y + 0.1) &&
-            (newPlayerPositionY + playerHalfHeight) > (obsBox.min.y - 0.1) &&
-            playerBoxAtTargetPos.intersectsBox(obsBox)
+          (player.position.y + playerHalfHeight) <= (obsBox.min.y + 0.1) &&
+          (newPlayerPositionY + playerHalfHeight) > (obsBox.min.y - 0.1) &&
+          playerBoxAtTargetPos.intersectsBox(obsBox)
         ) {
-            playerVelocityY = 0;
-            newPlayerPositionY = obsBox.min.y - playerHalfHeight;
+          playerVelocityY = 0;
+          newPlayerPositionY = obsBox.min.y - playerHalfHeight;
         }
-        if (playerBoxAtTargetPos.intersectsBox(obsBox)) {
-            actualHorizontalPosition.x = player.position.x;
-            actualHorizontalPosition.z = player.position.z;
+        // Only apply horizontal collision if not climbing
+        if (playerBoxAtTargetPos.intersectsBox(obsBox) && !isClimbing) {
+          actualHorizontalPosition.x = player.position.x;
+          actualHorizontalPosition.z = player.position.z;
         }
       });
 
-      player.position.x = actualHorizontalPosition.x;
-      player.position.z = actualHorizontalPosition.z;
-      player.position.y = newPlayerPositionY;
+      // Apply position updates only if not climbing
+      if (!isClimbing) {
+        player.position.x = actualHorizontalPosition.x;
+        player.position.z = actualHorizontalPosition.z;
+        player.position.y = newPlayerPositionY;
+      }
 
       setPlayerPosition({ x: player.position.x, y: player.position.y, z: player.position.z });
 
@@ -807,9 +873,9 @@ export default function Mission3DView({ gameState, setGameState }) {
             </div>
             
             <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm border border-gray-600 rounded p-2 font-mono text-xs text-gray-300">
-              <p>W/A/S/D: Move | SPACE: Jump | E: Interact | Shift: Sprint</p>
+              <p>W/A/S/D: Move | SPACE: Jump/Climb | E: Interact | Shift: Sprint</p>
               <p className="text-green-400 mt-1 font-bold">
-                Press SPACE to JUMP and climb platforms!
+                Hold SPACE while touching objects to CLIMB them!
               </p>
             </div>
 
@@ -831,16 +897,16 @@ export default function Mission3DView({ gameState, setGameState }) {
                   Mission 1 Solution:
                 </h4>
                 <ol className="text-yellow-100 font-mono text-xs space-y-1 list-decimal list-inside">
-                  <li>Jump (SPACE) to climb the SALT SHAKER</li>
-                  <li>Press [E] on the button on top (turns green)</li>
-                  <li>Jump across the fork bridge that appears</li>
-                  <li>Walk onto the PRESSURE PLATE on napkin</li>
+                  <li>Walk to SALT SHAKER, hold SPACE to climb</li>
+                  <li>Press [E] on button on top (turns green)</li>
+                  <li>Climb down and cross fork bridge</li>
+                  <li>Walk onto PRESSURE PLATE on napkin</li>
                   <li>Go to KNIFE, press [E] to activate lever</li>
-                  <li>Jump onto the white plate that rises</li>
-                  <li>Jump to reach WATER DROPLET</li>
+                  <li>White plate rises - climb it (hold SPACE)</li>
+                  <li>Reach WATER DROPLET to complete mission</li>
                 </ol>
                 <p className="text-yellow-200 text-xs mt-2 italic font-bold">
-                  Use SPACE to jump and climb! All 3 puzzles unlock water!
+                  Hold SPACE while touching objects to climb up!
                 </p>
               </div>
             )}
