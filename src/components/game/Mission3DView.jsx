@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -116,7 +117,6 @@ export default function Mission3DView({ gameState, setGameState }) {
     fillLight.position.set(-50, 50, -50);
     scene.add(fillLight);
 
-    // Realistic marble counter
     const counterGeometry = new THREE.PlaneGeometry(200, 200);
     const counterMaterial = new THREE.MeshStandardMaterial({ 
       color: 0xf5f5f0,
@@ -129,12 +129,10 @@ export default function Mission3DView({ gameState, setGameState }) {
     counter.receiveShadow = true;
     scene.add(counter);
 
-    // Add subtle grid pattern
     const gridHelper = new THREE.GridHelper(200, 40, 0xe0e0e0, 0xf0f0f0);
     gridHelper.position.y = 0.01;
     scene.add(gridHelper);
 
-    // Realistic player (ant-sized agent)
     const playerGroup = new THREE.Group();
     
     const bodyGeometry = new THREE.CapsuleGeometry(0.4, 0.8, 8, 16);
@@ -149,7 +147,6 @@ export default function Mission3DView({ gameState, setGameState }) {
     body.castShadow = true;
     playerGroup.add(body);
 
-    // Helmet
     const helmetGeometry = new THREE.SphereGeometry(0.35, 16, 16);
     const helmetMaterial = new THREE.MeshStandardMaterial({ 
       color: 0x60a5fa,
@@ -163,7 +160,6 @@ export default function Mission3DView({ gameState, setGameState }) {
     helmet.castShadow = true;
     playerGroup.add(helmet);
 
-    // Visor glow
     const visorGeometry = new THREE.RingGeometry(0.15, 0.2, 16);
     const visorMaterial = new THREE.MeshBasicMaterial({ 
       color: 0x00ffff,
@@ -175,7 +171,7 @@ export default function Mission3DView({ gameState, setGameState }) {
     visor.position.set(0, 0.9, 0.3);
     playerGroup.add(visor);
 
-    playerGroup.position.set(0, 1, 0);
+    playerGroup.position.set(0, 1, 0); // Player initial position
     scene.add(playerGroup);
     const player = playerGroup;
 
@@ -186,9 +182,16 @@ export default function Mission3DView({ gameState, setGameState }) {
     let interactiveObjects = [];
     let mistParticles = [];
     let missionComplete = false;
+    
+    let playerVelocityY = 0;
+    let isOnGround = true;
+    const gravity = -25;
+    const jumpForce = 10;
+    const playerHalfHeight = 0.8; // Half the total height of the player capsule (1.6 / 2)
+    const playerRadius = 0.4; // Radius of the capsule
 
     if (activeMission.mission_number === 1) {
-      addLog("Mission 1: Navigate kitchen obstacles and reach the water source", 'info');
+      addLog("Mission 1: Navigate kitchen - Use SPACE to jump and climb!", 'info');
       
       // CERAMIC BOWL - realistic china
       const bowlGroup = new THREE.Group();
@@ -211,6 +214,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       rim.position.set(30, 8, 20);
       rim.rotation.x = Math.PI / 2;
       scene.add(rim);
+      obstacles.push(rim); // Rim is also an obstacle
       
       bowlGroup.add(bowl);
       scene.add(bowlGroup);
@@ -264,6 +268,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       mugHandleMesh.castShadow = true;
       scene.add(mugHandleMesh);
       obstacles.push(mug);
+      obstacles.push(mugHandleMesh); // Handle is also an obstacle
 
       // BREADCRUMBS - realistic texture
       for (let i = 0; i < 8; i++) {
@@ -305,6 +310,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       butter.userData = { type: 'slippery', slipFactor: 3 };
       scene.add(butter);
       interactiveObjects.push(butter);
+      obstacles.push(butter); // Butter is also an obstacle
 
       // GLASS SALT SHAKER - transparent
       const saltBaseGeometry = new THREE.CylinderGeometry(3, 3, 15, 32);
@@ -322,6 +328,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       saltShaker.castShadow = true;
       saltShaker.receiveShadow = true;
       scene.add(saltShaker);
+      obstacles.push(saltShaker);
       
       const saltTopGeometry = new THREE.ConeGeometry(3, 5, 32);
       const saltTopMaterial = new THREE.MeshStandardMaterial({ 
@@ -333,7 +340,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       saltTop.position.set(-5, 17.5, -25);
       saltTop.castShadow = true;
       scene.add(saltTop);
-      obstacles.push(saltShaker);
+      obstacles.push(saltTop); // Salt top is also an obstacle
 
       // INTERACTIVE BUTTON on salt shaker
       const buttonGeometry = new THREE.CylinderGeometry(1.2, 1.2, 0.6, 32);
@@ -350,6 +357,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       button1.castShadow = true;
       scene.add(button1);
       puzzleElements.push(button1);
+      obstacles.push(button1); // Button is also an obstacle
 
       // Indicator light ring
       if (activatedButtons.includes('button1')) {
@@ -375,6 +383,7 @@ export default function Mission3DView({ gameState, setGameState }) {
         fork.castShadow = true;
         fork.receiveShadow = true;
         scene.add(fork);
+        obstacles.push(fork); // Fork is an obstacle
         
         for (let i = 0; i < 4; i++) {
           const prongGeometry = new THREE.BoxGeometry(0.5, 0.5, 6);
@@ -383,6 +392,7 @@ export default function Mission3DView({ gameState, setGameState }) {
           prong.rotation.y = Math.PI / 6;
           prong.castShadow = true;
           scene.add(prong);
+          obstacles.push(prong); // Prongs are also obstacles
         }
       }
 
@@ -399,6 +409,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       napkin.receiveShadow = true;
       napkin.castShadow = true;
       scene.add(napkin);
+      obstacles.push(napkin); // Napkin is an obstacle
 
       // PRESSURE PLATE
       const plateDiscGeometry = new THREE.CylinderGeometry(2.2, 2.2, 0.4, 64);
@@ -415,6 +426,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       plate1.castShadow = true;
       scene.add(plate1);
       puzzleElements.push(plate1);
+      obstacles.push(plate1); // Plate is an obstacle
 
       // KNIFE LEVER
       const knifeBladeGeometry = new THREE.BoxGeometry(1.2, 0.2, 16);
@@ -447,6 +459,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       knife.userData = { type: 'lever', id: 'lever1' };
       scene.add(knife);
       puzzleElements.push(knife);
+      obstacles.push(knife); // Knife is an obstacle
 
       // CERAMIC PLATE (rises when lever activated)
       const dishGeometry = new THREE.CylinderGeometry(8, 7, 1.2, 64);
@@ -461,15 +474,9 @@ export default function Mission3DView({ gameState, setGameState }) {
       plate.castShadow = true;
       plate.receiveShadow = true;
       scene.add(plate);
-      interactiveObjects.push(plate);
+      obstacles.push(plate); // Rising plate is an obstacle
 
       // SUGAR CUBES - white crystalline
-      const sugarPositions = [
-        { x: 20, y: 1, z: -8 },
-        { x: 22, y: 1, z: -8 },
-        { x: 21, y: 3, z: -8 },
-        { x: 24, y: 1, z: -6 }
-      ];
       sugarPositions.forEach((pos, i) => {
         const cubeGeometry = new THREE.BoxGeometry(2, 2, 2);
         const cubeMaterial = new THREE.MeshStandardMaterial({ 
@@ -570,6 +577,12 @@ export default function Mission3DView({ gameState, setGameState }) {
     const handleKeyDown = (e) => { 
       keys[e.key.toLowerCase()] = true;
       
+      if (e.key === ' ' && isOnGround) {
+        playerVelocityY = jumpForce;
+        isOnGround = false;
+        addLog("Jump!", 'info');
+      }
+      
       if (e.key.toLowerCase() === 'e') {
         puzzleElements.forEach(elem => {
           const distance = player.position.distanceTo(elem.position);
@@ -584,8 +597,7 @@ export default function Mission3DView({ gameState, setGameState }) {
               setLeverStates(prev => ({ ...prev, [leverId]: !prev[leverId] }));
               addLog(`✓ Lever ${!leverStates[leverId] ? 'activated' : 'deactivated'}! Plate moved.`, 'info');
             } else if (elem.userData.type === 'pressure_plate') {
-              setPuzzleStates(prev => ({ ...prev, [elem.userData.id]: true }));
-              addLog(`✓ Pressure plate activated!`, 'info');
+              // Handled in animate loop based on player position, not direct interaction
             }
           }
         });
@@ -629,6 +641,8 @@ export default function Mission3DView({ gameState, setGameState }) {
     const animate = () => {
       const delta = clock.getDelta();
 
+      playerVelocityY += gravity * delta;
+      
       const baseSpeed = keys['shift'] ? 20 : 10;
       const speed = onSlippery ? baseSpeed * 1.5 : baseSpeed;
       const direction = new THREE.Vector3();
@@ -638,56 +652,103 @@ export default function Mission3DView({ gameState, setGameState }) {
       if (keys['a']) direction.x -= 1;
       if (keys['d']) direction.x += 1;
 
+      const currentHorizontalPosition = new THREE.Vector3(player.position.x, 0, player.position.z);
+      const targetHorizontalPosition = new THREE.Vector3(player.position.x, 0, player.position.z);
+
       if (direction.length() > 0) {
         direction.normalize();
-        const newVelocity = new THREE.Vector3(
-          direction.x * speed * delta,
-          0,
-          direction.z * speed * delta
-        );
-        
-        const newPosition = player.position.clone().add(newVelocity);
-        
-        let collision = false;
-        onSlippery = false;
+        targetHorizontalPosition.x += direction.x * speed * delta;
+        targetHorizontalPosition.z += direction.z * speed * delta;
+      }
+      
+      let newPlayerPositionY = player.position.y + playerVelocityY * delta;
 
-        obstacles.forEach(obs => {
-          const obsBox = new THREE.Box3().setFromObject(obs);
-          const playerBox = new THREE.Box3().setFromCenterAndSize(
-            newPosition,
-            new THREE.Vector3(1, 2, 1)
-          );
-          if (obsBox.intersectsBox(playerBox)) {
-            collision = true;
-          }
-        });
+      onSlippery = false;
+      isOnGround = false;
 
-        interactiveObjects.forEach(obj => {
-          if (obj.userData.type === 'slippery') {
-            const distance = new THREE.Vector2(newPosition.x, newPosition.z)
-              .distanceTo(new THREE.Vector2(obj.position.x, obj.position.z));
-            if (distance < 5) {
-              onSlippery = true;
-            }
-          }
-        });
-
-        if (!collision) {
-          player.position.add(newVelocity);
-          setPlayerPosition({ x: player.position.x, y: player.position.y, z: player.position.z });
-        }
+      // --- Vertical collision with ground plane (y=0) ---
+      if (newPlayerPositionY - playerHalfHeight <= 0) { // If player's bottom hits or goes below ground
+          newPlayerPositionY = playerHalfHeight; // Snap player to sit on the ground
+          playerVelocityY = 0;
+          isOnGround = true;
       }
 
+      let actualHorizontalPosition = new THREE.Vector3(targetHorizontalPosition.x, player.position.y, targetHorizontalPosition.z);
+      
+      // --- Collision with obstacles ---
+      obstacles.forEach(obs => {
+        const obsBox = new THREE.Box3().setFromObject(obs);
+
+        const playerBoxAtTargetPos = new THREE.Box3().setFromCenterAndSize(
+            new THREE.Vector3(targetHorizontalPosition.x, newPlayerPositionY, targetHorizontalPosition.z),
+            new THREE.Vector3(playerRadius * 2, playerHalfHeight * 2, playerRadius * 2)
+        );
+
+        // Check for landing on an obstacle
+        if (playerVelocityY < 0 && 
+            (player.position.y - playerHalfHeight) >= (obsBox.max.y - 0.1) && // Was above or slightly into
+            (newPlayerPositionY - playerHalfHeight) < (obsBox.max.y + 0.1) && // Now below or slightly above
+            playerBoxAtTargetPos.intersectsBox(obsBox) // Horizontally aligned
+        ) {
+            newPlayerPositionY = obsBox.max.y + playerHalfHeight; // Snap to top of obstacle
+            playerVelocityY = 0; // Stop vertical movement
+            isOnGround = true; // Player is on an obstacle
+        }
+        // Check for hitting head on an obstacle
+        else if (playerVelocityY > 0 && 
+            (player.position.y + playerHalfHeight) <= (obsBox.min.y + 0.1) && // Was below or slightly into
+            (newPlayerPositionY + playerHalfHeight) > (obsBox.min.y - 0.1) && // Now above or slightly below
+            playerBoxAtTargetPos.intersectsBox(obsBox) // Horizontally aligned
+        ) {
+            playerVelocityY = 0; // Stop upward movement
+            newPlayerPositionY = obsBox.min.y - playerHalfHeight; // Snap to bottom of obstacle
+        }
+        // Check for horizontal collision (walls)
+        if (playerBoxAtTargetPos.intersectsBox(obsBox)) {
+            // Revert horizontal movement if it would cause a collision
+            actualHorizontalPosition.x = player.position.x;
+            actualHorizontalPosition.z = player.position.z;
+        }
+      });
+
+      player.position.x = actualHorizontalPosition.x;
+      player.position.z = actualHorizontalPosition.z;
+      player.position.y = newPlayerPositionY; // Apply final vertical position
+
+      setPlayerPosition({ x: player.position.x, y: player.position.y, z: player.position.z });
+
+      // --- Pressure plate activation ---
       puzzleElements.forEach(elem => {
         if (elem.userData.type === 'pressure_plate') {
           const distance = new THREE.Vector2(player.position.x, player.position.z)
             .distanceTo(new THREE.Vector2(elem.position.x, elem.position.z));
           
-          if (distance < 2) {
+          const plateHalfHeight = elem.geometry.parameters.height / 2;
+          const plateTopY = elem.position.y + plateHalfHeight;
+
+          // Check if player is within horizontal range and vertically on top of the plate
+          const playerIsOnPlate = distance < 2 &&
+                                 (player.position.y - playerHalfHeight <= plateTopY + 0.2) && // Player's bottom is slightly above or on plate top
+                                 (player.position.y - playerHalfHeight >= plateTopY - 0.5); // Player's bottom is not too far below plate top (e.g. falling through)
+          
+          if (playerIsOnPlate) {
             if (!puzzleStates[elem.userData.id]) {
               setPuzzleStates(prev => ({ ...prev, [elem.userData.id]: true }));
               addLog(`✓ Pressure plate activated!`, 'info');
             }
+          } else if (puzzleStates[elem.userData.id]) {
+            setPuzzleStates(prev => ({ ...prev, [elem.userData.id]: false }));
+            addLog(`Pressure plate deactivated.`, 'info');
+          }
+        }
+      });
+
+      interactiveObjects.forEach(obj => {
+        if (obj.userData.type === 'slippery') {
+          const distance = new THREE.Vector2(player.position.x, player.position.z)
+            .distanceTo(new THREE.Vector2(obj.position.x, obj.position.z));
+          if (distance < 5) {
+            onSlippery = true;
           }
         }
       });
@@ -703,25 +764,6 @@ export default function Mission3DView({ gameState, setGameState }) {
 
         obj.position.y += Math.sin(clock.elapsedTime * 2) * 0.02;
         obj.rotation.y += delta * 0.5;
-      });
-
-      interactiveObjects.forEach((obj, index) => {
-        if (obj.userData.type === 'falling_hazard') {
-          obj.position.y += obj.userData.velocity;
-          obj.rotation.x += 0.1;
-          obj.rotation.y += 0.05;
-          
-          if (obj.position.y < 0) {
-            scene.remove(obj);
-            interactiveObjects.splice(index, 1);
-          }
-          
-          const distance = player.position.distanceTo(obj.position);
-          if (distance < 2) {
-            addLog("Hit by falling object!", 'error');
-            player.position.set(0, 1, 0);
-          }
-        }
       });
 
       mistParticles.forEach(mist => {
@@ -798,10 +840,9 @@ export default function Mission3DView({ gameState, setGameState }) {
             </div>
             
             <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm border border-gray-600 rounded p-2 font-mono text-xs text-gray-300">
-              <p>W/A/S/D: Move | E: Interact/Destroy | Shift: Sprint</p>
-              <p className="text-yellow-400 mt-1">
-                <Hammer className="w-3 h-3 inline mr-1" />
-                Hit objects multiple times to destroy
+              <p>W/A/S/D: Move | SPACE: Jump | E: Interact | Shift: Sprint</p>
+              <p className="text-green-400 mt-1 font-bold">
+                Press SPACE to JUMP and climb platforms!
               </p>
             </div>
 
@@ -823,16 +864,16 @@ export default function Mission3DView({ gameState, setGameState }) {
                   Mission 1 Solution:
                 </h4>
                 <ol className="text-yellow-100 font-mono text-xs space-y-1 list-decimal list-inside">
-                  <li>Climb the SALT SHAKER (cylindrical white object)</li>
-                  <li>Press button [E] on top (turns green)</li>
-                  <li>Fork bridge appears - cross it</li>
-                  <li>Step on PRESSURE PLATE on napkin</li>
+                  <li>Jump (SPACE) to climb the SALT SHAKER</li>
+                  <li>Press [E] on the button on top (turns green)</li>
+                  <li>Jump across the fork bridge that appears</li>
+                  <li>Walk onto the PRESSURE PLATE on napkin</li>
                   <li>Go to KNIFE, press [E] to activate lever</li>
-                  <li>White plate rises up</li>
-                  <li>Climb plate to reach WATER DROPLET</li>
+                  <li>Jump onto the white plate that rises</li>
+                  <li>Jump to reach WATER DROPLET</li>
                 </ol>
-                <p className="text-yellow-200 text-xs mt-2 italic">
-                  All 3 puzzles must be completed to lower the water droplet!
+                <p className="text-yellow-200 text-xs mt-2 italic font-bold">
+                  Use SPACE to jump and climb! All 3 puzzles unlock water!
                 </p>
               </div>
             )}
