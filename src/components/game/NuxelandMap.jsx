@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
@@ -55,7 +54,7 @@ export default function NuxelandMap() {
             <Card className="bg-[#0F1729] border-gray-700">
               <CardContent className="p-0">
                 <div 
-                  className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg overflow-hidden border-4 border-blue-500/30"
+                  className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg overflow-hidden"
                   style={{ 
                     height: '600px',
                     backgroundImage: `
@@ -65,9 +64,16 @@ export default function NuxelandMap() {
                     `
                   }}
                 >
-                  {/* Inner border decoration */}
-                  <div className="absolute inset-2 border-2 border-cyan-500/20 rounded pointer-events-none"></div>
-                  <div className="absolute inset-4 border border-cyan-500/10 rounded pointer-events-none"></div>
+                  {/* Country-like border outline */}
+                  <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ filter: 'drop-shadow(0 0 8px rgba(59, 130, 246, 0.4))' }}>
+                    <path
+                      d="M 100 150 Q 120 140, 150 160 L 180 140 Q 220 150, 250 180 L 280 160 Q 320 170, 350 200 L 380 220 Q 400 260, 390 300 L 400 340 Q 390 380, 370 410 L 350 440 Q 320 460, 280 450 L 240 460 Q 200 470, 160 450 L 130 430 Q 100 410, 90 380 L 80 340 Q 70 300, 80 260 L 90 220 Q 95 180, 100 150 Z"
+                      fill="none"
+                      stroke="rgba(59, 130, 246, 0.6)"
+                      strokeWidth="3"
+                      strokeDasharray="8,4"
+                    />
+                  </svg>
 
                   {/* Topographic lines */}
                   <svg className="absolute inset-0 w-full h-full opacity-10">
@@ -79,13 +85,6 @@ export default function NuxelandMap() {
                     </defs>
                     <rect width="100%" height="100%" fill="url(#topo)" />
                   </svg>
-
-                  {/* Regions */}
-                  <div className="absolute inset-4 border-2 border-blue-500/20 rounded">
-                    <div className="absolute top-2 left-2 text-blue-400 font-mono text-xs uppercase opacity-40">
-                      North Sector
-                    </div>
-                  </div>
 
                   <div className="absolute top-4 left-4 bg-black/70 px-3 py-1 rounded border border-green-500/30">
                     <p className="text-green-400 font-mono text-xs">
@@ -102,6 +101,24 @@ export default function NuxelandMap() {
                     </p>
                   </div>
 
+                  {/* Black dotted roads connecting all locations */}
+                  <svg className="absolute inset-0 pointer-events-none" style={{ zIndex: 1 }}>
+                    {/* Capital to Kitchen */}
+                    <line x1="50%" y1="50%" x2="35%" y2="40%" stroke="#000000" strokeWidth="2" strokeDasharray="4,4" opacity="0.6" />
+                    {/* Capital to Lab */}
+                    <line x1="50%" y1="50%" x2="60%" y2="35%" stroke="#000000" strokeWidth="2" strokeDasharray="4,4" opacity="0.6" />
+                    {/* Capital to Underground */}
+                    <line x1="50%" y1="50%" x2="70%" y2="60%" stroke="#000000" strokeWidth="2" strokeDasharray="4,4" opacity="0.6" />
+                    {/* Capital to Forest */}
+                    <line x1="50%" y1="50%" x2="25%" y2="70%" stroke="#000000" strokeWidth="2" strokeDasharray="4,4" opacity="0.6" />
+                    {/* Lab to Mountain */}
+                    <line x1="60%" y1="35%" x2="80%" y2="25%" stroke="#000000" strokeWidth="2" strokeDasharray="4,4" opacity="0.6" />
+                    {/* Kitchen to Forest */}
+                    <line x1="35%" y1="40%" x2="25%" y2="70%" stroke="#000000" strokeWidth="2" strokeDasharray="4,4" opacity="0.6" />
+                    {/* Underground to Lab */}
+                    <line x1="70%" y1="60%" x2="60%" y2="35%" stroke="#000000" strokeWidth="2" strokeDasharray="4,4" opacity="0.6" />
+                  </svg>
+
                   {/* Location markers */}
                   {locations.map(location => {
                     const status = getLocationStatus(location.mission);
@@ -109,42 +126,19 @@ export default function NuxelandMap() {
                       <button
                         key={location.id}
                         className="absolute transform -translate-x-1/2 -translate-y-1/2 group"
-                        style={{ left: `${location.x}%`, top: `${location.y}%` }}
+                        style={{ left: `${location.x}%`, top: `${location.y}%`, zIndex: 10 }}
                         onClick={() => setSelectedLocation(location)}
                       >
                         <div className={`w-5 h-5 rounded-full ${getLocationColor(status)} shadow-lg ring-4 ring-black/50 group-hover:scale-150 transition-all duration-300`}>
                           <div className="absolute inset-0 rounded-full animate-ping opacity-30"></div>
                         </div>
-                        <div className="absolute top-8 left-1/2 transform -translate-x-1/2 bg-black/95 px-3 py-1.5 rounded border border-white/20 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl">
+                        <div className="absolute top-8 left-1/2 transform -translate-x-1/2 bg-black/95 px-3 py-1.5 rounded border border-white/20 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl z-50">
                           <p className="text-white text-xs font-mono font-bold">{location.name}</p>
                           <p className="text-gray-400 text-[10px] font-mono">{location.region} region</p>
                         </div>
                       </button>
                     );
                   })}
-
-                  {/* Connection lines between mission locations */}
-                  <svg className="absolute inset-0 pointer-events-none">
-                    {missions.filter(m => m.mission_number > 1).map((mission, idx) => {
-                      const from = locations.find(l => l.mission?.mission_number === mission.mission_number - 1);
-                      const to = locations.find(l => l.mission?.mission_number === mission.mission_number);
-                      if (from && to) {
-                        return (
-                          <line
-                            key={mission.id}
-                            x1={`${from.x}%`}
-                            y1={`${from.y}%`}
-                            x2={`${to.x}%`}
-                            y2={`${to.y}%`}
-                            stroke="rgba(59, 130, 246, 0.3)"
-                            strokeWidth="2"
-                            strokeDasharray="5,5"
-                          />
-                        );
-                      }
-                      return null;
-                    })}
-                  </svg>
                 </div>
               </CardContent>
             </Card>
