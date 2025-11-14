@@ -87,7 +87,7 @@ export default function Mission3DView({ gameState, setGameState }) {
           setDestroyedObjects([]);
           setLeverStates({});
           setActivatedButtons([]);
-          setEnvironmentVariant(null); // Reset variant for new mission
+          setEnvironmentVariant(null);
         }, 2000);
       }
     }
@@ -167,6 +167,7 @@ Return JSON with this structure:
     );
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(mountRef.current.clientWidth / 2, mountRef.current.clientHeight / 2); // Set smaller for testing
     renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -1275,22 +1276,15 @@ Return JSON with this structure:
       
       renderer.dispose();
     };
-  }, [activeMission, puzzleStates, inventory, missionStarted, destroyedObjects, leverStates, activatedButtons, mobileControls, environmentVariant]);
+  }, [activeMission, puzzleStates, inventory, missionStarted, destroyedObjects, leverStates, activatedButtons, environmentVariant]);
 
   const handleMobileJump = () => {
-    // Set the jump flag in mobileControls to be handled in the animation loop
     setMobileControls(prev => ({ ...prev, jump: true }));
   };
 
   const handleMobileInteract = () => {
-    // Dispatch a synthetic keyboard event for 'e'
-    const keyEvent = new KeyboardEvent('keydown', { key: 'e', code: 'KeyE', bubbles: true });
+    const keyEvent = new KeyboardEvent('keydown', { key: 'e' });
     window.dispatchEvent(keyEvent);
-    // Simulate keyup immediately as 'e' is typically a tap for interact
-    setTimeout(() => {
-        const keyEventUp = new KeyboardEvent('keyup', { key: 'e', code: 'KeyE', bubbles: true });
-        window.dispatchEvent(keyEventUp);
-    }, 50);
   };
 
   return (

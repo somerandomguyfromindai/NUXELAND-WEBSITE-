@@ -64,14 +64,65 @@ export default function NuxelandMap() {
                     `
                   }}
                 >
-                  {/* Country-like border outline */}
+                  {/* Full country border outline */}
                   <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ filter: 'drop-shadow(0 0 8px rgba(59, 130, 246, 0.4))' }}>
                     <path
-                      d="M 100 150 Q 120 140, 150 160 L 180 140 Q 220 150, 250 180 L 280 160 Q 320 170, 350 200 L 380 220 Q 400 260, 390 300 L 400 340 Q 390 380, 370 410 L 350 440 Q 320 460, 280 450 L 240 460 Q 200 470, 160 450 L 130 430 Q 100 410, 90 380 L 80 340 Q 70 300, 80 260 L 90 220 Q 95 180, 100 150 Z"
+                      d="M 80 120 
+                         Q 100 110, 140 130 
+                         L 180 115 
+                         Q 220 120, 260 145 
+                         L 300 130 
+                         Q 350 140, 390 170 
+                         L 420 195 
+                         Q 450 230, 445 275 
+                         L 455 320 
+                         Q 450 365, 430 400 
+                         L 410 435 
+                         Q 380 465, 340 460 
+                         L 295 470 
+                         Q 250 480, 205 470 
+                         L 165 455 
+                         Q 125 440, 105 410 
+                         L 85 375 
+                         Q 65 340, 70 300 
+                         L 75 260 
+                         Q 70 220, 75 185 
+                         L 80 150 
+                         Q 78 135, 80 120 Z"
                       fill="none"
-                      stroke="rgba(59, 130, 246, 0.6)"
+                      stroke="rgba(59, 130, 246, 0.7)"
                       strokeWidth="3"
-                      strokeDasharray="8,4"
+                      strokeDasharray="10,5"
+                      strokeLinecap="round"
+                    />
+                    {/* Additional inner border for depth */}
+                    <path
+                      d="M 100 140 
+                         Q 115 132, 150 148 
+                         L 190 135 
+                         Q 225 140, 265 162 
+                         L 305 148 
+                         Q 345 156, 380 182 
+                         L 408 205 
+                         Q 435 238, 430 280 
+                         L 438 320 
+                         Q 434 358, 418 388 
+                         L 400 420 
+                         Q 373 447, 337 442 
+                         L 295 451 
+                         Q 253 460, 212 451 
+                         L 175 438 
+                         Q 140 425, 122 398 
+                         L 105 366 
+                         Q 88 334, 92 298 
+                         L 96 262 
+                         Q 92 228, 96 195 
+                         L 100 162 
+                         Q 99 148, 100 140 Z"
+                      fill="none"
+                      stroke="rgba(59, 130, 246, 0.3)"
+                      strokeWidth="2"
+                      strokeDasharray="6,3"
                     />
                   </svg>
 
