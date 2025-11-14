@@ -193,6 +193,8 @@ export default function Mission3DView({ gameState, setGameState }) {
     const climbSpeed = 5;
     const playerHalfHeight = 0.8;
     const playerRadius = 0.4;
+    let jumpCount = 0;
+    const maxJumps = 2; // Double jump
 
     if (activeMission.mission_number === 1) {
       addLog("Mission 1: Hold SPACE near objects to climb them!", 'info');
@@ -881,9 +883,13 @@ export default function Mission3DView({ gameState, setGameState }) {
     const handleKeyDown = (e) => { 
       keys[e.key.toLowerCase()] = true;
       
-      if (e.key === ' ' && isOnGround && !isClimbing) {
-        playerVelocityY = jumpForce;
-        isOnGround = false;
+      if (e.key === ' ') {
+        // Double jump logic
+        if (jumpCount < maxJumps) {
+          playerVelocityY = jumpForce;
+          jumpCount++;
+          isOnGround = false;
+        }
       }
       
       if (e.key.toLowerCase() === 'e') {
@@ -1028,6 +1034,7 @@ export default function Mission3DView({ gameState, setGameState }) {
         newPlayerPositionY = playerHalfHeight;
         playerVelocityY = 0;
         isOnGround = true;
+        jumpCount = 0; // Reset jump count when on ground
       }
 
       let actualHorizontalPosition = new THREE.Vector3(targetHorizontalPosition.x, player.position.y, targetHorizontalPosition.z);
@@ -1048,6 +1055,7 @@ export default function Mission3DView({ gameState, setGameState }) {
           newPlayerPositionY = obsBox.max.y + playerHalfHeight;
           playerVelocityY = 0;
           isOnGround = true;
+          jumpCount = 0; // Reset jump count when landing on obstacle
         }
         else if (playerVelocityY > 0 && 
           (player.position.y + playerHalfHeight) <= (obsBox.min.y + 0.1) &&
