@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { AlertTriangle, DollarSign, Ship, Radio, Lock, Key, Timer, CheckCircle, XCircle } from "lucide-react";
 
 export default function FinalChoice({ gameState, onChoice }) {
-  const [stage, setStage] = useState('initial'); // initial, challenge, executing, complete
+  const [stage, setStage] = useState('initial');
   const [selectedChoice, setSelectedChoice] = useState(null);
   const [passwordAttempt, setPasswordAttempt] = useState('');
   const [sequenceProgress, setSequenceProgress] = useState([]);
@@ -66,7 +66,7 @@ export default function FinalChoice({ gameState, onChoice }) {
   }, [stage, sequenceProgress, selectedChoice]);
 
   const handleCodeChange = (index, value) => {
-    if (value.length > 1) return;
+    if (!value || value.length > 1) return;
     const newCode = [...codeInput];
     newCode[index] = value;
     setCodeInput(newCode);
@@ -98,7 +98,8 @@ export default function FinalChoice({ gameState, onChoice }) {
   };
 
   const handlePasswordSubmit = () => {
-    if (passwordAttempt.toUpperCase() === 'NUXELAND') {
+    const password = (passwordAttempt || '').trim().toUpperCase();
+    if (password === 'NUXELAND') {
       setStage('executing');
       setTimeout(() => {
         onChoice();
@@ -386,7 +387,7 @@ export default function FinalChoice({ gameState, onChoice }) {
               <Input
                 type="text"
                 value={passwordAttempt}
-                onChange={(e) => setPasswordAttempt(e.target.value)}
+                onChange={(e) => setPasswordAttempt(e.target.value || '')}
                 onKeyPress={(e) => e.key === 'Enter' && handlePasswordSubmit()}
                 placeholder="ENTER PASSWORD"
                 className="w-full h-12 text-center text-lg font-mono bg-black border-green-500/50 text-green-400 placeholder:text-gray-600"
