@@ -853,8 +853,7 @@ export default function Mission3DView({ gameState, setGameState }) {
               addLog(`✓ Pressure plate activated!`, 'info');
             }
           }
-        }
-      });
+        });
 
       interactiveObjects.forEach(obj => {
         if (obj.userData.type === 'slippery') {
@@ -982,7 +981,7 @@ export default function Mission3DView({ gameState, setGameState }) {
                   <li>Climb down and cross fork bridge</li>
                   <li>Walk onto PRESSURE PLATE on napkin</li>
                   <li>Go to KNIFE, press [E] to activate lever</li>
-                  <li>White plate rises - climb it (hold SPACE)</li>
+                  <li>Water droplet drops to ground - walk to it!</li>
                   <li>Reach WATER DROPLET to complete mission</li>
                 </ol>
                 <p className="text-yellow-200 text-xs mt-2 italic font-bold">
