@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -13,7 +14,7 @@ const navigationItems = [
   { title: "Map", url: createPageUrl("Map"), icon: MapPin },
   { title: "Resources", url: createPageUrl("Resources"), icon: Package },
   { title: "Shop", url: createPageUrl("Shop"), icon: BarChart3 },
-  { title: "Dashboard", url: createPageUrl("Dashboard"), icon: BarChart3 },
+  { title: "Experiment Lab", url: createPageUrl("Dashboard"), icon: BarChart3 }, // Changed from "Dashboard" to "Experiment Lab"
   { title: "Community", url: createPageUrl("Community"), icon: Users },
 ];
 
