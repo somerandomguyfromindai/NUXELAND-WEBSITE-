@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
@@ -54,7 +55,7 @@ export default function NuxelandMap() {
             <Card className="bg-[#0F1729] border-gray-700">
               <CardContent className="p-0">
                 <div 
-                  className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg overflow-hidden"
+                  className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg overflow-hidden border-4 border-blue-500/30"
                   style={{ 
                     height: '600px',
                     backgroundImage: `
@@ -64,6 +65,10 @@ export default function NuxelandMap() {
                     `
                   }}
                 >
+                  {/* Inner border decoration */}
+                  <div className="absolute inset-2 border-2 border-cyan-500/20 rounded pointer-events-none"></div>
+                  <div className="absolute inset-4 border border-cyan-500/10 rounded pointer-events-none"></div>
+
                   {/* Topographic lines */}
                   <svg className="absolute inset-0 w-full h-full opacity-10">
                     <defs>

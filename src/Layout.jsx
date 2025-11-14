@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Atom, Home, FlaskConical, BarChart3, Users, Menu, X, Clock, MapPin, Package } from "lucide-react";
+import { Atom, Home, FlaskConical, BarChart3, Users, Menu, X, Clock, MapPin, Package, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
+import NuxelandAgent from "@/components/ai/NuxelandAgent";
 
 const navigationItems = [
   { title: "Home", url: createPageUrl("Home"), icon: Home },
@@ -21,6 +22,7 @@ export default function Layout({ children, currentPageName }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [user, setUser] = useState(null);
+  const [agentOpen, setAgentOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -184,6 +186,16 @@ export default function Layout({ children, currentPageName }) {
       <main className="pt-16">
         {children}
       </main>
+
+      {/* AI Agent Button */}
+      <button
+        onClick={() => setAgentOpen(!agentOpen)}
+        className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shadow-2xl hover:scale-110 transition-transform"
+      >
+        <Bot className="w-7 h-7 text-white" />
+      </button>
+
+      <NuxelandAgent isOpen={agentOpen} onClose={() => setAgentOpen(false)} />
 
       <footer className="bg-[#050811] border-t border-white/10 mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
