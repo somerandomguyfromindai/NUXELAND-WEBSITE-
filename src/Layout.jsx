@@ -93,7 +93,6 @@ export default function Layout({ children, currentPageName }) {
         }
       `}</style>
 
-      {/* Header */}
       <header 
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           scrolled 
@@ -103,7 +102,6 @@ export default function Layout({ children, currentPageName }) {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            {/* Logo */}
             <Link to={createPageUrl("Home")} className="flex items-center gap-3 group">
               <div className="relative">
                 <div className="absolute inset-0 bg-blue-500 rounded-full blur-xl opacity-50 group-hover:opacity-75 transition-opacity"></div>
@@ -115,7 +113,6 @@ export default function Layout({ children, currentPageName }) {
               </div>
             </Link>
 
-            {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-8">
               {navigationItems.map((item) => (
                 <Link
@@ -133,7 +130,6 @@ export default function Layout({ children, currentPageName }) {
               ))}
             </nav>
 
-            {/* User Section */}
             <div className="hidden md:flex items-center gap-4">
               {user && (
                 <div className="flex items-center gap-2">
@@ -148,16 +144,17 @@ export default function Layout({ children, currentPageName }) {
                   </div>
                 </div>
               )}
-              <Button 
-                size="sm" 
-                className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 animate-pulse-glow"
-              >
-                <Zap className="w-4 h-4 mr-2" />
-                New Experiment
-              </Button>
+              <Link to={createPageUrl("Simulator")}>
+                <Button 
+                  size="sm" 
+                  className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 animate-pulse-glow"
+                >
+                  <Zap className="w-4 h-4 mr-2" />
+                  New Experiment
+                </Button>
+              </Link>
             </div>
 
-            {/* Mobile Menu Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden text-white p-2"
@@ -167,7 +164,6 @@ export default function Layout({ children, currentPageName }) {
           </div>
         </div>
 
-        {/* Mobile Menu */}
         {mobileMenuOpen && (
           <div className="md:hidden bg-[#0A0E1A]/98 backdrop-blur-md border-t border-white/10">
             <div className="px-4 py-4 space-y-3">
@@ -191,12 +187,10 @@ export default function Layout({ children, currentPageName }) {
         )}
       </header>
 
-      {/* Main Content */}
       <main className="pt-16">
         {children}
       </main>
 
-      {/* Footer */}
       <footer className="bg-[#050811] border-t border-white/10 mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
