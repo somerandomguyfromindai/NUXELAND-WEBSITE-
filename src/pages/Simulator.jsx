@@ -3,11 +3,11 @@ import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Monitor, Folder, Radio, AlertTriangle, Play } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Monitor, Folder, Radio, AlertTriangle, Shield } from "lucide-react";
 import Mission3DView from "../components/game/Mission3DView";
 import FileBrowser from "../components/game/FileBrowser";
 import CommsPanel from "../components/game/CommsPanel";
+import GamepassMenu from "../components/game/GamepassMenu";
 import FinalChoice from "../components/game/FinalChoice";
 import MatrixEscape from "../components/game/MatrixEscape";
 
@@ -56,7 +56,6 @@ export default function Simulator() {
   return (
     <div className="min-h-screen bg-[#0A0E1A] py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        {/* Terminal Header */}
         <div className="mb-6 bg-gradient-to-r from-red-900/20 to-red-800/10 border border-red-500/30 rounded-lg p-4">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
@@ -73,7 +72,6 @@ export default function Simulator() {
           </p>
         </div>
 
-        {/* Warning Banner */}
         <div className="mb-6 bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-3 flex items-center gap-3">
           <AlertTriangle className="w-5 h-5 text-yellow-400" />
           <p className="text-yellow-300 text-sm font-mono">
@@ -81,7 +79,6 @@ export default function Simulator() {
           </p>
         </div>
 
-        {/* Main Interface */}
         <Card className="bg-[#0F1729] border-gray-700">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="w-full bg-[#1A1F2E] border-b border-gray-700 rounded-none">
@@ -106,6 +103,13 @@ export default function Simulator() {
                 <Radio className="w-4 h-4 mr-2" />
                 Internal Comms
               </TabsTrigger>
+              <TabsTrigger 
+                value="gamepasses"
+                className="flex-1 data-[state=active]:bg-orange-900/30 data-[state=active]:text-orange-400"
+              >
+                <Shield className="w-4 h-4 mr-2" />
+                Gamepasses
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="monitor" className="p-0">
@@ -118,6 +122,10 @@ export default function Simulator() {
 
             <TabsContent value="comms" className="p-0">
               <CommsPanel gameState={gameState} />
+            </TabsContent>
+
+            <TabsContent value="gamepasses" className="p-6">
+              <GamepassMenu />
             </TabsContent>
           </Tabs>
         </Card>
