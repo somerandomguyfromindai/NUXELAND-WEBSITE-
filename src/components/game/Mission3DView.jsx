@@ -26,9 +26,12 @@ export default function Mission3DView({ gameState, setGameState }) {
     up: false,
     down: false,
     left: false,
-    right: false
+    right: false,
+    jump: false
   });
   const mobileControlsRef = useRef(mobileControls);
+  const [environmentVariant, setEnvironmentVariant] = useState(null);
+  const [isGeneratingVariant, setIsGeneratingVariant] = useState(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -84,8 +87,68 @@ export default function Mission3DView({ gameState, setGameState }) {
           setDestroyedObjects([]);
           setLeverStates({});
           setActivatedButtons([]);
+          setEnvironmentVariant(null); // Reset variant for new mission
         }, 2000);
       }
+    }
+  };
+
+  const generateEnvironmentVariant = async () => {
+    if (!activeMission || isGeneratingVariant) return;
+    
+    setIsGeneratingVariant(true);
+    try {
+      const playerActions = {
+        puzzles_completed: Object.keys(puzzleStates).filter(k => puzzleStates[k]).length,
+        buttons_activated: activatedButtons.length,
+        levers_activated: Object.keys(leverStates).filter(k => leverStates[k]).length,
+        items_collected: inventory.length,
+        destroyed_objects: destroyedObjects.length
+      };
+
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt: `You are a game environment designer for Mission ${activeMission.mission_number}: ${activeMission.title}.
+
+Current player actions:
+${JSON.stringify(playerActions, null, 2)}
+
+Generate a JSON object with environmental variations to make the mission more challenging and unique based on player progress:
+
+For Mission 1 (Kitchen):
+- Add hazards like "steam vents", "water puddles", "falling utensils"
+- Modify object positions slightly (small random offsets)
+- Add dynamic elements like "moving platforms", "rotating obstacles"
+
+For Mission 2 (Lab):
+- Add "additional laser barriers", "moving security cameras", "patrol drones"
+- Modify "terminal hack difficulty", "data core elevation"
+- Add environmental effects like "flickering lights", "gas leaks"
+
+Return JSON with this structure:
+{
+  "hazards": [{"type": "steam_vent", "x": 10, "y": 2, "z": -20, "radius": 3}],
+  "modified_objects": [{"id": "sink", "position_offset": {"x": 0, "y": 0, "z": 2}}],
+  "dynamic_elements": [{"type": "moving_platform", "path": [{"x": 10, "z": 20}, {"x": 30, "z": 20}], "speed": 2}],
+  "effects": [{"type": "flickering_lights", "intensity": 0.3}]
+}`,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            hazards: { type: "array", items: { type: "object" } },
+            modified_objects: { type: "array", items: { type: "object" } },
+            dynamic_elements: { type: "array", items: { type: "object" } },
+            effects: { type: "array", items: { type: "object" } }
+          }
+        }
+      });
+
+      setEnvironmentVariant(response);
+      addLog('Environment adapted to your progress!', 'warning');
+    } catch (error) {
+      console.error('Failed to generate variant:', error);
+      addLog('Failed to generate environment variant.', 'error');
+    } finally {
+      setIsGeneratingVariant(false);
     }
   };
 
@@ -456,7 +519,10 @@ export default function Mission3DView({ gameState, setGameState }) {
         const crumbSize = 1.2 + Math.random() * 1.8;
         const crumb = new THREE.Mesh(
           new THREE.DodecahedronGeometry(crumbSize, 1),
-          new THREE.MeshStandardMaterial({ color: 0xdaa520, roughness: 0.95 })
+          new THREE.MeshStandardMaterial({ 
+            color: 0xdaa520,
+            roughness: 0.95
+          })
         );
         crumb.position.set(10 + i * 4 + Math.random() * 2, crumbSize / 2, 5 + Math.random() * 4);
         crumb.rotation.set(Math.random(), Math.random(), Math.random());
@@ -1003,7 +1069,7 @@ export default function Mission3DView({ gameState, setGameState }) {
         }
       });
 
-      if ((keys[' '] || (mobileControlsRef.current.up && touchingObstacle)) && touchingObstacle) { // Allow mobile up button to trigger climb
+      if ((keys[' '] || mobileControlsRef.current.jump) && touchingObstacle) { // Allow mobile jump button to trigger climb
         isClimbing = true;
         playerVelocityY = 0;
         player.position.y += climbSpeed * delta;
@@ -1011,24 +1077,11 @@ export default function Mission3DView({ gameState, setGameState }) {
         
         const touchedBox = new THREE.Box3().setFromObject(touchingObstacle);
         // Simple collision response for climbing - prevent moving through object
-        // This is a basic example, more robust climbing would involve raycasting
-        const playerBBox = new THREE.Box3().setFromCenterAndSize(
-          new THREE.Vector3(player.position.x, player.position.y, player.position.z),
-          new THREE.Vector3(playerRadius * 2, playerHalfHeight * 2, playerRadius * 2)
-        );
-        if (playerBBox.intersectsBox(touchedBox)) {
-            // Adjust position to be outside the obstacle in XZ plane if it intersects
-            const penetrationX = Math.min(playerBBox.max.x - touchedBox.min.x, touchedBox.max.x - playerBBox.min.x);
-            const penetrationZ = Math.min(playerBBox.max.z - touchedBox.min.z, touchedBox.max.z - playerBBox.min.z);
-
-            if (penetrationX < penetrationZ) {
-                if (player.position.x < touchedBox.min.x) player.position.x -= penetrationX + 0.01;
-                else player.position.x += penetrationX + 0.01;
-            } else {
-                if (player.position.z < touchedBox.min.z) player.position.z -= penetrationZ + 0.01;
-                else player.position.z += penetrationZ + 0.01;
-            }
-        }
+        // Pushes player out if their center is inside the XZ bounds of the obstacle
+        if (player.position.x < touchedBox.min.x) player.position.x = touchedBox.min.x - playerRadius;
+        if (player.position.x > touchedBox.max.x) player.position.x = touchedBox.max.x + playerRadius;
+        if (player.position.z < touchedBox.min.z) player.position.z = touchedBox.min.z - playerRadius;
+        if (player.position.z > touchedBox.max.z) player.position.z = touchedBox.max.z + playerRadius;
       } else {
         isClimbing = false;
         if (!isOnGround) {
@@ -1036,6 +1089,14 @@ export default function Mission3DView({ gameState, setGameState }) {
         }
       }
       
+      // Handle mobile jump separately (one-shot trigger)
+      if (mobileControlsRef.current.jump && jumpCount < maxJumps && !keys[' ']) {
+        playerVelocityY = jumpForce;
+        jumpCount++;
+        isOnGround = false;
+        setMobileControls(prev => ({ ...prev, jump: false })); // Reset jump flag after triggering
+      }
+
       const baseSpeed = keys['shift'] ? 20 : 10;
       const speed = onSlippery ? baseSpeed * 1.5 : baseSpeed;
       const direction = new THREE.Vector3();
@@ -1176,6 +1237,22 @@ export default function Mission3DView({ gameState, setGameState }) {
         }
       });
 
+      // Apply environment variants
+      if (environmentVariant) {
+        // Apply dynamic effects
+        environmentVariant.effects?.forEach(effect => {
+          if (effect.type === 'flickering_lights') {
+            // Apply flickering to ambient light
+            ambientLight.intensity = 0.5 + Math.sin(clock.elapsedTime * 5) * effect.intensity;
+          }
+          // TODO: Add logic for other effects if defined in the LLM response
+        });
+        // TODO: Implement other variant applications here (hazards, modified_objects, dynamic_elements)
+        // For modified_objects and dynamic_elements, these would ideally be set up once when the scene loads,
+        // so they might need to be part of the initial scene setup conditional on environmentVariant being present.
+        // Or, if they are dynamic, logic to create/move them needs to be here.
+      }
+
       camera.position.x = player.position.x + mouseX * 8;
       camera.position.y = player.position.y + 15;
       camera.position.z = player.position.z + 22;
@@ -1198,19 +1275,11 @@ export default function Mission3DView({ gameState, setGameState }) {
       
       renderer.dispose();
     };
-  }, [activeMission, puzzleStates, inventory, missionStarted, destroyedObjects, leverStates, activatedButtons, mobileControls]);
+  }, [activeMission, puzzleStates, inventory, missionStarted, destroyedObjects, leverStates, activatedButtons, mobileControls, environmentVariant]);
 
   const handleMobileJump = () => {
-    // Dispatch a synthetic keyboard event for ' ' (spacebar)
-    // This allows the existing jump logic in handleKeyDown to be reused.
-    // The event needs to be active for a short duration to simulate holding, if needed for climbing.
-    const keyEventDown = new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true });
-    window.dispatchEvent(keyEventDown);
-    // Simulate keyup after a very short delay for single jump
-    setTimeout(() => {
-        const keyEventUp = new KeyboardEvent('keyup', { key: ' ', code: 'Space', bubbles: true });
-        window.dispatchEvent(keyEventUp);
-    }, 100); // Adjust delay as needed
+    // Set the jump flag in mobileControls to be handled in the animation loop
+    setMobileControls(prev => ({ ...prev, jump: true }));
   };
 
   const handleMobileInteract = () => {
@@ -1274,6 +1343,14 @@ export default function Mission3DView({ gameState, setGameState }) {
             </div>
 
             <div className="absolute top-4 right-4 flex gap-2 z-10">
+              <Button
+                onClick={generateEnvironmentVariant}
+                disabled={isGeneratingVariant}
+                className="bg-purple-600/80 hover:bg-purple-700/80 backdrop-blur-sm font-mono text-xs"
+                size="sm"
+              >
+                {isGeneratingVariant ? 'Generating...' : 'AI Remix'}
+              </Button>
               <Button
                 onClick={() => setShowAIAssistant(true)}
                 className="bg-cyan-600/80 hover:bg-cyan-700/80 backdrop-blur-sm font-mono text-xs"
