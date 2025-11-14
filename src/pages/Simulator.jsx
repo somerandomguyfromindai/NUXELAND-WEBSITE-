@@ -3,19 +3,23 @@ import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Monitor, Folder, Radio, AlertTriangle } from "lucide-react";
-import AgentMonitor from "../components/game/AgentMonitor";
+import { Monitor, Folder, Radio, AlertTriangle, Play } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import Mission3DView from "../components/game/Mission3DView";
 import FileBrowser from "../components/game/FileBrowser";
 import CommsPanel from "../components/game/CommsPanel";
 import FinalChoice from "../components/game/FinalChoice";
+import MatrixEscape from "../components/game/MatrixEscape";
 
 export default function Simulator() {
   const [activeTab, setActiveTab] = useState("monitor");
   const [showFinalChoice, setShowFinalChoice] = useState(false);
+  const [showMatrixEscape, setShowMatrixEscape] = useState(false);
   const [gameState, setGameState] = useState({
     completedMissions: [],
-    unlockedChannels: [],
-    decryptedFiles: []
+    unlockedChannels: ['#general'],
+    decryptedFiles: [],
+    currentMission: null
   });
 
   const { data: missions } = useQuery({
@@ -25,15 +29,28 @@ export default function Simulator() {
   });
 
   useEffect(() => {
-    // Check if all missions completed
-    const allCompleted = missions.every(m => m.status === 'completed');
+    const activeMission = missions.find(m => m.status === 'active');
+    if (activeMission) {
+      setGameState(prev => ({ ...prev, currentMission: activeMission }));
+    }
+  }, [missions]);
+
+  useEffect(() => {
+    const allCompleted = missions.filter(m => m.status === 'completed').length >= 3;
     if (allCompleted && missions.length >= 3) {
       setTimeout(() => setShowFinalChoice(true), 2000);
     }
   }, [missions]);
 
+  if (showMatrixEscape) {
+    return <MatrixEscape />;
+  }
+
   if (showFinalChoice) {
-    return <FinalChoice gameState={gameState} />;
+    return <FinalChoice 
+      gameState={gameState} 
+      onChoice={() => setShowMatrixEscape(true)} 
+    />;
   }
 
   return (
@@ -43,16 +60,16 @@ export default function Simulator() {
         <div className="mb-6 bg-gradient-to-r from-red-900/20 to-red-800/10 border border-red-500/30 rounded-lg p-4">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-            <span className="text-red-400 font-mono text-sm">SYSTEM ACTIVE</span>
+            <span className="text-red-400 font-mono text-sm">UNAUTHORIZED ACCESS</span>
             <span className="text-gray-500 font-mono text-xs ml-auto">
-              etinuxE Corp // Internal Terminal v2.4.1
+              etinuxE Corp // A.N.T. Console v2.4.1
             </span>
           </div>
           <h1 className="text-2xl md:text-3xl font-bold text-white font-mono">
-            &gt; MINIATURIZATION COMMAND CENTER
+            &gt; THE A.N.T. CONSOLE
           </h1>
           <p className="text-gray-400 font-mono text-sm mt-1">
-            Unauthorized access detected. Session logged.
+            Agent Navigation & Telemetry // Session Logged
           </p>
         </div>
 
@@ -60,7 +77,7 @@ export default function Simulator() {
         <div className="mb-6 bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-3 flex items-center gap-3">
           <AlertTriangle className="w-5 h-5 text-yellow-400" />
           <p className="text-yellow-300 text-sm font-mono">
-            CLASSIFIED: This terminal contains sensitive etinuxE operational data
+            CLASSIFIED SYSTEM // Complete missions sequentially to progress
           </p>
         </div>
 
@@ -73,14 +90,14 @@ export default function Simulator() {
                 className="flex-1 data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-400"
               >
                 <Monitor className="w-4 h-4 mr-2" />
-                Agent Monitor
+                Agent Monitor (3D)
               </TabsTrigger>
               <TabsTrigger 
                 value="files"
                 className="flex-1 data-[state=active]:bg-purple-900/30 data-[state=active]:text-purple-400"
               >
                 <Folder className="w-4 h-4 mr-2" />
-                File Browser
+                File Explorer
               </TabsTrigger>
               <TabsTrigger 
                 value="comms"
@@ -92,7 +109,7 @@ export default function Simulator() {
             </TabsList>
 
             <TabsContent value="monitor" className="p-0">
-              <AgentMonitor gameState={gameState} setGameState={setGameState} />
+              <Mission3DView gameState={gameState} setGameState={setGameState} />
             </TabsContent>
 
             <TabsContent value="files" className="p-0">
