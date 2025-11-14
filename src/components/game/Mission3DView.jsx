@@ -477,6 +477,12 @@ export default function Mission3DView({ gameState, setGameState }) {
       obstacles.push(plate); // Rising plate is an obstacle
 
       // SUGAR CUBES - white crystalline
+      const sugarPositions = [
+        { x: 20, y: 1, z: -8 },
+        { x: 22, y: 1, z: -8 },
+        { x: 21, y: 3, z: -8 },
+        { x: 24, y: 1, z: -6 }
+      ];
       sugarPositions.forEach((pos, i) => {
         const cubeGeometry = new THREE.BoxGeometry(2, 2, 2);
         const cubeMaterial = new THREE.MeshStandardMaterial({ 
@@ -943,3 +949,4 @@ export default function Mission3DView({ gameState, setGameState }) {
     </div>
   );
 }
+
