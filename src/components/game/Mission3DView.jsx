@@ -132,38 +132,6 @@ export default function Mission3DView({ gameState, setGameState }) {
     const gridHelper = new THREE.GridHelper(200, 40, 0xe0e0e0, 0xf0f0f0);
     gridHelper.position.y = 0.01;
     scene.add(gridHelper);
-
-    // VISIBLE COUNTER BORDER
-    const borderMaterial = new THREE.MeshStandardMaterial({ 
-      color: 0x8b7355, 
-      roughness: 0.8,
-      metalness: 0.1
-    });
-    const borderHeight = 3;
-    
-    const frontBorder = new THREE.Mesh(new THREE.BoxGeometry(200, borderHeight, 2), borderMaterial);
-    frontBorder.position.set(0, borderHeight/2, 100);
-    frontBorder.castShadow = true;
-    scene.add(frontBorder);
-    obstacles.push(frontBorder);
-    
-    const backBorder = new THREE.Mesh(new THREE.BoxGeometry(200, borderHeight, 2), borderMaterial);
-    backBorder.position.set(0, borderHeight/2, -100);
-    backBorder.castShadow = true;
-    scene.add(backBorder);
-    obstacles.push(backBorder);
-    
-    const leftBorder = new THREE.Mesh(new THREE.BoxGeometry(2, borderHeight, 200), borderMaterial);
-    leftBorder.position.set(-100, borderHeight/2, 0);
-    leftBorder.castShadow = true;
-    scene.add(leftBorder);
-    obstacles.push(leftBorder);
-    
-    const rightBorder = new THREE.Mesh(new THREE.BoxGeometry(2, borderHeight, 200), borderMaterial);
-    rightBorder.position.set(100, borderHeight/2, 0);
-    rightBorder.castShadow = true;
-    scene.add(rightBorder);
-    obstacles.push(rightBorder);
     
     const playerGroup = new THREE.Group();
     
@@ -229,6 +197,9 @@ export default function Mission3DView({ gameState, setGameState }) {
     if (activeMission.mission_number === 1) {
       addLog("Mission 1: Hold SPACE near objects to climb them!", 'info');
       
+      // Initialize obstacles array first
+      obstacles = [];
+      
       // REALISTIC KITCHEN WALLS AND CABINETS
       const wallHeight = 50;
       const wallMaterial = new THREE.MeshStandardMaterial({ color: 0xd4c5b9, roughness: 0.8 });
@@ -265,6 +236,38 @@ export default function Mission3DView({ gameState, setGameState }) {
       );
       windowFrame.position.set(50, 30, -99);
       scene.add(windowFrame);
+      
+      // VISIBLE COUNTER BORDER
+      const borderMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x8b7355, 
+        roughness: 0.8,
+        metalness: 0.1
+      });
+      const borderHeight = 3;
+      
+      const frontBorder = new THREE.Mesh(new THREE.BoxGeometry(200, borderHeight, 2), borderMaterial);
+      frontBorder.position.set(0, borderHeight/2, 100);
+      frontBorder.castShadow = true;
+      scene.add(frontBorder);
+      obstacles.push(frontBorder);
+      
+      const backBorder = new THREE.Mesh(new THREE.BoxGeometry(200, borderHeight, 2), borderMaterial);
+      backBorder.position.set(0, borderHeight/2, -100);
+      backBorder.castShadow = true;
+      scene.add(backBorder);
+      obstacles.push(backBorder);
+      
+      const leftBorder = new THREE.Mesh(new THREE.BoxGeometry(2, borderHeight, 200), borderMaterial);
+      leftBorder.position.set(-100, borderHeight/2, 0);
+      leftBorder.castShadow = true;
+      scene.add(leftBorder);
+      obstacles.push(leftBorder);
+      
+      const rightBorder = new THREE.Mesh(new THREE.BoxGeometry(2, borderHeight, 200), borderMaterial);
+      rightBorder.position.set(100, borderHeight/2, 0);
+      rightBorder.castShadow = true;
+      scene.add(rightBorder);
+      obstacles.push(rightBorder);
       
       // LARGE FLAT SINK (GOING DOWN)
       const sinkOuterRim = new THREE.Mesh(
