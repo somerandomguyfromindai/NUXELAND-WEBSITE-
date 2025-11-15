@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -208,13 +207,13 @@ export default function SellFormula() {
                     <button
                       key={buyer.id}
                       onClick={() => handleBuyerClick(buyer)}
-                      className="absolute transform -translate-x-1/2 -translate-y-1/2 group z-10"
+                      className="absolute transform -translate-x-1/4 -translate-y-1/4 group z-10"
                       style={{ left: `${buyer.coordinates.x}%`, top: `${buyer.coordinates.y}%` }}
                     >
                       <div className={`w-4 h-4 rounded-full bg-green-500 shadow-lg ring-4 ${
                         selectedBuyer?.id === buyer.id ? 'ring-green-400 scale-150' : 'ring-green-900'
                       } group-hover:scale-150 transition-all duration-300`}>
-                        <div className="absolute inset-0 rounded-full bg-green-400 animate-ping opacity-50"></div>
+                        <div className="absolute left-1 top-1 w-4 h-4 rounded-full bg-green-400 animate-ping opacity-50"></div>
                       </div>
                       <div className="absolute top-6 left-1/2 transform -translate-x-1/2 bg-black/95 px-2 py-1 rounded border border-green-500/30 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap text-xs font-mono text-green-400 z-50">
                         {buyer.name}
@@ -226,7 +225,7 @@ export default function SellFormula() {
                   <button
                     onClick={handleNuxelandClick}
                     className="absolute transform -translate-x-1/2 -translate-y-1/2 group z-10"
-                    style={{ left: '52%', top: '15%' }}
+                    style={{ left: '50%', top: '20%' }}
                   >
                     <div className={`w-5 h-5 rounded-full bg-red-500 shadow-lg ring-4 ${
                       showNuxelandMap ? 'ring-red-400 scale-150' : 'ring-red-900'
