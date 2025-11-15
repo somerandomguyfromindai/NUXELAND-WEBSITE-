@@ -10,6 +10,7 @@ import MissionTimeline from './pages/MissionTimeline';
 import Resources from './pages/Resources';
 import MerchShop from './pages/MerchShop';
 import SellFormula from './pages/SellFormula';
+import FormulaRD from './pages/FormulaRD';
 import Layout from './Layout.jsx';
 
 
@@ -26,6 +27,7 @@ export const PAGES = {
     "Resources": Resources,
     "MerchShop": MerchShop,
     "SellFormula": SellFormula,
+    "FormulaRD": FormulaRD,
 }
 
 export const pagesConfig = {
