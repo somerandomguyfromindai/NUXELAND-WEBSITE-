@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Atom, Home, FlaskConical, Clock, MapPin, Package, ShoppingCart, BarChart3, Users, Menu, X, Bot, ChevronDown, Sparkles } from "lucide-react";
+import { Atom, Home, FlaskConical, Clock, MapPin, Package, ShoppingCart, BarChart3, Users, Menu, X, Bot, ChevronDown, Sparkles, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import NuxelandAgent from "@/components/ai/NuxelandAgent";
@@ -183,6 +183,14 @@ export default function Layout({ children, currentPageName }) {
                 </DropdownMenuContent>
               </DropdownMenu>
 
+              <Link
+                to={createPageUrl("SellFormula")}
+                className="nav-link flex items-center gap-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
+              >
+                <DollarSign className="w-4 h-4" />
+                Sell the Formula
+              </Link>
+
               <DropdownMenu>
                 <DropdownMenuTrigger className="nav-link flex items-center gap-2 text-sm font-medium text-gray-300 hover:text-white transition-colors cursor-pointer">
                   <Sparkles className="w-4 h-4" />
@@ -263,6 +271,15 @@ export default function Layout({ children, currentPageName }) {
                   </Link>
                 ))}
               </div>
+
+              <Link
+                to={createPageUrl("SellFormula")}
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-white/5"
+              >
+                <DollarSign className="w-5 h-5" />
+                <span className="font-medium">Sell the Formula</span>
+              </Link>
 
               <div className="border-t border-white/10 pt-3">
                 <p className="text-purple-400 text-xs px-4 mb-2 font-bold">LIVING THE GAME</p>
