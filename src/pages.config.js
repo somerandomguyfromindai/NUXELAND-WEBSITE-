@@ -11,6 +11,9 @@ import Resources from './pages/Resources';
 import MerchShop from './pages/MerchShop';
 import SellFormula from './pages/SellFormula';
 import FormulaRD from './pages/FormulaRD';
+import Blog from './pages/Blog';
+import Groups from './pages/Groups';
+import Leaderboards from './pages/Leaderboards';
 import Layout from './Layout.jsx';
 
 
@@ -28,6 +31,9 @@ export const PAGES = {
     "MerchShop": MerchShop,
     "SellFormula": SellFormula,
     "FormulaRD": FormulaRD,
+    "Blog": Blog,
+    "Groups": Groups,
+    "Leaderboards": Leaderboards,
 }
 
 export const pagesConfig = {
