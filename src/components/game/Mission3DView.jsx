@@ -111,22 +111,11 @@ export default function Mission3DView({ gameState, setGameState }) {
 Current player actions:
 ${JSON.stringify(playerActions, null, 2)}
 
-Generate a JSON object with environmental variations to make the mission more challenging and unique based on player progress:
+Generate environmental variations based on player progress. Add 2-3 hazards or dynamic elements to increase challenge.
 
-For Mission 1 (Kitchen):
-- Add hazards like "steam vents", "water puddles", "falling utensils"
-- Modify object positions slightly (small random offsets)
-- Add dynamic elements like "moving platforms", "rotating obstacles"
-
-For Mission 2 (Lab):
-- Add "additional laser barriers", "moving security cameras", "patrol drones"
-- Modify "terminal hack difficulty", "data core elevation"
-- Add environmental effects like "flickering lights", "gas leaks"
-
-Return JSON with this structure:
+Return JSON with:
 {
   "hazards": [{"type": "steam_vent", "x": 10, "y": 2, "z": -20, "radius": 3}],
-  "modified_objects": [{"id": "sink", "position_offset": {"x": 0, "y": 0, "z": 2}}],
   "dynamic_elements": [{"type": "moving_platform", "path": [{"x": 10, "z": 20}, {"x": 30, "z": 20}], "speed": 2}],
   "effects": [{"type": "flickering_lights", "intensity": 0.3}]
 }`,
@@ -134,7 +123,6 @@ Return JSON with this structure:
           type: "object",
           properties: {
             hazards: { type: "array", items: { type: "object" } },
-            modified_objects: { type: "array", items: { type: "object" } },
             dynamic_elements: { type: "array", items: { type: "object" } },
             effects: { type: "array", items: { type: "object" } }
           }
@@ -142,7 +130,7 @@ Return JSON with this structure:
       });
 
       setEnvironmentVariant(response);
-      addLog('Environment adapted to your progress!', 'warning');
+      addLog('Environment adapted!', 'warning');
     } catch (error) {
       console.error('Failed to generate variant:', error);
     } finally {
@@ -272,7 +260,7 @@ Return JSON with this structure:
     const ceilingHeight = 50;
 
     if (activeMission.mission_number === 1) {
-      addLog("Mission 1: Hold SPACE anywhere to deploy ROPE!", 'info');
+      addLog("Mission 1: Hold SPACE to deploy rope!", 'info');
       
       obstacles = [];
       
@@ -918,7 +906,7 @@ Return JSON with this structure:
         resourceObjects.push(resourceMesh);
       });
 
-      addLog("Advanced security systems active!", 'warning');
+      addLog("Advanced security active!", 'warning');
     }
 
     const keys = {};
@@ -966,7 +954,7 @@ Return JSON with this structure:
               setLeverStates(prev => ({ ...prev, [leverId]: !prev[leverId] }));
               addLog(`✓ Lever toggled!`, 'info');
             } else if (elem.userData.type === 'terminal') {
-                addLog(`Interacted with terminal ${elem.userData.id}`, 'info');
+                addLog(`Terminal accessed`, 'info');
             }
           }
         });
@@ -982,7 +970,7 @@ Return JSON with this structure:
               destructibleObjects.splice(index, 1);
               obstacles = obstacles.filter(o => o !== obj);
             } else {
-              addLog(`Hit ${obj.userData.id} - Health: ${obj.userData.health}`, 'warning');
+              addLog(`Hit ${obj.userData.id}`, 'warning');
               obj.material.emissive.setHex(0xff0000);
               obj.material.emissiveIntensity = 0.5;
               setTimeout(() => {
@@ -994,6 +982,7 @@ Return JSON with this structure:
         });
       }
     };
+    
     const handleKeyUp = (e) => { keys[e.key.toLowerCase()] = false; };
     
     window.addEventListener('keydown', handleKeyDown);
@@ -1034,7 +1023,6 @@ Return JSON with this structure:
           ropeLine.material.dispose();
           ropeLine = null;
           isOnRope = false;
-          addLog('Rope retracted', 'info');
         }
       }
       
@@ -1047,16 +1035,24 @@ Return JSON with this structure:
 
         if (keys['w'] || mobileControlsRef.current.up) {
           player.position.y += ropeSpeed * delta;
-          if (player.position.y > ceilingHeight - playerHalfHeight - 0.5) player.position.y = ceilingHeight - playerHalfHeight - 0.5;
+          if (player.position.y > ceilingHeight - playerHalfHeight - 0.5) {
+            player.position.y = ceilingHeight - playerHalfHeight - 0.5;
+          }
         }
         if (keys['s'] || mobileControlsRef.current.down) {
           player.position.y -= ropeSpeed * delta;
-          if (player.position.y < playerHalfHeight) player.position.y = playerHalfHeight;
+          if (player.position.y < playerHalfHeight) {
+            player.position.y = playerHalfHeight;
+          }
         }
 
         const ropeHorizontalSpeed = (keys['shift'] ? 20 : 10) * 0.5;
-        if (keys['a'] || mobileControlsRef.current.left) player.position.x -= ropeHorizontalSpeed * delta;
-        if (keys['d'] || mobileControlsRef.current.right) player.position.x += ropeHorizontalSpeed * delta;
+        if (keys['a'] || mobileControlsRef.current.left) {
+          player.position.x -= ropeHorizontalSpeed * delta;
+        }
+        if (keys['d'] || mobileControlsRef.current.right) {
+          player.position.x += ropeHorizontalSpeed * delta;
+        }
 
         const ropePoints = [
           new THREE.Vector3(player.position.x, player.position.y, player.position.z),
@@ -1319,7 +1315,7 @@ Return JSON with this structure:
                 size="sm"
               >
                 <Bot className="w-4 h-4 mr-1" />
-                AI Assistant
+                AI
               </Button>
               <Button
                 onClick={() => setShowHint(!showHint)}
@@ -1327,14 +1323,14 @@ Return JSON with this structure:
                 size="sm"
               >
                 <Lightbulb className="w-4 h-4 mr-1" />
-                {showHint ? 'Hide' : 'Show'} Hints
+                {showHint ? 'Hide' : 'Hint'}
               </Button>
             </div>
             
             <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm border border-gray-600 rounded p-2 font-mono text-xs text-gray-300 hidden md:block z-10">
-              <p>W/A/S/D: Move | SPACE: Deploy Rope | E: Interact | Shift: Sprint</p>
+              <p>W/A/S/D: Move | SPACE: Rope | E: Interact | Shift: Sprint</p>
               <p className="text-cyan-400 mt-1 font-bold">
-                Hold SPACE anywhere to deploy ROPE - Use W/S to move up/down, A/D to swing left/right!
+                Hold SPACE to deploy rope - W/S up/down, A/D left/right!
               </p>
             </div>
 
@@ -1396,18 +1392,18 @@ Return JSON with this structure:
               <div className="absolute top-20 left-4 bg-yellow-900/90 backdrop-blur-sm border border-yellow-500/50 rounded p-4 max-w-md z-20">
                 <h4 className="text-yellow-300 font-mono font-bold mb-2 flex items-center gap-2">
                   <Lightbulb className="w-4 h-4" />
-                  Mission 1 Solution:
+                  Mission 1 Hints:
                 </h4>
                 <ol className="text-yellow-100 font-mono text-xs space-y-1 list-decimal list-inside">
                   <li>Use ROPE (hold SPACE) to reach button on sink</li>
                   <li>Press USE on button (turns green)</li>
-                  <li>Cross fork bridge that appears</li>
-                  <li>Walk onto PRESSURE PLATE on napkin</li>
-                  <li>Go to KNIFE, press USE to activate lever</li>
-                  <li>Reach WATER DROPLET to complete mission</li>
+                  <li>Cross fork bridge</li>
+                  <li>Step on PRESSURE PLATE</li>
+                  <li>Activate KNIFE lever</li>
+                  <li>Reach WATER DROPLET</li>
                 </ol>
                 <p className="text-yellow-200 text-xs mt-2 italic font-bold">
-                  Hold SPACE for rope - W/S to move up/down!
+                  Hold SPACE for rope - W/S up/down!
                 </p>
               </div>
             )}
@@ -1417,7 +1413,7 @@ Return JSON with this structure:
                 <div className="text-center">
                   <AlertTriangle className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
                   <p className="text-white font-mono text-xl mb-2">ALL MISSIONS COMPLETE</p>
-                  <p className="text-gray-400 font-mono text-sm">Check File Browser and Comms for intel</p>
+                  <p className="text-gray-400 font-mono text-sm">Check File Browser and Comms</p>
                 </div>
               </div>
             )}
@@ -1454,10 +1450,10 @@ Return JSON with this structure:
               <>
                 <div className={`flex items-center gap-2 p-2 rounded ${inventory.some(item => item.name === 'Security Key') ? 'bg-green-900/20' : 'bg-gray-800/20'}`}>
                   <CheckCircle className={`w-4 h-4 ${inventory.some(item => item.name === 'Security Key') ? 'text-green-400' : 'text-gray-600'}`} />
-                  <span className="text-sm font-mono text-white">Security Key Acquired</span>
+                  <span className="text-sm font-mono text-white">Security Key</span>
                 </div>
-                <div className={`flex items-center gap-2 p-2 rounded ${false ? 'bg-green-900/20' : 'bg-gray-800/20'}`}>
-                  <CheckCircle className={`w-4 h-4 ${false ? 'text-green-400' : 'text-gray-600'}`} />
+                <div className={`flex items-center gap-2 p-2 rounded bg-gray-800/20`}>
+                  <CheckCircle className="w-4 h-4 text-gray-600" />
                   <span className="text-sm font-mono text-white">Terminal Hacked</span>
                 </div>
               </>
