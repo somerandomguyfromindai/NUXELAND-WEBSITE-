@@ -195,7 +195,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       color: 0x3b82f6,
       roughness: 0.15,
       metalness: 0.98,
-      envMapIntensity = 2
+      envMapIntensity: 2
     });
     const head = new THREE.Mesh(headGeometry, headMaterial);
     head.position.y = 1.35;
