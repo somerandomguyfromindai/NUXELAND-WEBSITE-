@@ -20,7 +20,6 @@ export default function Mission3DView({ gameState, setGameState }) {
   const [destroyedObjects, setDestroyedObjects] = useState([]);
   const [leverStates, setLeverStates] = useState({});
   const [activatedButtons, setActivatedButtons] = useState([]);
-  const [showHint, setShowHint] = useState(false);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [mobileControls, setMobileControls] = useState({
     up: false,
@@ -31,8 +30,6 @@ export default function Mission3DView({ gameState, setGameState }) {
     crouch: false
   });
   const mobileControlsRef = useRef(mobileControls);
-  const [environmentVariant, setEnvironmentVariant] = useState(null);
-  const [isGeneratingVariant, setIsGeneratingVariant] = useState(false);
   const [playerHealth, setPlayerHealth] = useState(100);
   const [showHackingPuzzle, setShowHackingPuzzle] = useState(false);
   const queryClient = useQueryClient();
@@ -90,7 +87,6 @@ export default function Mission3DView({ gameState, setGameState }) {
           setDestroyedObjects([]);
           setLeverStates({});
           setActivatedButtons([]);
-          setEnvironmentVariant(null);
           setPlayerHealth(100);
         }, 2000);
       }
@@ -115,8 +111,6 @@ export default function Mission3DView({ gameState, setGameState }) {
     renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
     mountRef.current.appendChild(renderer.domElement);
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
@@ -125,25 +119,13 @@ export default function Mission3DView({ gameState, setGameState }) {
     const sunLight = new THREE.DirectionalLight(0xfff5e1, 1.5);
     sunLight.position.set(50, 100, 50);
     sunLight.castShadow = true;
-    sunLight.shadow.camera.left = -100;
-    sunLight.shadow.camera.right = 100;
-    sunLight.shadow.camera.top = 100;
-    sunLight.shadow.camera.bottom = -100;
-    sunLight.shadow.mapSize.width = 4096;
-    sunLight.shadow.mapSize.height = 4096;
-    sunLight.shadow.bias = -0.0001;
     scene.add(sunLight);
-
-    const fillLight = new THREE.DirectionalLight(0x87ceeb, 0.3);
-    fillLight.position.set(-50, 50, -50);
-    scene.add(fillLight);
 
     const counterGeometry = new THREE.PlaneGeometry(200, 200);
     const counterMaterial = new THREE.MeshStandardMaterial({ 
       color: 0xf5f5f0,
       roughness: 0.3,
-      metalness: 0.2,
-      envMapIntensity: 1
+      metalness: 0.2
     });
     const counter = new THREE.Mesh(counterGeometry, counterMaterial);
     counter.rotation.x = -Math.PI / 2;
@@ -160,9 +142,7 @@ export default function Mission3DView({ gameState, setGameState }) {
     const bodyMaterial = new THREE.MeshStandardMaterial({ 
       color: 0x1e40af,
       roughness: 0.4,
-      metalness: 0.6,
-      emissive: 0x1e3a8a,
-      emissiveIntensity: 0.2
+      metalness: 0.6
     });
     const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
     body.castShadow = true;
@@ -172,25 +152,12 @@ export default function Mission3DView({ gameState, setGameState }) {
     const helmetMaterial = new THREE.MeshStandardMaterial({ 
       color: 0x60a5fa,
       roughness: 0.1,
-      metalness: 0.9,
-      transparent: true,
-      opacity: 0.8
+      metalness: 0.9
     });
     const helmet = new THREE.Mesh(helmetGeometry, helmetMaterial);
     helmet.position.y = 0.9;
     helmet.castShadow = true;
     playerGroup.add(helmet);
-
-    const visorGeometry = new THREE.RingGeometry(0.15, 0.2, 16);
-    const visorMaterial = new THREE.MeshBasicMaterial({ 
-      color: 0x00ffff,
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.8
-    });
-    const visor = new THREE.Mesh(visorGeometry, visorMaterial);
-    visor.position.set(0, 0.9, 0.3);
-    playerGroup.add(visor);
 
     playerGroup.position.set(0, 1, 0);
     scene.add(playerGroup);
@@ -199,11 +166,7 @@ export default function Mission3DView({ gameState, setGameState }) {
     let objectives = [];
     let obstacles = [];
     let puzzleElements = [];
-    let destructibleObjects = [];
-    let interactiveObjects = [];
-    let mistParticles = [];
     let missionComplete = false;
-    let resourceObjects = [];
     
     let playerVelocityY = 0;
     let isOnGround = true;
@@ -214,32 +177,27 @@ export default function Mission3DView({ gameState, setGameState }) {
     const ropeSpeed = 8;
     const playerHalfHeight = 0.8;
     const playerRadius = 0.4;
-    let jumpCount = 0;
     const ceilingHeight = 50;
     let lastDamageTime = 0;
 
     if (activeMission.mission_number === 1) {
       addLog("Mission 1: Hold SPACE to deploy rope!", 'info');
       
-      obstacles = [];
-      
       const wallHeight = 50;
       const wallMaterial = new THREE.MeshStandardMaterial({ color: 0xd4c5b9, roughness: 0.8 });
       
-      const backWall = new THREE.Mesh(new THREE.BoxGeometry(200, wallHeight, 2), wallMaterial);
-      backWall.position.set(0, wallHeight/2, -100);
-      backWall.receiveShadow = true;
-      scene.add(backWall);
-      
-      const leftWall = new THREE.Mesh(new THREE.BoxGeometry(2, wallHeight, 200), wallMaterial);
-      leftWall.position.set(-100, wallHeight/2, 0);
-      leftWall.receiveShadow = true;
-      scene.add(leftWall);
-      
-      const rightWall = new THREE.Mesh(new THREE.BoxGeometry(2, wallHeight, 200), wallMaterial);
-      rightWall.position.set(100, wallHeight/2, 0);
-      rightWall.receiveShadow = true;
-      scene.add(rightWall);
+      const walls = [
+        new THREE.Mesh(new THREE.BoxGeometry(200, wallHeight, 2), wallMaterial),
+        new THREE.Mesh(new THREE.BoxGeometry(2, wallHeight, 200), wallMaterial),
+        new THREE.Mesh(new THREE.BoxGeometry(2, wallHeight, 200), wallMaterial)
+      ];
+      walls[0].position.set(0, wallHeight/2, -100);
+      walls[1].position.set(-100, wallHeight/2, 0);
+      walls[2].position.set(100, wallHeight/2, 0);
+      walls.forEach(wall => {
+        wall.receiveShadow = true;
+        scene.add(wall);
+      });
       
       const cabinetMaterial = new THREE.MeshStandardMaterial({ color: 0x5d4e37, roughness: 0.6 });
       for (let i = 0; i < 4; i++) {
@@ -250,52 +208,39 @@ export default function Mission3DView({ gameState, setGameState }) {
         obstacles.push(cabinet);
       }
       
-      const borderMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x8b7355, 
-        roughness: 0.8,
-        metalness: 0.1
-      });
+      const borderMaterial = new THREE.MeshStandardMaterial({ color: 0x8b7355, roughness: 0.8 });
       const borderHeight = 3;
       
-      const frontBorder = new THREE.Mesh(new THREE.BoxGeometry(200, borderHeight, 2), borderMaterial);
-      frontBorder.position.set(0, borderHeight/2, 100);
-      frontBorder.castShadow = true;
-      scene.add(frontBorder);
-      obstacles.push(frontBorder);
+      const borders = [
+        new THREE.Mesh(new THREE.BoxGeometry(200, borderHeight, 2), borderMaterial),
+        new THREE.Mesh(new THREE.BoxGeometry(200, borderHeight, 2), borderMaterial),
+        new THREE.Mesh(new THREE.BoxGeometry(2, borderHeight, 200), borderMaterial),
+        new THREE.Mesh(new THREE.BoxGeometry(2, borderHeight, 200), borderMaterial)
+      ];
+      borders[0].position.set(0, borderHeight/2, 100);
+      borders[1].position.set(0, borderHeight/2, -100);
+      borders[2].position.set(-100, borderHeight/2, 0);
+      borders[3].position.set(100, borderHeight/2, 0);
+      borders.forEach(border => {
+        border.castShadow = true;
+        scene.add(border);
+        obstacles.push(border);
+      });
       
-      const backBorder = new THREE.Mesh(new THREE.BoxGeometry(200, borderHeight, 2), borderMaterial);
-      backBorder.position.set(0, borderHeight/2, -100);
-      backBorder.castShadow = true;
-      scene.add(backBorder);
-      obstacles.push(backBorder);
-      
-      const leftBorder = new THREE.Mesh(new THREE.BoxGeometry(2, borderHeight, 200), borderMaterial);
-      leftBorder.position.set(-100, borderHeight/2, 0);
-      leftBorder.castShadow = true;
-      scene.add(leftBorder);
-      obstacles.push(leftBorder);
-      
-      const rightBorder = new THREE.Mesh(new THREE.BoxGeometry(2, borderHeight, 200), borderMaterial);
-      rightBorder.position.set(100, borderHeight/2, 0);
-      rightBorder.castShadow = true;
-      scene.add(rightBorder);
-      obstacles.push(rightBorder);
-      
-      const sinkOuterRim = new THREE.Mesh(
+      const sinkRim = new THREE.Mesh(
         new THREE.BoxGeometry(30, 0.8, 22),
         new THREE.MeshStandardMaterial({ color: 0xe0e0e0, metalness: 0.95, roughness: 0.05 })
       );
-      sinkOuterRim.position.set(-5, 0.4, -25);
-      sinkOuterRim.castShadow = true;
-      scene.add(sinkOuterRim);
-      obstacles.push(sinkOuterRim);
+      sinkRim.position.set(-5, 0.4, -25);
+      sinkRim.castShadow = true;
+      scene.add(sinkRim);
+      obstacles.push(sinkRim);
       
       const buttonGeometry = new THREE.CylinderGeometry(1.2, 1.2, 0.6, 32);
       const buttonMaterial = new THREE.MeshStandardMaterial({ 
         color: activatedButtons.includes('button1') ? 0x10b981 : 0xef4444,
         emissive: activatedButtons.includes('button1') ? 0x10b981 : 0xef4444,
-        emissiveIntensity: activatedButtons.includes('button1') ? 0.8 : 0.6,
-        roughness: 0.3,
+        emissiveIntensity: 0.7,
         metalness: 0.7
       });
       const button1 = new THREE.Mesh(buttonGeometry, buttonMaterial);
@@ -314,12 +259,19 @@ export default function Mission3DView({ gameState, setGameState }) {
       blade.position.z = 10;
       blade.castShadow = true;
       knife.add(blade);
-      
       knife.position.set(80, 0.8, 35);
       knife.userData = { type: 'lever', id: 'lever1' };
       scene.add(knife);
       puzzleElements.push(knife);
       obstacles.push(knife);
+
+      const mugGeometry = new THREE.CylinderGeometry(5, 4.2, 10, 32);
+      const mugMaterial = new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 0.6 });
+      const mug = new THREE.Mesh(mugGeometry, mugMaterial);
+      mug.position.set(50, 5, -20);
+      mug.castShadow = true;
+      scene.add(mug);
+      obstacles.push(mug);
 
       const napkin = new THREE.Mesh(
         new THREE.BoxGeometry(12, 0.3, 12),
@@ -369,35 +321,15 @@ export default function Mission3DView({ gameState, setGameState }) {
       scene.fog = new THREE.Fog(0x1a1a2e, 30, 150);
       
       addLog("Mission 2: Lab infiltration", 'warning');
-      
       player.position.set(-80, 1, 80);
-      obstacles = [];
 
-      const labFloorGeometry = new THREE.PlaneGeometry(200, 200);
-      const labFloorMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x2a2a4a,
-        roughness: 0.9,
-        metalness: 0.1
-      });
-      const labFloor = new THREE.Mesh(labFloorGeometry, labFloorMaterial);
+      const labFloor = new THREE.Mesh(
+        new THREE.PlaneGeometry(200, 200),
+        new THREE.MeshStandardMaterial({ color: 0x2a2a4a, roughness: 0.9 })
+      );
       labFloor.rotation.x = -Math.PI / 2;
       labFloor.receiveShadow = true;
       scene.add(labFloor);
-
-      for (let i = 0; i < 3; i++) {
-        const laser = new THREE.Mesh(
-          new THREE.BoxGeometry(0.2, 8, 60),
-          new THREE.MeshBasicMaterial({ 
-            color: 0xff0000,
-            transparent: true,
-            opacity: 0.6
-          })
-        );
-        laser.position.set(-60 + i * 30, 4, 20);
-        laser.userData = { type: 'laser', deadly: true, damage: 10 };
-        scene.add(laser);
-        interactiveObjects.push(laser);
-      }
 
       const dataCore = new THREE.Mesh(
         new THREE.BoxGeometry(4, 4, 4),
@@ -419,19 +351,14 @@ export default function Mission3DView({ gameState, setGameState }) {
       scene.background = new THREE.Color(0x0d0d1a);
       scene.fog = new THREE.Fog(0x0d0d1a, 20, 120);
       
-      addLog("Mission 3: Specimen Retrieval - Agent Pip", 'warning');
+      addLog("Mission 3: Specimen Retrieval", 'warning');
       addLog("Use C to CROUCH under lasers!", 'info');
-      
       player.position.set(-70, 1, 70);
-      obstacles = [];
 
-      const floorGeometry = new THREE.PlaneGeometry(200, 200);
-      const floorMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x1a1a2a,
-        roughness: 0.95,
-        metalness: 0.05
-      });
-      const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+      const floor = new THREE.Mesh(
+        new THREE.PlaneGeometry(200, 200),
+        new THREE.MeshStandardMaterial({ color: 0x1a1a2a, roughness: 0.95 })
+      );
       floor.rotation.x = -Math.PI / 2;
       floor.receiveShadow = true;
       scene.add(floor);
@@ -440,29 +367,6 @@ export default function Mission3DView({ gameState, setGameState }) {
       redLight.position.set(0, 20, 0);
       scene.add(redLight);
 
-      const laserPositions = [
-        { x: -50, z: 20, width: 60 },
-        { x: -20, z: -10, width: 50 },
-        { x: 20, z: -40, width: 55 }
-      ];
-
-      laserPositions.forEach((pos) => {
-        const laser = new THREE.Mesh(
-          new THREE.BoxGeometry(0.3, 4, pos.width),
-          new THREE.MeshBasicMaterial({ 
-            color: 0xff0000,
-            transparent: true,
-            opacity: 0.7,
-            emissive: 0xff0000,
-            emissiveIntensity: 1
-          })
-        );
-        laser.position.set(pos.x, 2, pos.z);
-        laser.userData = { type: 'laser', deadly: true, damage: 15 };
-        scene.add(laser);
-        interactiveObjects.push(laser);
-      });
-
       const powerCore = new THREE.Mesh(
         new THREE.SphereGeometry(3, 32, 32),
         new THREE.MeshPhysicalMaterial({ 
@@ -470,8 +374,7 @@ export default function Mission3DView({ gameState, setGameState }) {
           emissive: 0x00ff00,
           emissiveIntensity: 1.5,
           transparent: true,
-          opacity: 0.8,
-          transmission: 0.5
+          opacity: 0.8
         })
       );
       powerCore.position.set(0, 5, -90);
@@ -479,18 +382,13 @@ export default function Mission3DView({ gameState, setGameState }) {
       powerCore.castShadow = true;
       scene.add(powerCore);
       objectives.push(powerCore);
-
-      addLog("Bio-stress warning: Agent Pip vitals unstable!", 'error');
     }
 
     const keys = {};
     
     const handleKeyDown = (e) => { 
       keys[e.key.toLowerCase()] = true;
-      
-      if (e.key.toLowerCase() === 'c') {
-        isCrouching = true;
-      }
+      if (e.key.toLowerCase() === 'c') isCrouching = true;
       
       if (e.key.toLowerCase() === 'e') {
         puzzleElements.forEach(elem => {
@@ -502,8 +400,7 @@ export default function Mission3DView({ gameState, setGameState }) {
                 addLog(`✓ Button activated!`, 'success');
               }
             } else if (elem.userData.type === 'lever') {
-              const leverId = elem.userData.id;
-              setLeverStates(prev => ({ ...prev, [leverId]: !prev[leverId] }));
+              setLeverStates(prev => ({ ...prev, [elem.userData.id]: !prev[elem.userData.id] }));
               addLog(`✓ Lever toggled!`, 'info');
             }
           }
@@ -512,7 +409,6 @@ export default function Mission3DView({ gameState, setGameState }) {
         objectives.forEach(obj => {
           const distance = player.position.distanceTo(obj.position);
           if (distance < 5 && obj.userData.type === 'power_core' && obj.userData.needsHack) {
-            addLog('Accessing Power Core...', 'info');
             setShowHackingPuzzle(true);
           }
         });
@@ -521,9 +417,7 @@ export default function Mission3DView({ gameState, setGameState }) {
     
     const handleKeyUp = (e) => { 
       keys[e.key.toLowerCase()] = false;
-      if (e.key.toLowerCase() === 'c') {
-        isCrouching = false;
-      }
+      if (e.key.toLowerCase() === 'c') isCrouching = false;
     };
     
     window.addEventListener('keydown', handleKeyDown);
@@ -539,36 +433,24 @@ export default function Mission3DView({ gameState, setGameState }) {
     
     const animate = () => {
       const delta = clock.getDelta();
-      const currentTime = clock.elapsedTime;
 
-      const isSpaceOrMobileJumpPressed = keys[' '] || mobileControlsRef.current.jump;
+      const isSpacePressed = keys[' '] || mobileControlsRef.current.jump;
 
-      if (isSpaceOrMobileJumpPressed) {
-        if (!isOnRope) {
-          const ropeMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
-          const ropeGeometry = new THREE.BufferGeometry().setFromPoints([
-            new THREE.Vector3(player.position.x, player.position.y, player.position.z),
-            new THREE.Vector3(player.position.x, ceilingHeight, player.position.z)
-          ]);
-          ropeLine = new THREE.Line(ropeGeometry, ropeMaterial);
-          scene.add(ropeLine);
-          isOnRope = true;
-          playerVelocityY = 0;
-          isOnGround = false;
-          jumpCount = 0;
-        }
-      } else {
-        if (ropeLine) {
-          scene.remove(ropeLine);
-          ropeLine.geometry.dispose();
-          ropeLine.material.dispose();
-          ropeLine = null;
-          isOnRope = false;
-        }
-      }
-      
-      if (mobileControlsRef.current.jump) {
-        setMobileControls(prev => ({ ...prev, jump: false }));
+      if (isSpacePressed && !isOnRope) {
+        const ropeMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
+        const ropeGeometry = new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(player.position.x, player.position.y, player.position.z),
+          new THREE.Vector3(player.position.x, ceilingHeight, player.position.z)
+        ]);
+        ropeLine = new THREE.Line(ropeGeometry, ropeMaterial);
+        scene.add(ropeLine);
+        isOnRope = true;
+        playerVelocityY = 0;
+        isOnGround = false;
+      } else if (!isSpacePressed && ropeLine) {
+        scene.remove(ropeLine);
+        ropeLine = null;
+        isOnRope = false;
       }
 
       if (isCrouching || mobileControlsRef.current.crouch) {
@@ -578,176 +460,55 @@ export default function Mission3DView({ gameState, setGameState }) {
       }
 
       if (isOnRope) {
-        playerVelocityY = 0;
+        if (keys['w'] || mobileControlsRef.current.up) player.position.y += ropeSpeed * delta;
+        if (keys['s'] || mobileControlsRef.current.down) player.position.y -= ropeSpeed * delta;
+        if (keys['a'] || mobileControlsRef.current.left) player.position.x -= ropeSpeed * delta * 0.5;
+        if (keys['d'] || mobileControlsRef.current.right) player.position.x += ropeSpeed * delta * 0.5;
 
-        if (keys['w'] || mobileControlsRef.current.up) {
-          player.position.y += ropeSpeed * delta;
-          if (player.position.y > ceilingHeight - playerHalfHeight - 0.5) {
-            player.position.y = ceilingHeight - playerHalfHeight - 0.5;
-          }
-        }
-        if (keys['s'] || mobileControlsRef.current.down) {
-          player.position.y -= ropeSpeed * delta;
-          if (player.position.y < playerHalfHeight) {
-            player.position.y = playerHalfHeight;
-          }
-        }
-
-        const ropeHorizontalSpeed = (keys['shift'] ? 20 : 10) * 0.5;
-        if (keys['a'] || mobileControlsRef.current.left) {
-          player.position.x -= ropeHorizontalSpeed * delta;
-        }
-        if (keys['d'] || mobileControlsRef.current.right) {
-          player.position.x += ropeHorizontalSpeed * delta;
-        }
-
-        const ropePoints = [
+        ropeLine.geometry.setFromPoints([
           new THREE.Vector3(player.position.x, player.position.y, player.position.z),
           new THREE.Vector3(player.position.x, ceilingHeight, player.position.z)
-        ];
-        ropeLine.geometry.setFromPoints(ropePoints);
-
-        isOnGround = false;
-        jumpCount = 0;
+        ]);
       } else {
-        if (!isOnGround) {
-          playerVelocityY += gravity * delta;
-        }
+        if (!isOnGround) playerVelocityY += gravity * delta;
 
-        const baseSpeed = keys['shift'] ? 20 : 10;
-        const speed = isCrouching ? baseSpeed * 0.5 : baseSpeed;
-        const direction = new THREE.Vector3();
+        const speed = (isCrouching ? 5 : 10) * delta;
+        if (keys['w'] || mobileControlsRef.current.up) player.position.z -= speed;
+        if (keys['s'] || mobileControlsRef.current.down) player.position.z += speed;
+        if (keys['a'] || mobileControlsRef.current.left) player.position.x -= speed;
+        if (keys['d'] || mobileControlsRef.current.right) player.position.x += speed;
 
-        if (keys['w'] || mobileControlsRef.current.up) direction.z -= 1;
-        if (keys['s'] || mobileControlsRef.current.down) direction.z += 1;
-        if (keys['a'] || mobileControlsRef.current.left) direction.x -= 1;
-        if (keys['d'] || mobileControlsRef.current.right) direction.x += 1;
+        player.position.y += playerVelocityY * delta;
 
-        const targetHorizontalPosition = new THREE.Vector3(player.position.x, 0, player.position.z);
-
-        if (direction.length() > 0) {
-          direction.normalize();
-          targetHorizontalPosition.x += direction.x * speed * delta;
-          targetHorizontalPosition.z += direction.z * speed * delta;
-        }
-        
-        let newPlayerPositionY = player.position.y + playerVelocityY * delta;
-
-        isOnGround = false;
-
-        if (newPlayerPositionY - playerHalfHeight <= 0) {
-          newPlayerPositionY = playerHalfHeight;
+        if (player.position.y <= playerHalfHeight) {
+          player.position.y = playerHalfHeight;
           playerVelocityY = 0;
           isOnGround = true;
-          jumpCount = 0;
         }
-
-        let actualHorizontalPosition = new THREE.Vector3(targetHorizontalPosition.x, player.position.y, targetHorizontalPosition.z);
-        
-        obstacles.forEach(obs => {
-          const obsBox = new THREE.Box3().setFromObject(obs);
-
-          const playerBoxAtTargetPos = new THREE.Box3().setFromCenterAndSize(
-            new THREE.Vector3(targetHorizontalPosition.x, newPlayerPositionY, targetHorizontalPosition.z),
-            new THREE.Vector3(playerRadius * 2, playerHalfHeight * 2, playerRadius * 2)
-          );
-
-          if (playerVelocityY < 0 && 
-            (player.position.y - playerHalfHeight) >= (obsBox.max.y - 0.1) &&
-            (newPlayerPositionY - playerHalfHeight) < (obsBox.max.y + 0.1) &&
-            playerBoxAtTargetPos.intersectsBox(obsBox)
-          ) {
-            newPlayerPositionY = obsBox.max.y + playerHalfHeight;
-            playerVelocityY = 0;
-            isOnGround = true;
-            jumpCount = 0;
-          }
-          else if (playerVelocityY > 0 && 
-            (player.position.y + playerHalfHeight) <= (obsBox.min.y + 0.1) &&
-            (newPlayerPositionY + playerHalfHeight) > (obsBox.min.y - 0.1) &&
-            playerBoxAtTargetPos.intersectsBox(obsBox)
-          ) {
-            playerVelocityY = 0;
-            newPlayerPositionY = obsBox.min.y - playerHalfHeight;
-          }
-          if (playerBoxAtTargetPos.intersectsBox(obsBox)) {
-            actualHorizontalPosition.x = player.position.x;
-            actualHorizontalPosition.z = player.position.z;
-          }
-        });
-
-        player.position.x = actualHorizontalPosition.x;
-        player.position.z = actualHorizontalPosition.z;
-        player.position.y = newPlayerPositionY;
       }
-
-      setPlayerPosition({ x: player.position.x, y: player.position.y, z: player.position.z });
-
-      interactiveObjects.forEach(obj => {
-        if (obj.userData.type === 'laser' && obj.userData.deadly) {
-          const distance = player.position.distanceTo(obj.position);
-          const playerEffectiveHeight = isCrouching ? 0.4 : 0.8;
-          
-          if (distance < 5 && 
-              player.position.y < obj.position.y + 2 && 
-              player.position.y + playerEffectiveHeight > obj.position.y - 2) {
-            
-            if (isCrouching && obj.position.y > 1.5) {
-              // Successfully crouched under laser
-            } else if (currentTime - lastDamageTime > 0.5) {
-              setPlayerHealth(prev => {
-                const newHealth = Math.max(0, prev - obj.userData.damage);
-                if (newHealth <= 0) {
-                  addLog("CRITICAL: Health depleted!", 'error');
-                }
-                return newHealth;
-              });
-              addLog("LASER HIT! -" + obj.userData.damage + " HP", 'error');
-              lastDamageTime = currentTime;
-            }
-          }
-        }
-      });
 
       puzzleElements.forEach(elem => {
         if (elem.userData.type === 'pressure_plate') {
           const distance = new THREE.Vector2(player.position.x, player.position.z)
             .distanceTo(new THREE.Vector2(elem.position.x, elem.position.z));
-          
-          const plateHalfHeight = elem.geometry.parameters.height / 2;
-          const plateTopY = elem.position.y + plateHalfHeight;
-
-          const playerIsOnPlate = distance < 2 &&
-                                 (player.position.y - playerHalfHeight <= plateTopY + 0.2) &&
-                                 (player.position.y - playerHalfHeight >= plateTopY - 0.5);
-          
-          if (playerIsOnPlate) {
-            if (!puzzleStates[elem.userData.id]) {
-              setPuzzleStates(prev => ({ ...prev, [elem.userData.id]: true }));
-              addLog(`✓ Pressure plate activated!`, 'info');
-            }
+          if (distance < 2 && !puzzleStates[elem.userData.id]) {
+            setPuzzleStates(prev => ({ ...prev, [elem.userData.id]: true }));
+            addLog(`✓ Pressure plate activated!`, 'info');
           }
         }
       });
 
       objectives.forEach(obj => {
-        if (obj.userData.type === 'water_source' && obj.userData.accessible) {
-          const distance = player.position.distanceTo(obj.position);
-          if (!missionComplete && distance < 5) {
+        const distance = player.position.distanceTo(obj.position);
+        if (!missionComplete && distance < 5) {
+          if (obj.userData.type === 'water_source' && obj.userData.accessible) {
+            missionComplete = true;
+            completeMission();
+          } else if (obj.userData.type === 'data_core') {
             missionComplete = true;
             completeMission();
           }
         }
-
-        if (obj.userData.type === 'data_core' && obj.userData.accessible) {
-          const distance = player.position.distanceTo(obj.position);
-          if (!missionComplete && distance < 5) {
-            missionComplete = true;
-            addLog('DATA CORE EXTRACTED!', 'success');
-            completeMission();
-          }
-        }
-
         obj.position.y += Math.sin(clock.elapsedTime * 2) * 0.02;
         obj.rotation.y += delta * 0.5;
       });
@@ -767,194 +528,65 @@ export default function Mission3DView({ gameState, setGameState }) {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('mousemove', handleMouseMove);
-      
       if (mountRef.current && renderer.domElement) {
         mountRef.current.removeChild(renderer.domElement);
       }
-      
-      if (ropeLine) {
-        scene.remove(ropeLine);
-        ropeLine.geometry.dispose();
-        ropeLine.material.dispose();
-      }
-
+      if (ropeLine) scene.remove(ropeLine);
       renderer.dispose();
     };
-  }, [activeMission, puzzleStates, inventory, missionStarted, destroyedObjects, leverStates, activatedButtons]);
+  }, [activeMission, puzzleStates, missionStarted, leverStates, activatedButtons]);
 
-  const handleMobileJump = () => {
-    setMobileControls(prev => ({ ...prev, jump: true }));
-  };
-
-  const handleMobileCrouch = () => {
-    setMobileControls(prev => ({ ...prev, crouch: !prev.crouch }));
-  };
-
-  const handleMobileInteract = () => {
-    const keyEvent = new KeyboardEvent('keydown', { key: 'e' });
-    window.dispatchEvent(keyEvent);
+  const handleMobileControl = (control, value) => {
+    setMobileControls(prev => ({ ...prev, [control]: value }));
   };
 
   const handleHackingComplete = () => {
     setShowHackingPuzzle(false);
-    addLog('Power Core HACKED!', 'success');
     completeMission();
   };
 
   if (!activeMission) {
     return (
       <div className="flex items-center justify-center h-[600px] bg-gray-900 text-white">
-        <p className="font-mono">No active mission. Please select a mission from the main console.</p>
+        <p className="font-mono">No active mission</p>
       </div>
     );
   }
 
   return (
     <div className="grid lg:grid-cols-4 gap-4 p-6">
-      {showBriefing && activeMission && (
-        <MissionBriefing
-          mission={activeMission}
-          onStart={() => {
-            setShowBriefing(false);
-            setMissionStarted(true);
-            addLog(`Mission ${activeMission.mission_number} started`, 'info');
-          }}
-          puzzleStates={puzzleStates}
-          inventory={inventory}
-        />
-      )}
-
-      <GameAIAssistant
-        mission={activeMission}
-        puzzleStates={puzzleStates}
-        inventory={inventory}
-        playerPosition={playerPosition}
-        isOpen={showAIAssistant}
-        onClose={() => setShowAIAssistant(false)}
-      />
-
-      {showHackingPuzzle && (
-        <PowerCoreHackingPuzzle
-          onComplete={handleHackingComplete}
-          onClose={() => setShowHackingPuzzle(false)}
-        />
-      )}
+      {showBriefing && <MissionBriefing mission={activeMission} onStart={() => { setShowBriefing(false); setMissionStarted(true); }} puzzleStates={puzzleStates} inventory={inventory} />}
+      <GameAIAssistant mission={activeMission} puzzleStates={puzzleStates} inventory={inventory} playerPosition={playerPosition} isOpen={showAIAssistant} onClose={() => setShowAIAssistant(false)} />
+      {showHackingPuzzle && <PowerCoreHackingPuzzle onComplete={handleHackingComplete} onClose={() => setShowHackingPuzzle(false)} />}
 
       <div className="lg:col-span-3">
         <Card className="bg-black border-blue-500/20 overflow-hidden">
           <div className="relative">
             <div ref={mountRef} className="w-full h-[600px] bg-gray-900" />
             
-            {!missionStarted && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-                <p className="text-white font-mono text-xl">Loading mission briefing...</p>
-              </div>
-            )}
-            
-            <div className="absolute top-4 left-4 bg-black/80 backdrop-blur-sm border border-red-500/50 rounded p-3 z-10 min-w-[200px]">
+            <div className="absolute top-4 left-4 bg-black/80 border border-red-500/50 rounded p-3 z-10">
               <div className="flex items-center gap-2 mb-2">
-                <Heart className={`w-5 h-5 ${playerHealth > 50 ? 'text-green-400' : playerHealth > 25 ? 'text-yellow-400' : 'text-red-400'}`} />
-                <span className="text-white font-mono text-sm font-bold">HEALTH: {playerHealth}%</span>
+                <Heart className={`w-5 h-5 ${playerHealth > 50 ? 'text-green-400' : 'text-red-400'}`} />
+                <span className="text-white font-mono text-sm">HP: {playerHealth}%</span>
               </div>
-              <div className="w-full bg-gray-700 rounded-full h-3">
-                <div 
-                  className={`h-3 rounded-full transition-all ${
-                    playerHealth > 50 ? 'bg-green-500' : 
-                    playerHealth > 25 ? 'bg-yellow-500' : 
-                    'bg-red-500'
-                  }`}
-                  style={{ width: `${playerHealth}%` }}
-                />
+              <div className="w-40 bg-gray-700 rounded h-2">
+                <div className={`h-2 rounded ${playerHealth > 50 ? 'bg-green-500' : 'bg-red-500'}`} style={{ width: `${playerHealth}%` }} />
               </div>
             </div>
 
-            <div className="absolute top-24 left-4 bg-black/80 backdrop-blur-sm border border-blue-500/50 rounded p-3 z-10">
-              <p className="text-blue-400 font-mono text-sm font-bold mb-1">
-                {activeMission ? `MISSION ${activeMission.mission_number}` : 'AWAITING MISSION'}
-              </p>
-              <p className="text-gray-300 font-mono text-xs">
-                {activeMission?.title || 'No active mission'}
-              </p>
+            <div className="absolute top-24 left-4 bg-black/80 border border-blue-500/50 rounded p-3 z-10">
+              <p className="text-blue-400 font-mono text-sm font-bold">MISSION {activeMission.mission_number}</p>
+              <p className="text-gray-300 font-mono text-xs">{activeMission.title}</p>
             </div>
 
-            <div className="absolute top-4 right-4 flex gap-2 z-10">
-              <Button
-                onClick={() => setShowAIAssistant(true)}
-                className="bg-cyan-600/80 hover:bg-cyan-700/80 backdrop-blur-sm font-mono text-xs"
-                size="sm"
-              >
-                <Bot className="w-4 h-4 mr-1" />
-                AI
+            <div className="absolute top-4 right-4 z-10">
+              <Button onClick={() => setShowAIAssistant(true)} className="bg-cyan-600/80 font-mono text-xs" size="sm">
+                <Bot className="w-4 h-4 mr-1" />AI
               </Button>
             </div>
             
-            <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm border border-gray-600 rounded p-2 font-mono text-xs text-gray-300 hidden md:block z-10">
-              <p>W/A/S/D: Move | SPACE: Rope | C: CROUCH | E: Interact</p>
-              {activeMission?.mission_number === 3 && (
-                <p className="text-yellow-400 mt-1 font-bold">
-                  CROUCH (C) under lasers to avoid damage!
-                </p>
-              )}
-            </div>
-
-            <div className="absolute bottom-4 left-4 right-4 md:hidden flex justify-between items-end gap-4 z-10">
-              <div className="flex flex-col gap-2">
-                <div className="grid grid-cols-3 gap-1">
-                  <div></div>
-                  <button
-                    onTouchStart={() => setMobileControls(prev => ({ ...prev, up: true }))}
-                    onTouchEnd={() => setMobileControls(prev => ({ ...prev, up: false }))}
-                    className="w-12 h-12 bg-blue-500/80 rounded flex items-center justify-center active:bg-blue-600"
-                  >
-                    <ArrowUp className="w-6 h-6 text-white" />
-                  </button>
-                  <div></div>
-                  <button
-                    onTouchStart={() => setMobileControls(prev => ({ ...prev, left: true }))}
-                    onTouchEnd={() => setMobileControls(prev => ({ ...prev, left: false }))}
-                    className="w-12 h-12 bg-blue-500/80 rounded flex items-center justify-center active:bg-blue-600"
-                  >
-                    <ArrowLeft className="w-6 h-6 text-white" />
-                  </button>
-                  <button
-                    onTouchStart={() => setMobileControls(prev => ({ ...prev, down: true }))}
-                    onTouchEnd={() => setMobileControls(prev => ({ ...prev, down: false }))}
-                    className="w-12 h-12 bg-blue-500/80 rounded flex items-center justify-center active:bg-blue-600"
-                  >
-                    <ArrowDown className="w-6 h-6 text-white" />
-                  </button>
-                  <button
-                    onTouchStart={() => setMobileControls(prev => ({ ...prev, right: true }))}
-                    onTouchEnd={() => setMobileControls(prev => ({ ...prev, right: false }))}
-                    className="w-12 h-12 bg-blue-500/80 rounded flex items-center justify-center active:bg-blue-600"
-                  >
-                    <ArrowRight className="w-6 h-6 text-white" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  onTouchStart={handleMobileJump}
-                  className="w-14 h-14 bg-green-500/80 rounded-full flex items-center justify-center active:bg-green-600"
-                >
-                  <MoveUp className="w-7 h-7 text-white" />
-                </button>
-                <button
-                  onTouchStart={handleMobileCrouch}
-                  className={`w-14 h-14 rounded-full flex items-center justify-center ${
-                    mobileControls.crouch ? 'bg-orange-600/80' : 'bg-orange-500/80'
-                  }`}
-                >
-                  <ArrowDown className="w-7 h-7 text-white" />
-                </button>
-                <button
-                  onTouchStart={handleMobileInteract}
-                  className="w-14 h-14 bg-yellow-500/80 rounded-full flex items-center justify-center active:bg-yellow-600"
-                >
-                  <Hand className="w-7 h-7 text-white" />
-                </button>
-              </div>
+            <div className="absolute bottom-4 left-4 bg-black/80 rounded p-2 font-mono text-xs text-gray-300 hidden md:block z-10">
+              <p>WASD: Move | SPACE: Rope | C: Crouch | E: Interact</p>
             </div>
           </div>
         </Card>
@@ -964,12 +596,11 @@ export default function Mission3DView({ gameState, setGameState }) {
         <Card className="bg-[#0F1729] border-gray-700">
           <div className="p-4 border-b border-gray-700">
             <h3 className="text-white font-mono font-bold flex items-center gap-2">
-              <Target className="w-5 h-5 text-orange-400" />
-              STATUS
+              <Target className="w-5 h-5 text-orange-400" />STATUS
             </h3>
           </div>
           <div className="p-4 space-y-2">
-            {activeMission?.mission_number === 1 && (
+            {activeMission.mission_number === 1 && (
               <>
                 <div className={`flex items-center gap-2 p-2 rounded ${activatedButtons.includes('button1') ? 'bg-green-900/20' : 'bg-gray-800/20'}`}>
                   <CheckCircle className={`w-4 h-4 ${activatedButtons.includes('button1') ? 'text-green-400' : 'text-gray-600'}`} />
@@ -985,18 +616,6 @@ export default function Mission3DView({ gameState, setGameState }) {
                 </div>
               </>
             )}
-            {activeMission?.mission_number === 3 && (
-              <>
-                <div className="flex items-center gap-2 p-2 rounded bg-red-900/20 border border-red-500/50">
-                  <AlertTriangle className="w-4 h-4 text-red-400 animate-pulse" />
-                  <span className="text-sm font-mono text-red-300">Agent Pip: Bio-Stress HIGH</span>
-                </div>
-                <div className="flex items-center gap-2 p-2 rounded bg-yellow-900/20 border border-yellow-500/50">
-                  <Target className="w-4 h-4 text-yellow-400" />
-                  <span className="text-sm font-mono text-yellow-300">Target: Power Core</span>
-                </div>
-              </>
-            )}
           </div>
         </Card>
 
@@ -1008,12 +627,7 @@ export default function Mission3DView({ gameState, setGameState }) {
             {missionLog.slice(-10).map((log, i) => (
               <div key={i} className="text-xs font-mono">
                 <span className="text-gray-600">[{log.time}]</span>{' '}
-                <span className={
-                  log.type === 'error' ? 'text-red-400' :
-                  log.type === 'warning' ? 'text-yellow-400' :
-                  log.type === 'success' ? 'text-green-400' :
-                  'text-gray-400'
-                }>
+                <span className={log.type === 'error' ? 'text-red-400' : log.type === 'warning' ? 'text-yellow-400' : log.type === 'success' ? 'text-green-400' : 'text-gray-400'}>
                   {log.message}
                 </span>
               </div>
