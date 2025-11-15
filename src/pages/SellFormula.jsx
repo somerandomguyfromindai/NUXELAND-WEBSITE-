@@ -23,7 +23,7 @@ export default function SellFormula() {
       id: 1,
       name: "TechCorp Industries",
       location: "Silicon Valley, USA",
-      coordinates: { x: 15, y: 38 },
+      coordinates: { x: 18, y: 40 },
       offer: 15000000,
       interest: "Mass Production Technology",
       reputation: "Trusted",
@@ -40,7 +40,7 @@ export default function SellFormula() {
       id: 2,
       name: "MediBio Solutions",
       location: "Geneva, Switzerland",
-      coordinates: { x: 49, y: 30 },
+      coordinates: { x: 51, y: 32 },
       offer: 22000000,
       interest: "Medical Applications",
       reputation: "Highly Ethical",
@@ -57,7 +57,7 @@ export default function SellFormula() {
       id: 3,
       name: "Global Defense Systems",
       location: "Washington D.C., USA",
-      coordinates: { x: 20, y: 39 },
+      coordinates: { x: 23, y: 41 },
       offer: 45000000,
       interest: "Military Applications",
       reputation: "Controversial",
@@ -74,7 +74,7 @@ export default function SellFormula() {
       id: 4,
       name: "EcoTech Innovations",
       location: "Tokyo, Japan",
-      coordinates: { x: 83, y: 36 },
+      coordinates: { x: 82, y: 38 },
       offer: 18000000,
       interest: "Environmental Solutions",
       reputation: "Sustainable",
@@ -91,7 +91,7 @@ export default function SellFormula() {
       id: 5,
       name: "AstroNautic Corp",
       location: "Cape Canaveral, USA",
-      coordinates: { x: 21, y: 42 },
+      coordinates: { x: 24, y: 44 },
       offer: 35000000,
       interest: "Space Exploration",
       reputation: "Visionary",
@@ -108,7 +108,7 @@ export default function SellFormula() {
       id: 6,
       name: "NanoSystems Ltd",
       location: "Shanghai, China",
-      coordinates: { x: 73, y: 38 },
+      coordinates: { x: 75, y: 40 },
       offer: 28000000,
       interest: "Consumer Technology",
       reputation: "Competitive",
@@ -213,7 +213,7 @@ export default function SellFormula() {
                       <div className={`w-4 h-4 rounded-full bg-green-500 shadow-lg ring-4 ${
                         selectedBuyer?.id === buyer.id ? 'ring-green-400 scale-150' : 'ring-green-900'
                       } group-hover:scale-150 transition-all duration-300`}>
-                        <div className="absolute inset-0 -top-1 -right-1 rounded-full bg-green-400 animate-ping opacity-50"></div>
+                        <div className="absolute inset-0 rounded-full bg-green-400 animate-ping opacity-50"></div>
                       </div>
                       <div className="absolute top-6 left-1/2 transform -translate-x-1/2 bg-black/95 px-2 py-1 rounded border border-green-500/30 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap text-xs font-mono text-green-400 z-50">
                         {buyer.name}
@@ -225,7 +225,7 @@ export default function SellFormula() {
                   <button
                     onClick={handleNuxelandClick}
                     className="absolute transform -translate-x-1/2 -translate-y-1/2 group z-10"
-                    style={{ left: '50%', top: '20%' }}
+                    style={{ left: '45%', top: '15%' }}
                   >
                     <div className={`w-5 h-5 rounded-full bg-red-500 shadow-lg ring-4 ${
                       showNuxelandMap ? 'ring-red-400 scale-150' : 'ring-red-900'
