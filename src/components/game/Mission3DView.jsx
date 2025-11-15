@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -23,6 +24,7 @@ export default function Mission3DView({ gameState, setGameState }) {
   const [playerHealth, setPlayerHealth] = useState(100);
   const [showHackingPuzzle, setShowHackingPuzzle] = useState(false);
   const [collectedResources, setCollectedResources] = useState([]);
+  const [mobileControls, setMobileControls] = useState({ w: false, a: false, s: false, d: false, space: false, c: false });
   const queryClient = useQueryClient();
 
   const { data: missions } = useQuery({
@@ -1131,7 +1133,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       const delta = clock.getDelta();
       const time = clock.getElapsedTime();
 
-      const isSpacePressed = keys[' '];
+      const isSpacePressed = keys[' '] || mobileControls.space;
 
       if (isSpacePressed && !isOnRope) {
         const ropeMaterial = new THREE.LineBasicMaterial({ color: 0xd0d0d0, linewidth: 2 });
@@ -1150,20 +1152,20 @@ export default function Mission3DView({ gameState, setGameState }) {
         isOnRope = false;
       }
 
-      if (isCrouching) {
+      if (isCrouching || mobileControls.c) {
         player.scale.y = THREE.MathUtils.lerp(player.scale.y, 0.5, delta * 10);
       } else {
         player.scale.y = THREE.MathUtils.lerp(player.scale.y, 1, delta * 10);
       }
 
-      const speed = (isCrouching ? 7 : 15) * delta;
-      const isMoving = keys['w'] || keys['s'] || keys['a'] || keys['d'];
+      const speed = ((isCrouching || mobileControls.c) ? 7 : 15) * delta;
+      const isMoving = keys['w'] || keys['s'] || keys['a'] || keys['d'] || mobileControls.w || mobileControls.s || mobileControls.a || mobileControls.d;
 
       if (isOnRope) {
-        if (keys['w']) player.position.y += ropeSpeed * delta;
-        if (keys['s']) player.position.y -= ropeSpeed * delta;
-        if (keys['a']) player.position.x -= ropeSpeed * delta * 0.7;
-        if (keys['d']) player.position.x += ropeSpeed * delta * 0.7;
+        if (keys['w'] || mobileControls.w) player.position.y += ropeSpeed * delta;
+        if (keys['s'] || mobileControls.s) player.position.y -= ropeSpeed * delta;
+        if (keys['a'] || mobileControls.a) player.position.x -= ropeSpeed * delta * 0.7;
+        if (keys['d'] || mobileControls.d) player.position.x += ropeSpeed * delta * 0.7;
 
         if (ropeLine) {
           ropeLine.geometry.setFromPoints([
@@ -1174,10 +1176,10 @@ export default function Mission3DView({ gameState, setGameState }) {
       } else {
         if (!isOnGround) playerVelocityY += gravity * delta;
 
-        if (keys['w']) player.position.z -= speed;
-        if (keys['s']) player.position.z += speed;
-        if (keys['a']) player.position.x -= speed;
-        if (keys['d']) player.position.x += speed;
+        if (keys['w'] || mobileControls.w) player.position.z -= speed;
+        if (keys['s'] || mobileControls.s) player.position.z += speed;
+        if (keys['a'] || mobileControls.a) player.position.x -= speed;
+        if (keys['d'] || mobileControls.d) player.position.x += speed;
 
         player.position.y += playerVelocityY * delta;
 
@@ -1209,10 +1211,10 @@ export default function Mission3DView({ gameState, setGameState }) {
 
       if (isMoving) {
         let targetRotation = 0;
-        if (keys['w']) targetRotation = 0;
-        if (keys['s']) targetRotation = Math.PI;
-        if (keys['a']) targetRotation = Math.PI / 2;
-        if (keys['d']) targetRotation = -Math.PI / 2;
+        if (keys['w'] || mobileControls.w) targetRotation = 0;
+        if (keys['s'] || mobileControls.s) targetRotation = Math.PI;
+        if (keys['a'] || mobileControls.a) targetRotation = Math.PI / 2;
+        if (keys['d'] || mobileControls.d) targetRotation = -Math.PI / 2;
         player.rotation.y = THREE.MathUtils.lerp(player.rotation.y, targetRotation, delta * 10);
       }
 
@@ -1220,9 +1222,9 @@ export default function Mission3DView({ gameState, setGameState }) {
       laserGrids.forEach(laser => {
         const distance = player.position.distanceTo(laser.position);
         if (distance < 5) {
-          if (laser.userData.canCrouch && isCrouching) {
+          if (laser.userData.canCrouch && (isCrouching || mobileControls.c)) {
             // Safe - crouching under barrier
-          } else if (!laser.userData.canCrouch || !isCrouching) {
+          } else if (!laser.userData.canCrouch || !(isCrouching || mobileControls.c)) {
             setPlayerHealth(prev => {
               const newHealth = Math.max(0, prev - 50 * delta);
               if (newHealth <= 0) {
@@ -1304,7 +1306,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       if (ropeLine) scene.remove(ropeLine);
       renderer.dispose();
     };
-  }, [activeMission, puzzleStates, missionStarted, leverStates, activatedButtons, collectedResources, inventory]);
+  }, [activeMission, puzzleStates, missionStarted, leverStates, activatedButtons, collectedResources, inventory, mobileControls]);
 
   if (!activeMission) {
     return (
@@ -1313,6 +1315,12 @@ export default function Mission3DView({ gameState, setGameState }) {
       </div>
     );
   }
+
+  const handleMobileInteract = () => {
+    // Simulate a keydown event for 'e'
+    const event = new KeyboardEvent('keydown', { key: 'e', bubbles: true, cancelable: true });
+    window.dispatchEvent(event);
+  };
 
   return (
     <div className="grid lg:grid-cols-4 gap-4 p-6">
@@ -1362,6 +1370,81 @@ export default function Mission3DView({ gameState, setGameState }) {
             <div className="absolute bottom-4 left-4 bg-black/95 backdrop-blur-md rounded-lg p-3 font-mono text-xs text-gray-300 hidden md:block z-10 border border-gray-700 shadow-2xl">
               <p className="font-bold text-white mb-1">CONTROLS:</p>
               <p>WASD: Move | SPACE: Rope | C: Crouch | E: Interact</p>
+            </div>
+
+            {/* Mobile Controls */}
+            <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end md:hidden z-20">
+              {/* Movement Joystick */}
+              <div className="relative w-32 h-32 bg-black/50 backdrop-blur-md rounded-full border-2 border-blue-500/50">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-24 h-24 rounded-full border-2 border-blue-500/30"></div>
+                </div>
+                
+                {/* Up */}
+                <button
+                  onTouchStart={() => setMobileControls(prev => ({ ...prev, w: true }))}
+                  onTouchEnd={() => setMobileControls(prev => ({ ...prev, w: false }))}
+                  className="absolute top-2 left-1/2 transform -translate-x-1/2 w-10 h-10 bg-blue-500/80 rounded-full flex items-center justify-center active:bg-blue-600"
+                >
+                  <span className="text-white font-bold text-xs">W</span>
+                </button>
+                
+                {/* Down */}
+                <button
+                  onTouchStart={() => setMobileControls(prev => ({ ...prev, s: true }))}
+                  onTouchEnd={() => setMobileControls(prev => ({ ...prev, s: false }))}
+                  className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-10 h-10 bg-blue-500/80 rounded-full flex items-center justify-center active:bg-blue-600"
+                >
+                  <span className="text-white font-bold text-xs">S</span>
+                </button>
+                
+                {/* Left */}
+                <button
+                  onTouchStart={() => setMobileControls(prev => ({ ...prev, a: true }))}
+                  onTouchEnd={() => setMobileControls(prev => ({ ...prev, a: false }))}
+                  className="absolute top-1/2 left-2 transform -translate-y-1/2 w-10 h-10 bg-blue-500/80 rounded-full flex items-center justify-center active:bg-blue-600"
+                >
+                  <span className="text-white font-bold text-xs">A</span>
+                </button>
+                
+                {/* Right */}
+                <button
+                  onTouchStart={() => setMobileControls(prev => ({ ...prev, d: true }))}
+                  onTouchEnd={() => setMobileControls(prev => ({ ...prev, d: false }))}
+                  className="absolute top-1/2 right-2 transform -translate-y-1/2 w-10 h-10 bg-blue-500/80 rounded-full flex items-center justify-center active:bg-blue-600"
+                >
+                  <span className="text-white font-bold text-xs">D</span>
+                </button>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-2">
+                {/* Interact */}
+                <button
+                  onClick={handleMobileInteract}
+                  className="w-14 h-14 bg-green-500/80 backdrop-blur-md rounded-full flex items-center justify-center border-2 border-green-400/50 active:bg-green-600 shadow-lg"
+                >
+                  <span className="text-white font-bold text-xs">E</span>
+                </button>
+                
+                {/* Rope */}
+                <button
+                  onTouchStart={() => setMobileControls(prev => ({ ...prev, space: true }))}
+                  onTouchEnd={() => setMobileControls(prev => ({ ...prev, space: false }))}
+                  className="w-14 h-14 bg-yellow-500/80 backdrop-blur-md rounded-full flex items-center justify-center border-2 border-yellow-400/50 active:bg-yellow-600 shadow-lg"
+                >
+                  <span className="text-white font-bold text-xs">⬆</span>
+                </button>
+                
+                {/* Crouch */}
+                <button
+                  onTouchStart={() => setMobileControls(prev => ({ ...prev, c: true }))}
+                  onTouchEnd={() => setMobileControls(prev => ({ ...prev, c: false }))}
+                  className="w-14 h-14 bg-purple-500/80 backdrop-blur-md rounded-full flex items-center justify-center border-2 border-purple-400/50 active:bg-purple-600 shadow-lg"
+                >
+                  <span className="text-white font-bold text-xs">C</span>
+                </button>
+              </div>
             </div>
           </div>
         </Card>
