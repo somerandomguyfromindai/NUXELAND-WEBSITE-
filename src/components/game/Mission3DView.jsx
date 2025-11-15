@@ -4,9 +4,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as THREE from "three";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, AlertTriangle, Target, FileText, Lightbulb, MoveUp, Hand, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Bot } from "lucide-react";
+import { CheckCircle, AlertTriangle, Target, FileText, Lightbulb, MoveUp, Hand, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Bot, Heart } from "lucide-react";
 import MissionBriefing from "./MissionBriefing";
 import GameAIAssistant from "./GameAIAssistant";
+import PowerCoreHackingPuzzle from "./PowerCoreHackingPuzzle";
 
 export default function Mission3DView({ gameState, setGameState }) {
   const mountRef = useRef(null);
@@ -26,11 +27,14 @@ export default function Mission3DView({ gameState, setGameState }) {
     down: false,
     left: false,
     right: false,
-    jump: false
+    jump: false,
+    crouch: false
   });
   const mobileControlsRef = useRef(mobileControls);
   const [environmentVariant, setEnvironmentVariant] = useState(null);
   const [isGeneratingVariant, setIsGeneratingVariant] = useState(false);
+  const [playerHealth, setPlayerHealth] = useState(100);
+  const [showHackingPuzzle, setShowHackingPuzzle] = useState(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -87,6 +91,7 @@ export default function Mission3DView({ gameState, setGameState }) {
           setLeverStates({});
           setActivatedButtons([]);
           setEnvironmentVariant(null);
+          setPlayerHealth(100);
         }, 2000);
       }
     }
@@ -111,7 +116,7 @@ export default function Mission3DView({ gameState, setGameState }) {
 Current player actions:
 ${JSON.stringify(playerActions, null, 2)}
 
-Generate environmental variations based on player progress. Add 2-3 hazards or dynamic elements to increase challenge.
+Generate environmental variations based on player progress.
 
 Return JSON with:
 {
@@ -250,6 +255,7 @@ Return JSON with:
     let isOnGround = true;
     let isOnRope = false;
     let ropeLine = null;
+    let isCrouching = false;
     const gravity = -25;
     const jumpForce = 10;
     const ropeSpeed = 8;
@@ -258,6 +264,7 @@ Return JSON with:
     let jumpCount = 0;
     const maxJumps = 2;
     const ceilingHeight = 50;
+    let lastDamageTime = 0;
 
     if (activeMission.mission_number === 1) {
       addLog("Mission 1: Hold SPACE to deploy rope!", 'info');
@@ -681,13 +688,13 @@ Return JSON with:
       }
 
     } else if (activeMission.mission_number === 2) {
+      scene.background = new THREE.Color(0x1a1a2e);
+      scene.fog = new THREE.Fog(0x1a1a2e, 30, 150);
+      
       addLog("Mission 2: Lab infiltration", 'warning');
       
       player.position.set(-80, 1, 80);
       obstacles = [];
-      
-      scene.background = new THREE.Color(0x1a1a2e);
-      scene.fog = new THREE.Fog(0x1a1a2e, 30, 150);
 
       const labFloorGeometry = new THREE.PlaneGeometry(200, 200);
       const labFloorMaterial = new THREE.MeshStandardMaterial({ 
@@ -854,7 +861,7 @@ Return JSON with:
           })
         );
         laser.position.set(-60 + i * 30, 4, 20);
-        laser.userData = { type: 'laser', deadly: true };
+        laser.userData = { type: 'laser', deadly: true, damage: 10 };
         scene.add(laser);
         interactiveObjects.push(laser);
       }
@@ -907,6 +914,182 @@ Return JSON with:
       });
 
       addLog("Advanced security active!", 'warning');
+    } else if (activeMission.mission_number === 3) {
+      scene.background = new THREE.Color(0x0d0d1a);
+      scene.fog = new THREE.Fog(0x0d0d1a, 20, 120);
+      
+      addLog("Mission 3: Specimen Retrieval - Agent Pip", 'warning');
+      addLog("Use C to CROUCH under lasers!", 'info');
+      
+      player.position.set(-70, 1, 70);
+      obstacles = [];
+
+      const floorGeometry = new THREE.PlaneGeometry(200, 200);
+      const floorMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x1a1a2a,
+        roughness: 0.95,
+        metalness: 0.05
+      });
+      const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+      floor.rotation.x = -Math.PI / 2;
+      floor.receiveShadow = true;
+      scene.add(floor);
+
+      const wallMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x2a2a3a, 
+        roughness: 0.9,
+        metalness: 0.1
+      });
+      const wallHeight = 45;
+      
+      const walls = [
+        new THREE.Mesh(new THREE.BoxGeometry(200, wallHeight, 3), wallMaterial),
+        new THREE.Mesh(new THREE.BoxGeometry(3, wallHeight, 200), wallMaterial),
+        new THREE.Mesh(new THREE.BoxGeometry(3, wallHeight, 200), wallMaterial)
+      ];
+      walls[0].position.set(0, wallHeight/2, -100);
+      walls[1].position.set(-100, wallHeight/2, 0);
+      walls[2].position.set(100, wallHeight/2, 0);
+      walls.forEach(wall => {
+        wall.receiveShadow = true;
+        wall.castShadow = true;
+        scene.add(wall);
+      });
+
+      const redLight = new THREE.PointLight(0xff0000, 2, 100);
+      redLight.position.set(0, 20, 0);
+      scene.add(redLight);
+
+      const laserPositions = [
+        { x: -50, z: 20, width: 60 },
+        { x: -20, z: -10, width: 50 },
+        { x: 20, z: -40, width: 55 }
+      ];
+
+      laserPositions.forEach((pos, idx) => {
+        const laser = new THREE.Mesh(
+          new THREE.BoxGeometry(0.3, 4, pos.width),
+          new THREE.MeshBasicMaterial({ 
+            color: 0xff0000,
+            transparent: true,
+            opacity: 0.7,
+            emissive: 0xff0000,
+            emissiveIntensity: 1
+          })
+        );
+        laser.position.set(pos.x, 2, pos.z);
+        laser.userData = { type: 'laser', deadly: true, damage: 15 };
+        scene.add(laser);
+        interactiveObjects.push(laser);
+
+        const glowGeometry = new THREE.BoxGeometry(0.5, 4.5, pos.width + 2);
+        const glowMaterial = new THREE.MeshBasicMaterial({
+          color: 0xff0000,
+          transparent: true,
+          opacity: 0.2
+        });
+        const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+        glow.position.copy(laser.position);
+        scene.add(glow);
+      });
+
+      const containerPositions = [
+        { x: -60, z: 60 },
+        { x: 60, z: 60 },
+        { x: -60, z: -70 },
+        { x: 60, z: -70 }
+      ];
+
+      containerPositions.forEach(pos => {
+        const container = new THREE.Mesh(
+          new THREE.BoxGeometry(15, 20, 15),
+          new THREE.MeshStandardMaterial({ 
+            color: 0x3a3a4a,
+            roughness: 0.8,
+            metalness: 0.3
+          })
+        );
+        container.position.set(pos.x, 10, pos.z);
+        container.castShadow = true;
+        container.receiveShadow = true;
+        scene.add(container);
+        obstacles.push(container);
+      });
+
+      const specimenContainer = new THREE.Mesh(
+        new THREE.CylinderGeometry(8, 8, 12, 32),
+        new THREE.MeshPhysicalMaterial({ 
+          color: 0x88ccff,
+          transparent: true,
+          opacity: 0.3,
+          transmission: 0.9,
+          roughness: 0.1,
+          metalness: 0.1
+        })
+      );
+      specimenContainer.position.set(0, 6, -70);
+      specimenContainer.castShadow = true;
+      scene.add(specimenContainer);
+      obstacles.push(specimenContainer);
+
+      const flyBody = new THREE.Group();
+      const bodyMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(4, 32, 32),
+        new THREE.MeshStandardMaterial({ 
+          color: 0x1a1a1a,
+          roughness: 0.3,
+          metalness: 0.7
+        })
+      );
+      bodyMesh.scale.set(1, 1.2, 1);
+      flyBody.add(bodyMesh);
+
+      const eyeMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xff0000,
+        emissive: 0xff0000,
+        emissiveIntensity: 0.5
+      });
+      const leftEye = new THREE.Mesh(new THREE.SphereGeometry(1.5, 16, 16), eyeMaterial);
+      leftEye.position.set(-2, 2, 3);
+      flyBody.add(leftEye);
+      
+      const rightEye = new THREE.Mesh(new THREE.SphereGeometry(1.5, 16, 16), eyeMaterial);
+      rightEye.position.set(2, 2, 3);
+      flyBody.add(rightEye);
+
+      flyBody.position.set(0, 8, -70);
+      flyBody.userData = { type: 'specimen', animated: true };
+      scene.add(flyBody);
+
+      const powerCore = new THREE.Mesh(
+        new THREE.SphereGeometry(3, 32, 32),
+        new THREE.MeshPhysicalMaterial({ 
+          color: 0x00ff00,
+          emissive: 0x00ff00,
+          emissiveIntensity: 1.5,
+          transparent: true,
+          opacity: 0.8,
+          transmission: 0.5
+        })
+      );
+      powerCore.position.set(0, 5, -90);
+      powerCore.userData = { type: 'power_core', accessible: true, needsHack: true };
+      powerCore.castShadow = true;
+      scene.add(powerCore);
+      objectives.push(powerCore);
+
+      const coreGlow = new THREE.Mesh(
+        new THREE.SphereGeometry(4, 32, 32),
+        new THREE.MeshBasicMaterial({ 
+          color: 0x00ff00,
+          transparent: true,
+          opacity: 0.2
+        })
+      );
+      coreGlow.position.copy(powerCore.position);
+      scene.add(coreGlow);
+
+      addLog("Bio-stress warning: Agent Pip vitals unstable!", 'error');
     }
 
     const keys = {};
@@ -914,6 +1097,10 @@ Return JSON with:
     
     const handleKeyDown = (e) => { 
       keys[e.key.toLowerCase()] = true;
+      
+      if (e.key.toLowerCase() === 'c') {
+        isCrouching = true;
+      }
       
       if (e.key.toLowerCase() === 'e') {
         resourceObjects.forEach((obj, index) => {
@@ -980,10 +1167,23 @@ Return JSON with:
             }
           }
         });
+
+        objectives.forEach(obj => {
+          const distance = player.position.distanceTo(obj.position);
+          if (distance < 5 && obj.userData.type === 'power_core' && obj.userData.needsHack) {
+            addLog('Accessing Power Core...', 'info');
+            setShowHackingPuzzle(true);
+          }
+        });
       }
     };
     
-    const handleKeyUp = (e) => { keys[e.key.toLowerCase()] = false; };
+    const handleKeyUp = (e) => { 
+      keys[e.key.toLowerCase()] = false;
+      if (e.key.toLowerCase() === 'c') {
+        isCrouching = false;
+      }
+    };
     
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
@@ -998,6 +1198,7 @@ Return JSON with:
     
     const animate = () => {
       const delta = clock.getDelta();
+      const currentTime = clock.elapsedTime;
 
       const isSpaceOrMobileJumpPressed = keys[' '] || mobileControlsRef.current.jump;
 
@@ -1014,7 +1215,6 @@ Return JSON with:
           playerVelocityY = 0;
           isOnGround = false;
           jumpCount = 0;
-          addLog('Rope deployed!', 'info');
         }
       } else {
         if (ropeLine) {
@@ -1028,6 +1228,12 @@ Return JSON with:
       
       if (mobileControlsRef.current.jump) {
         setMobileControls(prev => ({ ...prev, jump: false }));
+      }
+
+      if (isCrouching || mobileControlsRef.current.crouch) {
+        player.scale.y = 0.5;
+      } else {
+        player.scale.y = 1;
       }
 
       if (isOnRope) {
@@ -1068,7 +1274,7 @@ Return JSON with:
         }
 
         const baseSpeed = keys['shift'] ? 20 : 10;
-        const speed = onSlippery ? baseSpeed * 1.5 : baseSpeed;
+        const speed = onSlippery ? baseSpeed * 1.5 : (isCrouching ? baseSpeed * 0.5 : baseSpeed);
         const direction = new THREE.Vector3();
 
         if (keys['w'] || mobileControlsRef.current.up) direction.z -= 1;
@@ -1137,6 +1343,38 @@ Return JSON with:
 
       setPlayerPosition({ x: player.position.x, y: player.position.y, z: player.position.z });
 
+      interactiveObjects.forEach(obj => {
+        if (obj.userData.type === 'slippery') {
+          const distance = new THREE.Vector2(player.position.x, player.position.z)
+            .distanceTo(new THREE.Vector2(obj.position.x, obj.position.z));
+          if (distance < 5) {
+            onSlippery = true;
+          }
+        } else if (obj.userData.type === 'laser' && obj.userData.deadly) {
+          const distance = player.position.distanceTo(obj.position);
+          const playerEffectiveHeight = isCrouching ? 0.4 : 0.8;
+          
+          if (distance < 5 && 
+              player.position.y < obj.position.y + 2 && 
+              player.position.y + playerEffectiveHeight > obj.position.y - 2) {
+            
+            if (isCrouching && obj.position.y > 1.5) {
+              // Successfully crouched under laser
+            } else if (currentTime - lastDamageTime > 0.5) {
+              setPlayerHealth(prev => {
+                const newHealth = Math.max(0, prev - obj.userData.damage);
+                if (newHealth <= 0) {
+                  addLog("CRITICAL: Health depleted!", 'error');
+                }
+                return newHealth;
+              });
+              addLog("LASER HIT! -" + obj.userData.damage + " HP", 'error');
+              lastDamageTime = currentTime;
+            }
+          }
+        }
+      });
+
       puzzleElements.forEach(elem => {
         if (elem.userData.type === 'pressure_plate') {
           const distance = new THREE.Vector2(player.position.x, player.position.z)
@@ -1154,21 +1392,6 @@ Return JSON with:
               setPuzzleStates(prev => ({ ...prev, [elem.userData.id]: true }));
               addLog(`✓ Pressure plate activated!`, 'info');
             }
-          }
-        }
-      });
-
-      interactiveObjects.forEach(obj => {
-        if (obj.userData.type === 'slippery') {
-          const distance = new THREE.Vector2(player.position.x, player.position.z)
-            .distanceTo(new THREE.Vector2(obj.position.x, obj.position.z));
-          if (distance < 5) {
-            onSlippery = true;
-          }
-        } else if (obj.userData.type === 'laser' && obj.userData.deadly) {
-          const distance = player.position.distanceTo(obj.position);
-          if (distance < 5 && player.position.y < obj.position.y + 4 && player.position.y > obj.position.y - 4) {
-            addLog("Laser detected!", 'error');
           }
         }
       });
@@ -1246,9 +1469,19 @@ Return JSON with:
     setMobileControls(prev => ({ ...prev, jump: true }));
   };
 
+  const handleMobileCrouch = () => {
+    setMobileControls(prev => ({ ...prev, crouch: !prev.crouch }));
+  };
+
   const handleMobileInteract = () => {
     const keyEvent = new KeyboardEvent('keydown', { key: 'e' });
     window.dispatchEvent(keyEvent);
+  };
+
+  const handleHackingComplete = () => {
+    setShowHackingPuzzle(false);
+    addLog('Power Core HACKED!', 'success');
+    completeMission();
   };
 
   return (
@@ -1275,40 +1508,45 @@ Return JSON with:
         onClose={() => setShowAIAssistant(false)}
       />
 
+      {showHackingPuzzle && (
+        <PowerCoreHackingPuzzle
+          onComplete={handleHackingComplete}
+          onClose={() => setShowHackingPuzzle(false)}
+        />
+      )}
+
       <div className="lg:col-span-3">
         <Card className="bg-black border-blue-500/20 overflow-hidden">
           <div className="relative">
             <div ref={mountRef} className="w-full h-[600px]" />
             
-            <div className="absolute top-4 left-4 bg-black/80 backdrop-blur-sm border border-blue-500/50 rounded p-3 z-10">
+            <div className="absolute top-4 left-4 bg-black/80 backdrop-blur-sm border border-red-500/50 rounded p-3 z-10 min-w-[200px]">
+              <div className="flex items-center gap-2 mb-2">
+                <Heart className={`w-5 h-5 ${playerHealth > 50 ? 'text-green-400' : playerHealth > 25 ? 'text-yellow-400' : 'text-red-400'}`} />
+                <span className="text-white font-mono text-sm font-bold">HEALTH: {playerHealth}%</span>
+              </div>
+              <div className="w-full bg-gray-700 rounded-full h-3">
+                <div 
+                  className={`h-3 rounded-full transition-all ${
+                    playerHealth > 50 ? 'bg-green-500' : 
+                    playerHealth > 25 ? 'bg-yellow-500' : 
+                    'bg-red-500'
+                  }`}
+                  style={{ width: `${playerHealth}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="absolute top-24 left-4 bg-black/80 backdrop-blur-sm border border-blue-500/50 rounded p-3 z-10">
               <p className="text-blue-400 font-mono text-sm font-bold mb-1">
                 {activeMission ? `MISSION ${activeMission.mission_number}` : 'AWAITING MISSION'}
               </p>
               <p className="text-gray-300 font-mono text-xs">
                 {activeMission?.title || 'No active mission'}
               </p>
-              {activeMission && !missionStarted && (
-                <Button
-                  onClick={() => setShowBriefing(true)}
-                  variant="outline"
-                  size="sm"
-                  className="mt-2 w-full font-mono text-xs"
-                >
-                  <FileText className="w-3 h-3 mr-1" />
-                  View Briefing
-                </Button>
-              )}
             </div>
 
             <div className="absolute top-4 right-4 flex gap-2 z-10">
-              <Button
-                onClick={generateEnvironmentVariant}
-                disabled={isGeneratingVariant}
-                className="bg-purple-600/80 hover:bg-purple-700/80 backdrop-blur-sm font-mono text-xs"
-                size="sm"
-              >
-                {isGeneratingVariant ? 'Generating...' : 'AI Remix'}
-              </Button>
               <Button
                 onClick={() => setShowAIAssistant(true)}
                 className="bg-cyan-600/80 hover:bg-cyan-700/80 backdrop-blur-sm font-mono text-xs"
@@ -1328,11 +1566,30 @@ Return JSON with:
             </div>
             
             <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm border border-gray-600 rounded p-2 font-mono text-xs text-gray-300 hidden md:block z-10">
-              <p>W/A/S/D: Move | SPACE: Rope | E: Interact | Shift: Sprint</p>
-              <p className="text-cyan-400 mt-1 font-bold">
-                Hold SPACE to deploy rope - W/S up/down, A/D left/right!
-              </p>
+              <p>W/A/S/D: Move | SPACE: Rope | C: CROUCH | E: Interact</p>
+              {activeMission?.mission_number === 3 && (
+                <p className="text-yellow-400 mt-1 font-bold">
+                  CROUCH (C) under lasers to avoid damage!
+                </p>
+              )}
             </div>
+
+            {showHint && activeMission?.mission_number === 1 && (
+              <div className="absolute top-20 left-4 bg-yellow-900/90 backdrop-blur-sm border border-yellow-500/50 rounded p-4 max-w-md z-20">
+                <h4 className="text-yellow-300 font-mono font-bold mb-2 flex items-center gap-2">
+                  <Lightbulb className="w-4 h-4" />
+                  Mission 1 Hints:
+                </h4>
+                <ol className="text-yellow-100 font-mono text-xs space-y-1 list-decimal list-inside">
+                  <li>Use ROPE (hold SPACE) to reach button on sink</li>
+                  <li>Press USE on button (turns green)</li>
+                  <li>Cross fork bridge</li>
+                  <li>Step on PRESSURE PLATE</li>
+                  <li>Activate KNIFE lever</li>
+                  <li>Reach WATER DROPLET</li>
+                </ol>
+              </div>
+            )}
 
             <div className="absolute bottom-4 left-4 right-4 md:hidden flex justify-between items-end gap-4 z-10">
               <div className="flex flex-col gap-2">
@@ -1373,50 +1630,26 @@ Return JSON with:
               <div className="flex gap-2">
                 <button
                   onTouchStart={handleMobileJump}
-                  className="w-16 h-16 bg-green-500/80 rounded-full flex items-center justify-center active:bg-green-600 flex-col"
+                  className="w-14 h-14 bg-green-500/80 rounded-full flex items-center justify-center active:bg-green-600"
                 >
-                  <MoveUp className="w-8 h-8 text-white" />
-                  <span className="text-[10px] text-white font-bold">ROPE</span>
+                  <MoveUp className="w-7 h-7 text-white" />
+                </button>
+                <button
+                  onTouchStart={handleMobileCrouch}
+                  className={`w-14 h-14 rounded-full flex items-center justify-center ${
+                    mobileControls.crouch ? 'bg-orange-600/80' : 'bg-orange-500/80'
+                  }`}
+                >
+                  <ArrowDown className="w-7 h-7 text-white" />
                 </button>
                 <button
                   onTouchStart={handleMobileInteract}
-                  className="w-16 h-16 bg-yellow-500/80 rounded-full flex items-center justify-center active:bg-yellow-600 flex-col"
+                  className="w-14 h-14 bg-yellow-500/80 rounded-full flex items-center justify-center active:bg-yellow-600"
                 >
                   <Hand className="w-7 h-7 text-white" />
-                  <span className="text-[10px] text-white font-bold">USE</span>
                 </button>
               </div>
             </div>
-
-            {showHint && activeMission?.mission_number === 1 && (
-              <div className="absolute top-20 left-4 bg-yellow-900/90 backdrop-blur-sm border border-yellow-500/50 rounded p-4 max-w-md z-20">
-                <h4 className="text-yellow-300 font-mono font-bold mb-2 flex items-center gap-2">
-                  <Lightbulb className="w-4 h-4" />
-                  Mission 1 Hints:
-                </h4>
-                <ol className="text-yellow-100 font-mono text-xs space-y-1 list-decimal list-inside">
-                  <li>Use ROPE (hold SPACE) to reach button on sink</li>
-                  <li>Press USE on button (turns green)</li>
-                  <li>Cross fork bridge</li>
-                  <li>Step on PRESSURE PLATE</li>
-                  <li>Activate KNIFE lever</li>
-                  <li>Reach WATER DROPLET</li>
-                </ol>
-                <p className="text-yellow-200 text-xs mt-2 italic font-bold">
-                  Hold SPACE for rope - W/S up/down!
-                </p>
-              </div>
-            )}
-
-            {!activeMission && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-20">
-                <div className="text-center">
-                  <AlertTriangle className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
-                  <p className="text-white font-mono text-xl mb-2">ALL MISSIONS COMPLETE</p>
-                  <p className="text-gray-400 font-mono text-sm">Check File Browser and Comms</p>
-                </div>
-              </div>
-            )}
           </div>
         </Card>
       </div>
@@ -1426,7 +1659,7 @@ Return JSON with:
           <div className="p-4 border-b border-gray-700">
             <h3 className="text-white font-mono font-bold flex items-center gap-2">
               <Target className="w-5 h-5 text-orange-400" />
-              PUZZLE STATUS
+              STATUS
             </h3>
           </div>
           <div className="p-4 space-y-2">
@@ -1446,15 +1679,23 @@ Return JSON with:
                 </div>
               </>
             )}
-             {activeMission?.mission_number === 2 && (
+            {activeMission?.mission_number === 2 && (
               <>
                 <div className={`flex items-center gap-2 p-2 rounded ${inventory.some(item => item.name === 'Security Key') ? 'bg-green-900/20' : 'bg-gray-800/20'}`}>
                   <CheckCircle className={`w-4 h-4 ${inventory.some(item => item.name === 'Security Key') ? 'text-green-400' : 'text-gray-600'}`} />
                   <span className="text-sm font-mono text-white">Security Key</span>
                 </div>
-                <div className={`flex items-center gap-2 p-2 rounded bg-gray-800/20`}>
-                  <CheckCircle className="w-4 h-4 text-gray-600" />
-                  <span className="text-sm font-mono text-white">Terminal Hacked</span>
+              </>
+            )}
+            {activeMission?.mission_number === 3 && (
+              <>
+                <div className="flex items-center gap-2 p-2 rounded bg-red-900/20 border border-red-500/50">
+                  <AlertTriangle className="w-4 h-4 text-red-400 animate-pulse" />
+                  <span className="text-sm font-mono text-red-300">Agent Pip: Bio-Stress HIGH</span>
+                </div>
+                <div className="flex items-center gap-2 p-2 rounded bg-yellow-900/20 border border-yellow-500/50">
+                  <Target className="w-4 h-4 text-yellow-400" />
+                  <span className="text-sm font-mono text-yellow-300">Target: Power Core</span>
                 </div>
               </>
             )}
