@@ -9,6 +9,7 @@ import Map from './pages/Map';
 import MissionTimeline from './pages/MissionTimeline';
 import Resources from './pages/Resources';
 import MerchShop from './pages/MerchShop';
+import SellFormula from './pages/SellFormula';
 import Layout from './Layout.jsx';
 
 
@@ -24,6 +25,7 @@ export const PAGES = {
     "MissionTimeline": MissionTimeline,
     "Resources": Resources,
     "MerchShop": MerchShop,
+    "SellFormula": SellFormula,
 }
 
 export const pagesConfig = {
