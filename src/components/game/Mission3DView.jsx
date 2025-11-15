@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as THREE from "three";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, AlertTriangle, Target, FileText, Lightbulb, MoveUp, Hand, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Bot, Heart } from "lucide-react";
+import { CheckCircle, AlertTriangle, Target, Lightbulb, MoveUp, Hand, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Bot, Heart } from "lucide-react";
 import MissionBriefing from "./MissionBriefing";
 import GameAIAssistant from "./GameAIAssistant";
 import PowerCoreHackingPuzzle from "./PowerCoreHackingPuzzle";
@@ -94,52 +94,6 @@ export default function Mission3DView({ gameState, setGameState }) {
           setPlayerHealth(100);
         }, 2000);
       }
-    }
-  };
-
-  const generateEnvironmentVariant = async () => {
-    if (!activeMission || isGeneratingVariant) return;
-    
-    setIsGeneratingVariant(true);
-    try {
-      const playerActions = {
-        puzzles_completed: Object.keys(puzzleStates).filter(k => puzzleStates[k]).length,
-        buttons_activated: activatedButtons.length,
-        levers_activated: Object.keys(leverStates).filter(k => leverStates[k]).length,
-        items_collected: inventory.length,
-        destroyed_objects: destroyedObjects.length
-      };
-
-      const response = await base44.integrations.Core.InvokeLLM({
-        prompt: `You are a game environment designer for Mission ${activeMission.mission_number}: ${activeMission.title}.
-
-Current player actions:
-${JSON.stringify(playerActions, null, 2)}
-
-Generate environmental variations based on player progress.
-
-Return JSON with:
-{
-  "hazards": [{"type": "steam_vent", "x": 10, "y": 2, "z": -20, "radius": 3}],
-  "dynamic_elements": [{"type": "moving_platform", "path": [{"x": 10, "z": 20}, {"x": 30, "z": 20}], "speed": 2}],
-  "effects": [{"type": "flickering_lights", "intensity": 0.3}]
-}`,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            hazards: { type: "array", items: { type: "object" } },
-            dynamic_elements: { type: "array", items: { type: "object" } },
-            effects: { type: "array", items: { type: "object" } }
-          }
-        }
-      });
-
-      setEnvironmentVariant(response);
-      addLog('Environment adapted!', 'warning');
-    } catch (error) {
-      console.error('Failed to generate variant:', error);
-    } finally {
-      setIsGeneratingVariant(false);
     }
   };
 
@@ -257,12 +211,10 @@ Return JSON with:
     let ropeLine = null;
     let isCrouching = false;
     const gravity = -25;
-    const jumpForce = 10;
     const ropeSpeed = 8;
     const playerHalfHeight = 0.8;
     const playerRadius = 0.4;
     let jumpCount = 0;
-    const maxJumps = 2;
     const ceilingHeight = 50;
     let lastDamageTime = 0;
 
@@ -297,13 +249,6 @@ Return JSON with:
         scene.add(cabinet);
         obstacles.push(cabinet);
       }
-      
-      const windowFrame = new THREE.Mesh(
-        new THREE.BoxGeometry(40, 25, 1),
-        new THREE.MeshStandardMaterial({ color: 0x87ceeb, transparent: true, opacity: 0.3 })
-      );
-      windowFrame.position.set(50, 30, -99);
-      scene.add(windowFrame);
       
       const borderMaterial = new THREE.MeshStandardMaterial({ 
         color: 0x8b7355, 
@@ -345,15 +290,6 @@ Return JSON with:
       scene.add(sinkOuterRim);
       obstacles.push(sinkOuterRim);
       
-      const sinkBasin = new THREE.Mesh(
-        new THREE.BoxGeometry(26, 6, 18),
-        new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.9, roughness: 0.1 })
-      );
-      sinkBasin.position.set(-5, -2.6, -25);
-      sinkBasin.castShadow = true;
-      sinkBasin.receiveShadow = true;
-      scene.add(sinkBasin);
-      
       const buttonGeometry = new THREE.CylinderGeometry(1.2, 1.2, 0.6, 32);
       const buttonMaterial = new THREE.MeshStandardMaterial({ 
         color: activatedButtons.includes('button1') ? 0x10b981 : 0xef4444,
@@ -369,193 +305,27 @@ Return JSON with:
       scene.add(button1);
       puzzleElements.push(button1);
       obstacles.push(button1);
-      
-      if (activatedButtons.includes('button1')) {
-        const ringGeometry = new THREE.TorusGeometry(1.5, 0.1, 16, 32);
-        const ringMaterial = new THREE.MeshBasicMaterial({ color: 0x10b981 });
-        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-        ring.position.set(-5, 1.1, -25);
-        ring.rotation.x = Math.PI / 2;
-        scene.add(ring);
-      }
 
-      const knifeBladeGeometry = new THREE.BoxGeometry(2, 0.4, 20);
-      const knifeHandleGeometry = new THREE.CylinderGeometry(1, 1, 7, 16);
-      const knifeBladeMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0xf0f0f0,
-        metalness: 0.98,
-        roughness: 0.02,
-        emissive: 0xffffff,
-        emissiveIntensity: 0.1
-      });
-      const knifeHandleMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x2a1810,
-        roughness: 0.8,
-        metalness: 0.1
-      });
-      
       const knife = new THREE.Group();
-      const blade = new THREE.Mesh(knifeBladeGeometry, knifeBladeMaterial);
+      const blade = new THREE.Mesh(
+        new THREE.BoxGeometry(2, 0.4, 20),
+        new THREE.MeshStandardMaterial({ color: 0xf0f0f0, metalness: 0.98, roughness: 0.02 })
+      );
       blade.position.z = 10;
       blade.castShadow = true;
-      
-      const handleMesh = new THREE.Mesh(knifeHandleGeometry, knifeHandleMaterial);
-      handleMesh.rotation.x = Math.PI / 2;
-      handleMesh.position.z = -3.5;
-      handleMesh.castShadow = true;
-      
       knife.add(blade);
-      knife.add(handleMesh);
+      
       knife.position.set(80, 0.8, 35);
-      knife.rotation.y = -Math.PI / 4;
       knife.userData = { type: 'lever', id: 'lever1' };
       scene.add(knife);
       puzzleElements.push(knife);
       obstacles.push(knife);
-      
-      const knifeGlow = new THREE.Mesh(
-        new THREE.SphereGeometry(2, 16, 16),
-        new THREE.MeshBasicMaterial({ 
-          color: leverStates.lever1 ? 0x10b981 : 0xffff00, 
-          transparent: true, 
-          opacity: 0.2 
-        })
-      );
-      knifeGlow.position.copy(knife.position);
-      knifeGlow.position.y += 2;
-      scene.add(knifeGlow);
-
-      const bowlRadius = 15;
-      const bowlGeometry = new THREE.SphereGeometry(bowlRadius, 64, 32, 0, Math.PI * 2, 0, Math.PI / 2);
-      const bowlMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0xffffff,
-        roughness: 0.15,
-        metalness: 0.1,
-        side: THREE.DoubleSide
-      });
-      const bowl = new THREE.Mesh(bowlGeometry, bowlMaterial);
-      bowl.position.set(30, 4, 20);
-      bowl.castShadow = true;
-      bowl.receiveShadow = true;
-      scene.add(bowl);
-      obstacles.push(bowl);
-      
-      const rimGeometry = new THREE.TorusGeometry(bowlRadius, 0.5, 16, 64);
-      const rim = new THREE.Mesh(rimGeometry, bowlMaterial);
-      rim.position.set(30, 8, 20);
-      rim.rotation.x = Math.PI / 2;
-      scene.add(rim);
-      obstacles.push(rim);
-
-      const spoonGroup = new THREE.Group();
-      const spoonHandleGeometry = new THREE.CylinderGeometry(0.4, 0.5, 18, 16);
-      const spoonHeadGeometry = new THREE.SphereGeometry(2.5, 32, 32);
-      const spoonMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0xe8e8e8,
-        metalness: 0.95,
-        roughness: 0.05
-      });
-      
-      const spoonHandle = new THREE.Mesh(spoonHandleGeometry, spoonMaterial);
-      spoonHandle.rotation.z = Math.PI / 2;
-      spoonHandle.castShadow = true;
-      
-      const spoonHead = new THREE.Mesh(spoonHeadGeometry, spoonMaterial);
-      spoonHead.position.x = 10;
-      spoonHead.scale.set(1, 0.4, 1);
-      spoonHead.castShadow = true;
-      
-      spoonGroup.add(spoonHandle);
-      spoonGroup.add(spoonHead);
-      spoonGroup.position.set(-15, 1.2, -10);
-      spoonGroup.rotation.y = Math.PI / 4;
-      scene.add(spoonGroup);
-      obstacles.push(spoonGroup);
-
-      const mugGeometry = new THREE.CylinderGeometry(5, 4.2, 10, 32);
-      const mugMaterial = new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 0.6 });
-      const mug = new THREE.Mesh(mugGeometry, mugMaterial);
-      mug.position.set(50, 5, -20);
-      mug.castShadow = true;
-      scene.add(mug);
-      obstacles.push(mug);
-      
-      const mugHandleGeometry = new THREE.TorusGeometry(3, 0.6, 16, 32, Math.PI);
-      const mugHandle = new THREE.Mesh(mugHandleGeometry, mugMaterial);
-      mugHandle.position.set(50, 5, -20);
-      mugHandle.rotation.y = -Math.PI / 2;
-      mugHandle.rotation.x = Math.PI / 2;
-      mugHandle.castShadow = true;
-      scene.add(mugHandle);
-      obstacles.push(mugHandle);
-      
-      const coffee = new THREE.Mesh(
-        new THREE.CylinderGeometry(4.8, 4, 0.5, 32),
-        new THREE.MeshStandardMaterial({ color: 0x3e2723 })
-      );
-      coffee.position.set(50, 9.5, -20);
-      scene.add(coffee);
-
-      for (let i = 0; i < 8; i++) {
-        const crumbSize = 1.2 + Math.random() * 1.8;
-        const crumb = new THREE.Mesh(
-          new THREE.DodecahedronGeometry(crumbSize, 1),
-          new THREE.MeshStandardMaterial({ 
-            color: 0xdaa520,
-            roughness: 0.95
-          })
-        );
-        crumb.position.set(10 + i * 4 + Math.random() * 2, crumbSize / 2, 5 + Math.random() * 4);
-        crumb.rotation.set(Math.random(), Math.random(), Math.random());
-        crumb.castShadow = true;
-        crumb.userData = { type: 'destructible', id: `crumb_${i}`, health: 2 };
-        if (!destroyedObjects.includes(`crumb_${i}`)) {
-          scene.add(crumb);
-          destructibleObjects.push(crumb);
-          obstacles.push(crumb);
-        }
-      }
-
-      const butter = new THREE.Mesh(
-        new THREE.BoxGeometry(8, 2, 4),
-        new THREE.MeshStandardMaterial({ color: 0xffd700, roughness: 0.2 })
-      );
-      butter.position.set(-25, 1, 15);
-      butter.castShadow = true;
-      butter.userData = { type: 'slippery' };
-      scene.add(butter);
-      interactiveObjects.push(butter);
-      obstacles.push(butter);
-
-      if (activatedButtons.includes('button1')) {
-        const forkMaterial = new THREE.MeshStandardMaterial({ color: 0xd3d3d3, metalness: 0.9, roughness: 0.1 });
-        const forkHandle = new THREE.Mesh(new THREE.BoxGeometry(2, 0.6, 25), forkMaterial);
-        forkHandle.position.set(15, 1.3, -15);
-        forkHandle.rotation.y = Math.PI / 6;
-        forkHandle.castShadow = true;
-        scene.add(forkHandle);
-        obstacles.push(forkHandle);
-        
-        for (let i = 0; i < 4; i++) {
-          const prong = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 6), forkMaterial);
-          prong.position.set(15 + (i - 1.5) * 0.8, 1.3, -27);
-          prong.rotation.y = Math.PI / 6;
-          prong.castShadow = true;
-          scene.add(prong);
-          obstacles.push(prong);
-        }
-      }
 
       const napkin = new THREE.Mesh(
         new THREE.BoxGeometry(12, 0.3, 12),
-        new THREE.MeshStandardMaterial({ 
-          color: 0xfafafa,
-          roughness: 0.9,
-          metalness: 0
-        })
+        new THREE.MeshStandardMaterial({ color: 0xfafafa, roughness: 0.9 })
       );
       napkin.position.set(35, 0.15, -5);
-      napkin.rotation.y = Math.PI / 8;
       napkin.castShadow = true;
       scene.add(napkin);
       obstacles.push(napkin);
@@ -576,69 +346,6 @@ Return JSON with:
       puzzleElements.push(plateDisc);
       obstacles.push(plateDisc);
 
-      const dinnerPlate = new THREE.Mesh(
-        new THREE.CylinderGeometry(8, 7, 1.2, 64),
-        new THREE.MeshStandardMaterial({ 
-          color: 0xffffff,
-          roughness: 0.25,
-          metalness: 0.1
-        })
-      );
-      dinnerPlate.position.set(55, 0.6, 0);
-      dinnerPlate.castShadow = true;
-      scene.add(dinnerPlate);
-      obstacles.push(dinnerPlate);
-
-      const sugarPositions = [
-        { x: 20, y: 1, z: -8 },
-        { x: 22, y: 1, z: -8 },
-        { x: 21, y: 3, z: -8 },
-        { x: 24, y: 1, z: -6 }
-      ];
-      sugarPositions.forEach((pos, i) => {
-        const cube = new THREE.Mesh(
-          new THREE.BoxGeometry(2, 2, 2),
-          new THREE.MeshStandardMaterial({ 
-            color: 0xffffff,
-            roughness: 0.7,
-            metalness: 0.1
-          })
-        );
-        cube.position.set(pos.x, pos.y, pos.z);
-        cube.castShadow = true;
-        cube.userData = { type: 'destructible', id: `sugar_${i}`, health: 3 };
-        if (!destroyedObjects.includes(`sugar_${i}`)) {
-          scene.add(cube);
-          destructibleObjects.push(cube);
-          obstacles.push(cube);
-        }
-      });
-
-      const resourcePositions = [
-        { name: 'Metal Scrap', x: -30, y: 1, z: 10, color: 0xc0c0c0 },
-        { name: 'Energy Cell', x: 40, y: 1, z: -10, color: 0xffff00 },
-        { name: 'Data Chip', x: 60, y: 1, z: 15, color: 0x00ffff },
-        { name: 'Chemical Sample', x: -20, y: 1, z: -15, color: 0x00ff00 },
-        { name: 'Nano Circuit', x: 45, y: 5, z: 5, color: 0xff00ff },
-      ];
-
-      resourcePositions.forEach((res, i) => {
-        const resourceGeometry = new THREE.OctahedronGeometry(0.8, 0);
-        const resourceMaterial = new THREE.MeshStandardMaterial({
-          color: res.color,
-          emissive: res.color,
-          emissiveIntensity: 0.5,
-          metalness: 0.8,
-          roughness: 0.2
-        });
-        const resourceMesh = new THREE.Mesh(resourceGeometry, resourceMaterial);
-        resourceMesh.position.set(res.x, res.y, res.z);
-        resourceMesh.userData = { type: 'resource', resourceName: res.name, id: `resource_${i}` };
-        resourceMesh.castShadow = true;
-        scene.add(resourceMesh);
-        resourceObjects.push(resourceMesh);
-      });
-
       const waterDrop = new THREE.Mesh(
         new THREE.SphereGeometry(3, 64, 64),
         new THREE.MeshPhysicalMaterial({ 
@@ -647,9 +354,7 @@ Return JSON with:
           opacity: 0.7,
           transmission: 0.95,
           roughness: 0,
-          metalness: 0,
-          thickness: 2,
-          envMapIntensity: 1.5
+          metalness: 0
         })
       );
       const canReachWater = activatedButtons.includes('button1') && puzzleStates.plate1 && leverStates.lever1;
@@ -658,34 +363,6 @@ Return JSON with:
       waterDrop.castShadow = true;
       scene.add(waterDrop);
       objectives.push(waterDrop);
-
-      const glow = new THREE.Mesh(
-        new THREE.SphereGeometry(3.5, 32, 32),
-        new THREE.MeshBasicMaterial({ 
-          color: 0x4dd0e1,
-          transparent: true,
-          opacity: 0.3
-        })
-      );
-      glow.position.copy(waterDrop.position);
-      scene.add(glow);
-
-      if (canReachWater) {
-        for (let i = 0; i < 40; i++) {
-          const mist = new THREE.Mesh(
-            new THREE.SphereGeometry(0.4, 8, 8),
-            new THREE.MeshBasicMaterial({ 
-              color: 0xffffff,
-              transparent: true,
-              opacity: 0.4
-            })
-          );
-          mist.position.set(65 + Math.random() * 10, 1 + Math.random() * 6, 0 + Math.random() * 10);
-          mist.userData = { type: 'mist', velocity: { y: Math.random() * 0.02 + 0.01 } };
-          scene.add(mist);
-          mistParticles.push(mist);
-        }
-      }
 
     } else if (activeMission.mission_number === 2) {
       scene.background = new THREE.Color(0x1a1a2e);
@@ -707,150 +384,6 @@ Return JSON with:
       labFloor.receiveShadow = true;
       scene.add(labFloor);
 
-      const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x3a3a5a, roughness: 0.8 });
-      const wallHeight = 40;
-      
-      const backWall = new THREE.Mesh(new THREE.BoxGeometry(200, wallHeight, 2), wallMaterial);
-      backWall.position.set(0, wallHeight/2, -100);
-      backWall.receiveShadow = true;
-      scene.add(backWall);
-      
-      const leftWall = new THREE.Mesh(new THREE.BoxGeometry(2, wallHeight, 200), wallMaterial);
-      leftWall.position.set(-100, wallHeight/2, 0);
-      leftWall.receiveShadow = true;
-      scene.add(leftWall);
-      
-      const rightWall = new THREE.Mesh(new THREE.BoxGeometry(2, wallHeight, 200), wallMaterial);
-      rightWall.position.set(100, wallHeight/2, 0);
-      rightWall.receiveShadow = true;
-      scene.add(rightWall);
-
-      for (let i = 0; i < 6; i++) {
-        const serverRack = new THREE.Mesh(
-          new THREE.BoxGeometry(15, 25, 8),
-          new THREE.MeshStandardMaterial({ color: 0x1a1a2a, roughness: 0.7, metalness: 0.3 })
-        );
-        serverRack.position.set(-60 + i * 25, 12.5, -90);
-        serverRack.castShadow = true;
-        scene.add(serverRack);
-        obstacles.push(serverRack);
-        
-        for (let j = 0; j < 5; j++) {
-          const light = new THREE.Mesh(
-            new THREE.BoxGeometry(1, 0.5, 0.5),
-            new THREE.MeshBasicMaterial({ 
-              color: Math.random() > 0.5 ? 0x00ff00 : 0xff0000,
-              emissive: Math.random() > 0.5 ? 0x00ff00 : 0xff0000,
-              emissiveIntensity: 0.8
-            })
-          );
-          light.position.set(-60 + i * 25, 5 + j * 4, -85.5);
-          scene.add(light);
-        }
-      }
-
-      const tablePositions = [
-        { x: -40, z: -30 },
-        { x: 0, z: -30 },
-        { x: 40, z: -30 },
-        { x: -40, z: 30 },
-        { x: 40, z: 30 }
-      ];
-
-      tablePositions.forEach(pos => {
-        const table = new THREE.Mesh(
-          new THREE.BoxGeometry(20, 1, 15),
-          new THREE.MeshStandardMaterial({ color: 0x4a4a6a, roughness: 0.6 })
-        );
-        table.position.set(pos.x, 6, pos.z);
-        table.castShadow = true;
-        scene.add(table);
-        obstacles.push(table);
-        
-        for (let i = 0; i < 4; i++) {
-          const leg = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.5, 0.5, 6, 16),
-            new THREE.MeshStandardMaterial({ color: 0x3a3a5a })
-          );
-          leg.position.set(
-            pos.x + (i % 2 === 0 ? -8 : 8),
-            3,
-            pos.z + (i < 2 ? -6 : 6)
-          );
-          leg.castShadow = true;
-          scene.add(leg);
-          obstacles.push(leg);
-        }
-
-        const equipment = new THREE.Mesh(
-          new THREE.BoxGeometry(8, 5, 6),
-          new THREE.MeshStandardMaterial({ 
-            color: 0x6a6a8a,
-            emissive: 0x0066cc,
-            emissiveIntensity: 0.3
-          })
-        );
-        equipment.position.set(pos.x, 9, pos.z);
-        equipment.castShadow = true;
-        scene.add(equipment);
-        obstacles.push(equipment);
-      });
-
-      const terminal = new THREE.Mesh(
-        new THREE.BoxGeometry(12, 15, 8),
-        new THREE.MeshStandardMaterial({ 
-          color: 0x2a2a4a,
-          emissive: 0x00ccff,
-          emissiveIntensity: 0.5,
-          metalness: 0.6
-        })
-      );
-      terminal.position.set(0, 7.5, 0);
-      terminal.castShadow = true;
-      terminal.userData = { type: 'terminal', id: 'main_terminal' };
-      scene.add(terminal);
-      puzzleElements.push(terminal);
-      obstacles.push(terminal);
-
-      const screen = new THREE.Mesh(
-        new THREE.PlaneGeometry(8, 6),
-        new THREE.MeshBasicMaterial({ 
-          color: 0x00ff00,
-          emissive: 0x00ff00,
-          emissiveIntensity: 0.8
-        })
-      );
-      screen.position.set(0, 10, 4.1);
-      scene.add(screen);
-
-      const dataCore = new THREE.Mesh(
-        new THREE.BoxGeometry(4, 4, 4),
-        new THREE.MeshPhysicalMaterial({ 
-          color: 0x00ffff,
-          emissive: 0x00ffff,
-          emissiveIntensity: 1,
-          transparent: true,
-          opacity: 0.8,
-          transmission: 0.5
-        })
-      );
-      dataCore.position.set(0, 16, 0);
-      dataCore.userData = { type: 'data_core', accessible: true };
-      dataCore.castShadow = true;
-      scene.add(dataCore);
-      objectives.push(dataCore);
-
-      const dataCoreGlow = new THREE.Mesh(
-        new THREE.SphereGeometry(5, 32, 32),
-        new THREE.MeshBasicMaterial({ 
-          color: 0x00ffff,
-          transparent: true,
-          opacity: 0.2
-        })
-      );
-      dataCoreGlow.position.copy(dataCore.position);
-      scene.add(dataCoreGlow);
-
       for (let i = 0; i < 3; i++) {
         const laser = new THREE.Mesh(
           new THREE.BoxGeometry(0.2, 8, 60),
@@ -866,54 +399,22 @@ Return JSON with:
         interactiveObjects.push(laser);
       }
 
-      const cratePositions = [
-        { x: -70, z: 40 },
-        { x: -50, z: 60 },
-        { x: 50, z: 60 },
-        { x: 70, z: 40 },
-        { x: -30, z: -60 },
-        { x: 30, z: -60 }
-      ];
+      const dataCore = new THREE.Mesh(
+        new THREE.BoxGeometry(4, 4, 4),
+        new THREE.MeshPhysicalMaterial({ 
+          color: 0x00ffff,
+          emissive: 0x00ffff,
+          emissiveIntensity: 1,
+          transparent: true,
+          opacity: 0.8
+        })
+      );
+      dataCore.position.set(0, 16, 0);
+      dataCore.userData = { type: 'data_core', accessible: true };
+      dataCore.castShadow = true;
+      scene.add(dataCore);
+      objectives.push(dataCore);
 
-      cratePositions.forEach(pos => {
-        const crate = new THREE.Mesh(
-          new THREE.BoxGeometry(10, 10, 10),
-          new THREE.MeshStandardMaterial({ 
-            color: 0x4a3a2a,
-            roughness: 0.9
-          })
-        );
-        crate.position.set(pos.x, 5, pos.z);
-        crate.castShadow = true;
-        scene.add(crate);
-        obstacles.push(crate);
-      });
-
-      const labResources = [
-        { name: 'Research Data', x: -70, y: 1, z: -70, color: 0x00ffff },
-        { name: 'Security Key', x: 70, y: 1, z: -70, color: 0xffaa00 },
-        { name: 'Lab Sample', x: -70, y: 1, z: 70, color: 0xff00ff },
-        { name: 'Prototype Chip', x: 70, y: 1, z: 70, color: 0x00ff00 }
-      ];
-
-      labResources.forEach((res, i) => {
-        const resourceGeometry = new THREE.OctahedronGeometry(0.8, 0);
-        const resourceMaterial = new THREE.MeshStandardMaterial({
-          color: res.color,
-          emissive: res.color,
-          emissiveIntensity: 0.6,
-          metalness: 0.8,
-          roughness: 0.2
-        });
-        const resourceMesh = new THREE.Mesh(resourceGeometry, resourceMaterial);
-        resourceMesh.position.set(res.x, res.y, res.z);
-        resourceMesh.userData = { type: 'resource', resourceName: res.name, id: `lab_resource_${i}` };
-        resourceMesh.castShadow = true;
-        scene.add(resourceMesh);
-        resourceObjects.push(resourceMesh);
-      });
-
-      addLog("Advanced security active!", 'warning');
     } else if (activeMission.mission_number === 3) {
       scene.background = new THREE.Color(0x0d0d1a);
       scene.fog = new THREE.Fog(0x0d0d1a, 20, 120);
@@ -935,27 +436,6 @@ Return JSON with:
       floor.receiveShadow = true;
       scene.add(floor);
 
-      const wallMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x2a2a3a, 
-        roughness: 0.9,
-        metalness: 0.1
-      });
-      const wallHeight = 45;
-      
-      const walls = [
-        new THREE.Mesh(new THREE.BoxGeometry(200, wallHeight, 3), wallMaterial),
-        new THREE.Mesh(new THREE.BoxGeometry(3, wallHeight, 200), wallMaterial),
-        new THREE.Mesh(new THREE.BoxGeometry(3, wallHeight, 200), wallMaterial)
-      ];
-      walls[0].position.set(0, wallHeight/2, -100);
-      walls[1].position.set(-100, wallHeight/2, 0);
-      walls[2].position.set(100, wallHeight/2, 0);
-      walls.forEach(wall => {
-        wall.receiveShadow = true;
-        wall.castShadow = true;
-        scene.add(wall);
-      });
-
       const redLight = new THREE.PointLight(0xff0000, 2, 100);
       redLight.position.set(0, 20, 0);
       scene.add(redLight);
@@ -966,7 +446,7 @@ Return JSON with:
         { x: 20, z: -40, width: 55 }
       ];
 
-      laserPositions.forEach((pos, idx) => {
+      laserPositions.forEach((pos) => {
         const laser = new THREE.Mesh(
           new THREE.BoxGeometry(0.3, 4, pos.width),
           new THREE.MeshBasicMaterial({ 
@@ -981,85 +461,7 @@ Return JSON with:
         laser.userData = { type: 'laser', deadly: true, damage: 15 };
         scene.add(laser);
         interactiveObjects.push(laser);
-
-        const glowGeometry = new THREE.BoxGeometry(0.5, 4.5, pos.width + 2);
-        const glowMaterial = new THREE.MeshBasicMaterial({
-          color: 0xff0000,
-          transparent: true,
-          opacity: 0.2
-        });
-        const glow = new THREE.Mesh(glowGeometry, glowMaterial);
-        glow.position.copy(laser.position);
-        scene.add(glow);
       });
-
-      const containerPositions = [
-        { x: -60, z: 60 },
-        { x: 60, z: 60 },
-        { x: -60, z: -70 },
-        { x: 60, z: -70 }
-      ];
-
-      containerPositions.forEach(pos => {
-        const container = new THREE.Mesh(
-          new THREE.BoxGeometry(15, 20, 15),
-          new THREE.MeshStandardMaterial({ 
-            color: 0x3a3a4a,
-            roughness: 0.8,
-            metalness: 0.3
-          })
-        );
-        container.position.set(pos.x, 10, pos.z);
-        container.castShadow = true;
-        container.receiveShadow = true;
-        scene.add(container);
-        obstacles.push(container);
-      });
-
-      const specimenContainer = new THREE.Mesh(
-        new THREE.CylinderGeometry(8, 8, 12, 32),
-        new THREE.MeshPhysicalMaterial({ 
-          color: 0x88ccff,
-          transparent: true,
-          opacity: 0.3,
-          transmission: 0.9,
-          roughness: 0.1,
-          metalness: 0.1
-        })
-      );
-      specimenContainer.position.set(0, 6, -70);
-      specimenContainer.castShadow = true;
-      scene.add(specimenContainer);
-      obstacles.push(specimenContainer);
-
-      const flyBody = new THREE.Group();
-      const bodyMesh = new THREE.Mesh(
-        new THREE.SphereGeometry(4, 32, 32),
-        new THREE.MeshStandardMaterial({ 
-          color: 0x1a1a1a,
-          roughness: 0.3,
-          metalness: 0.7
-        })
-      );
-      bodyMesh.scale.set(1, 1.2, 1);
-      flyBody.add(bodyMesh);
-
-      const eyeMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0xff0000,
-        emissive: 0xff0000,
-        emissiveIntensity: 0.5
-      });
-      const leftEye = new THREE.Mesh(new THREE.SphereGeometry(1.5, 16, 16), eyeMaterial);
-      leftEye.position.set(-2, 2, 3);
-      flyBody.add(leftEye);
-      
-      const rightEye = new THREE.Mesh(new THREE.SphereGeometry(1.5, 16, 16), eyeMaterial);
-      rightEye.position.set(2, 2, 3);
-      flyBody.add(rightEye);
-
-      flyBody.position.set(0, 8, -70);
-      flyBody.userData = { type: 'specimen', animated: true };
-      scene.add(flyBody);
 
       const powerCore = new THREE.Mesh(
         new THREE.SphereGeometry(3, 32, 32),
@@ -1078,22 +480,10 @@ Return JSON with:
       scene.add(powerCore);
       objectives.push(powerCore);
 
-      const coreGlow = new THREE.Mesh(
-        new THREE.SphereGeometry(4, 32, 32),
-        new THREE.MeshBasicMaterial({ 
-          color: 0x00ff00,
-          transparent: true,
-          opacity: 0.2
-        })
-      );
-      coreGlow.position.copy(powerCore.position);
-      scene.add(coreGlow);
-
       addLog("Bio-stress warning: Agent Pip vitals unstable!", 'error');
     }
 
     const keys = {};
-    let onSlippery = false;
     
     const handleKeyDown = (e) => { 
       keys[e.key.toLowerCase()] = true;
@@ -1103,31 +493,6 @@ Return JSON with:
       }
       
       if (e.key.toLowerCase() === 'e') {
-        resourceObjects.forEach((obj, index) => {
-          const distance = player.position.distanceTo(obj.position);
-          if (distance < 3) {
-            base44.auth.me().then(user => {
-              const inventory = user.resource_inventory || {};
-              inventory[obj.userData.resourceName] = (inventory[obj.userData.resourceName] || 0) + 1;
-              base44.auth.updateMe({ resource_inventory: inventory });
-            }).catch(() => {});
-            
-            addLog(`Collected: ${obj.userData.resourceName}`, 'success');
-            setInventory(prev => {
-              const existingItemIndex = prev.findIndex(item => item.name === obj.userData.resourceName);
-              if (existingItemIndex > -1) {
-                const newInventory = [...prev];
-                newInventory[existingItemIndex].quantity += 1;
-                return newInventory;
-              } else {
-                return [...prev, { name: obj.userData.resourceName, quantity: 1 }];
-              }
-            });
-            scene.remove(obj);
-            resourceObjects.splice(index, 1);
-          }
-        });
-
         puzzleElements.forEach(elem => {
           const distance = player.position.distanceTo(elem.position);
           if (distance < 3) {
@@ -1140,30 +505,6 @@ Return JSON with:
               const leverId = elem.userData.id;
               setLeverStates(prev => ({ ...prev, [leverId]: !prev[leverId] }));
               addLog(`✓ Lever toggled!`, 'info');
-            } else if (elem.userData.type === 'terminal') {
-                addLog(`Terminal accessed`, 'info');
-            }
-          }
-        });
-
-        destructibleObjects.forEach((obj, index) => {
-          const distance = player.position.distanceTo(obj.position);
-          if (distance < 3) {
-            obj.userData.health -= 1;
-            if (obj.userData.health <= 0) {
-              addLog(`Destroyed ${obj.userData.id}`, 'info');
-              setDestroyedObjects(prev => [...prev, obj.userData.id]);
-              scene.remove(obj);
-              destructibleObjects.splice(index, 1);
-              obstacles = obstacles.filter(o => o !== obj);
-            } else {
-              addLog(`Hit ${obj.userData.id}`, 'warning');
-              obj.material.emissive.setHex(0xff0000);
-              obj.material.emissiveIntensity = 0.5;
-              setTimeout(() => {
-                obj.material.emissive.setHex(0x000000);
-                obj.material.emissiveIntensity = 0;
-              }, 200);
             }
           }
         });
@@ -1274,7 +615,7 @@ Return JSON with:
         }
 
         const baseSpeed = keys['shift'] ? 20 : 10;
-        const speed = onSlippery ? baseSpeed * 1.5 : (isCrouching ? baseSpeed * 0.5 : baseSpeed);
+        const speed = isCrouching ? baseSpeed * 0.5 : baseSpeed;
         const direction = new THREE.Vector3();
 
         if (keys['w'] || mobileControlsRef.current.up) direction.z -= 1;
@@ -1292,7 +633,6 @@ Return JSON with:
         
         let newPlayerPositionY = player.position.y + playerVelocityY * delta;
 
-        onSlippery = false;
         isOnGround = false;
 
         if (newPlayerPositionY - playerHalfHeight <= 0) {
@@ -1344,13 +684,7 @@ Return JSON with:
       setPlayerPosition({ x: player.position.x, y: player.position.y, z: player.position.z });
 
       interactiveObjects.forEach(obj => {
-        if (obj.userData.type === 'slippery') {
-          const distance = new THREE.Vector2(player.position.x, player.position.z)
-            .distanceTo(new THREE.Vector2(obj.position.x, obj.position.z));
-          if (distance < 5) {
-            onSlippery = true;
-          }
-        } else if (obj.userData.type === 'laser' && obj.userData.deadly) {
+        if (obj.userData.type === 'laser' && obj.userData.deadly) {
           const distance = player.position.distanceTo(obj.position);
           const playerEffectiveHeight = isCrouching ? 0.4 : 0.8;
           
@@ -1418,23 +752,6 @@ Return JSON with:
         obj.rotation.y += delta * 0.5;
       });
 
-      mistParticles.forEach(mist => {
-        if (mist.userData.velocity) {
-          mist.position.y += mist.userData.velocity.y;
-          if (mist.position.y > 20) {
-            mist.position.y = 5;
-          }
-        }
-      });
-
-      if (environmentVariant) {
-        environmentVariant.effects?.forEach(effect => {
-          if (effect.type === 'flickering_lights') {
-            ambientLight.intensity = 0.5 + Math.sin(clock.elapsedTime * 5) * effect.intensity;
-          }
-        });
-      }
-
       camera.position.x = player.position.x + mouseX * 8;
       camera.position.y = player.position.y + 15;
       camera.position.z = player.position.z + 22;
@@ -1463,7 +780,7 @@ Return JSON with:
 
       renderer.dispose();
     };
-  }, [activeMission, puzzleStates, inventory, missionStarted, destroyedObjects, leverStates, activatedButtons, environmentVariant]);
+  }, [activeMission, puzzleStates, inventory, missionStarted, destroyedObjects, leverStates, activatedButtons]);
 
   const handleMobileJump = () => {
     setMobileControls(prev => ({ ...prev, jump: true }));
@@ -1483,6 +800,14 @@ Return JSON with:
     addLog('Power Core HACKED!', 'success');
     completeMission();
   };
+
+  if (!activeMission) {
+    return (
+      <div className="flex items-center justify-center h-[600px] bg-gray-900 text-white">
+        <p className="font-mono">No active mission. Please select a mission from the main console.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="grid lg:grid-cols-4 gap-4 p-6">
@@ -1518,7 +843,13 @@ Return JSON with:
       <div className="lg:col-span-3">
         <Card className="bg-black border-blue-500/20 overflow-hidden">
           <div className="relative">
-            <div ref={mountRef} className="w-full h-[600px]" />
+            <div ref={mountRef} className="w-full h-[600px] bg-gray-900" />
+            
+            {!missionStarted && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+                <p className="text-white font-mono text-xl">Loading mission briefing...</p>
+              </div>
+            )}
             
             <div className="absolute top-4 left-4 bg-black/80 backdrop-blur-sm border border-red-500/50 rounded p-3 z-10 min-w-[200px]">
               <div className="flex items-center gap-2 mb-2">
@@ -1555,14 +886,6 @@ Return JSON with:
                 <Bot className="w-4 h-4 mr-1" />
                 AI
               </Button>
-              <Button
-                onClick={() => setShowHint(!showHint)}
-                className="bg-yellow-600/80 hover:bg-yellow-700/80 backdrop-blur-sm font-mono text-xs hidden md:block"
-                size="sm"
-              >
-                <Lightbulb className="w-4 h-4 mr-1" />
-                {showHint ? 'Hide' : 'Hint'}
-              </Button>
             </div>
             
             <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm border border-gray-600 rounded p-2 font-mono text-xs text-gray-300 hidden md:block z-10">
@@ -1573,23 +896,6 @@ Return JSON with:
                 </p>
               )}
             </div>
-
-            {showHint && activeMission?.mission_number === 1 && (
-              <div className="absolute top-20 left-4 bg-yellow-900/90 backdrop-blur-sm border border-yellow-500/50 rounded p-4 max-w-md z-20">
-                <h4 className="text-yellow-300 font-mono font-bold mb-2 flex items-center gap-2">
-                  <Lightbulb className="w-4 h-4" />
-                  Mission 1 Hints:
-                </h4>
-                <ol className="text-yellow-100 font-mono text-xs space-y-1 list-decimal list-inside">
-                  <li>Use ROPE (hold SPACE) to reach button on sink</li>
-                  <li>Press USE on button (turns green)</li>
-                  <li>Cross fork bridge</li>
-                  <li>Step on PRESSURE PLATE</li>
-                  <li>Activate KNIFE lever</li>
-                  <li>Reach WATER DROPLET</li>
-                </ol>
-              </div>
-            )}
 
             <div className="absolute bottom-4 left-4 right-4 md:hidden flex justify-between items-end gap-4 z-10">
               <div className="flex flex-col gap-2">
@@ -1676,14 +982,6 @@ Return JSON with:
                 <div className={`flex items-center gap-2 p-2 rounded ${leverStates.lever1 ? 'bg-green-900/20' : 'bg-gray-800/20'}`}>
                   <CheckCircle className={`w-4 h-4 ${leverStates.lever1 ? 'text-green-400' : 'text-gray-600'}`} />
                   <span className="text-sm font-mono text-white">Knife Lever</span>
-                </div>
-              </>
-            )}
-            {activeMission?.mission_number === 2 && (
-              <>
-                <div className={`flex items-center gap-2 p-2 rounded ${inventory.some(item => item.name === 'Security Key') ? 'bg-green-900/20' : 'bg-gray-800/20'}`}>
-                  <CheckCircle className={`w-4 h-4 ${inventory.some(item => item.name === 'Security Key') ? 'text-green-400' : 'text-gray-600'}`} />
-                  <span className="text-sm font-mono text-white">Security Key</span>
                 </div>
               </>
             )}
