@@ -99,7 +99,6 @@ export default function Mission3DView({ gameState, setGameState }) {
     if (!mountRef.current || !activeMission || !missionStarted) return;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xf5f5dc);
     scene.fog = new THREE.Fog(0xf5f5dc, 60, 250);
 
     const camera = new THREE.PerspectiveCamera(
@@ -119,65 +118,9 @@ export default function Mission3DView({ gameState, setGameState }) {
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     mountRef.current.appendChild(renderer.domElement);
 
-    // Ultra-realistic lighting
-    const ambientLight = new THREE.AmbientLight(0xfff8e8, 0.5);
-    scene.add(ambientLight);
-
-    const sunLight = new THREE.DirectionalLight(0xfffaf0, 3);
-    sunLight.position.set(100, 150, 80);
-    sunLight.castShadow = true;
-    sunLight.shadow.mapSize.width = 8192;
-    sunLight.shadow.mapSize.height = 8192;
-    sunLight.shadow.camera.near = 0.5;
-    sunLight.shadow.camera.far = 600;
-    sunLight.shadow.camera.left = -200;
-    sunLight.shadow.camera.right = 200;
-    sunLight.shadow.camera.top = 200;
-    sunLight.shadow.camera.bottom = -200;
-    sunLight.shadow.bias = -0.0001;
-    sunLight.shadow.radius = 2;
-    scene.add(sunLight);
-
-    const fillLight = new THREE.DirectionalLight(0x87ceeb, 0.8);
-    fillLight.position.set(-80, 40, -80);
-    scene.add(fillLight);
-
-    const rimLight = new THREE.DirectionalLight(0xffffff, 0.4);
-    rimLight.position.set(-100, 60, 100);
-    scene.add(rimLight);
-
-    // Realistic counter with grain
-    const counterGeometry = new THREE.PlaneGeometry(300, 300, 150, 150);
-    const counterMaterial = new THREE.MeshStandardMaterial({ 
-      color: 0xfaf8f0,
-      roughness: 0.88,
-      metalness: 0.02,
-      envMapIntensity: 0.3
-    });
-    
-    const positions = counterGeometry.attributes.position;
-    for (let i = 0; i < positions.count; i++) {
-      positions.setZ(i, (Math.random() - 0.5) * 0.05);
-    }
-    positions.needsUpdate = true;
-    counterGeometry.computeVertexNormals();
-    
-    const counter = new THREE.Mesh(counterGeometry, counterMaterial);
-    counter.rotation.x = -Math.PI / 2;
-    counter.receiveShadow = true;
-    scene.add(counter);
-
-    // Realistic grid
-    const gridHelper = new THREE.GridHelper(300, 120, 0xe0e0e0, 0xf0f0f0);
-    gridHelper.position.y = 0.02;
-    gridHelper.material.transparent = true;
-    gridHelper.material.opacity = 0.15;
-    scene.add(gridHelper);
-    
     // Ultra-realistic human character
     const playerGroup = new THREE.Group();
     
-    // Body
     const bodyGeometry = new THREE.CapsuleGeometry(0.4, 1.5, 20, 40);
     const bodyMaterial = new THREE.MeshStandardMaterial({ 
       color: 0x1e40af,
@@ -189,7 +132,6 @@ export default function Mission3DView({ gameState, setGameState }) {
     body.castShadow = true;
     playerGroup.add(body);
 
-    // Head
     const headGeometry = new THREE.SphereGeometry(0.38, 32, 32);
     const headMaterial = new THREE.MeshStandardMaterial({ 
       color: 0x3b82f6,
@@ -202,7 +144,6 @@ export default function Mission3DView({ gameState, setGameState }) {
     head.castShadow = true;
     playerGroup.add(head);
 
-    // Visor
     const visorGeometry = new THREE.SphereGeometry(0.34, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
     const visorMaterial = new THREE.MeshPhysicalMaterial({
       color: 0x001a40,
@@ -218,7 +159,6 @@ export default function Mission3DView({ gameState, setGameState }) {
     visor.rotation.x = -0.4;
     playerGroup.add(visor);
 
-    // Shoulders
     const shoulderGeometry = new THREE.SphereGeometry(0.28, 20, 20);
     const shoulderMaterial = new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.55, metalness: 0.6 });
     const leftShoulder = new THREE.Mesh(shoulderGeometry, shoulderMaterial);
@@ -231,7 +171,6 @@ export default function Mission3DView({ gameState, setGameState }) {
     rightShoulder.position.x = 0.5;
     playerGroup.add(rightShoulder);
 
-    // Arms
     const armGeometry = new THREE.CapsuleGeometry(0.15, 0.8, 12, 24);
     const armMaterial = new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.5, metalness: 0.7 });
     const leftArm = new THREE.Mesh(armGeometry, armMaterial);
@@ -243,7 +182,6 @@ export default function Mission3DView({ gameState, setGameState }) {
     rightArm.position.x = 0.5;
     playerGroup.add(rightArm);
 
-    // Legs
     const legGeometry = new THREE.CapsuleGeometry(0.18, 0.9, 12, 24);
     const legMaterial = new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.6, metalness: 0.5 });
     const leftLeg = new THREE.Mesh(legGeometry, legMaterial);
@@ -264,6 +202,7 @@ export default function Mission3DView({ gameState, setGameState }) {
     let puzzleElements = [];
     let collectibles = [];
     let missionComplete = false;
+    let laserGrids = [];
     
     let playerVelocityY = 0;
     let isOnGround = true;
@@ -278,7 +217,58 @@ export default function Mission3DView({ gameState, setGameState }) {
     let armSwing = 0;
 
     if (activeMission.mission_number === 1) {
+      // MISSION 1: KITCHEN
+      scene.background = new THREE.Color(0xf5f5dc);
+      
+      const ambientLight = new THREE.AmbientLight(0xfff8e8, 0.5);
+      scene.add(ambientLight);
+
+      const sunLight = new THREE.DirectionalLight(0xfffaf0, 3);
+      sunLight.position.set(100, 150, 80);
+      sunLight.castShadow = true;
+      sunLight.shadow.mapSize.width = 8192;
+      sunLight.shadow.mapSize.height = 8192;
+      sunLight.shadow.camera.near = 0.5;
+      sunLight.shadow.camera.far = 600;
+      sunLight.shadow.camera.left = -200;
+      sunLight.shadow.camera.right = 200;
+      sunLight.shadow.camera.top = 200;
+      sunLight.shadow.camera.bottom = -200;
+      sunLight.shadow.bias = -0.0001;
+      sunLight.shadow.radius = 2;
+      scene.add(sunLight);
+
+      const fillLight = new THREE.DirectionalLight(0x87ceeb, 0.8);
+      fillLight.position.set(-80, 40, -80);
+      scene.add(fillLight);
+
       addLog("Mission 1: Navigate kitchen. SPACE=rope, E=interact", 'info');
+      
+      const counterGeometry = new THREE.PlaneGeometry(300, 300, 150, 150);
+      const counterMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xfaf8f0,
+        roughness: 0.88,
+        metalness: 0.02,
+        envMapIntensity: 0.3
+      });
+      
+      const positions = counterGeometry.attributes.position;
+      for (let i = 0; i < positions.count; i++) {
+        positions.setZ(i, (Math.random() - 0.5) * 0.05);
+      }
+      positions.needsUpdate = true;
+      counterGeometry.computeVertexNormals();
+      
+      const counter = new THREE.Mesh(counterGeometry, counterMaterial);
+      counter.rotation.x = -Math.PI / 2;
+      counter.receiveShadow = true;
+      scene.add(counter);
+
+      const gridHelper = new THREE.GridHelper(300, 120, 0xe0e0e0, 0xf0f0f0);
+      gridHelper.position.y = 0.02;
+      gridHelper.material.transparent = true;
+      gridHelper.material.opacity = 0.15;
+      scene.add(gridHelper);
       
       const wallHeight = 70;
       const wallMaterial = new THREE.MeshStandardMaterial({ 
@@ -287,7 +277,6 @@ export default function Mission3DView({ gameState, setGameState }) {
         metalness: 0.01
       });
       
-      // Kitchen walls
       const backWall = new THREE.Mesh(new THREE.BoxGeometry(300, wallHeight, 4), wallMaterial);
       backWall.position.set(0, wallHeight/2, -150);
       backWall.receiveShadow = true;
@@ -309,7 +298,6 @@ export default function Mission3DView({ gameState, setGameState }) {
       scene.add(rightWall);
       obstacles.push(rightWall);
 
-      // Wooden cabinets with realistic detail
       const cabinetMaterial = new THREE.MeshStandardMaterial({ 
         color: 0x6b4423, 
         roughness: 0.75,
@@ -318,13 +306,11 @@ export default function Mission3DView({ gameState, setGameState }) {
       
       for (let i = 0; i < 5; i++) {
         const cabinetGroup = new THREE.Group();
-        
         const cabinet = new THREE.Mesh(new THREE.BoxGeometry(32, 18, 12), cabinetMaterial);
         cabinet.castShadow = true;
         cabinet.receiveShadow = true;
         cabinetGroup.add(cabinet);
         
-        // Cabinet handles
         const handleMaterial = new THREE.MeshStandardMaterial({ 
           color: 0xb8b8b8, 
           roughness: 0.15, 
@@ -341,10 +327,7 @@ export default function Mission3DView({ gameState, setGameState }) {
         obstacles.push(cabinet);
       }
 
-      // Ultra-realistic sink (flat, going down)
       const sinkGroup = new THREE.Group();
-      
-      // Sink rim (flat countertop level)
       const sinkMaterial = new THREE.MeshStandardMaterial({ 
         color: 0xe0e0e0, 
         metalness: 0.98, 
@@ -357,15 +340,12 @@ export default function Mission3DView({ gameState, setGameState }) {
       sinkRim.receiveShadow = true;
       sinkGroup.add(sinkRim);
       
-      // Sink basin (going DOWN into counter)
-      const sinkBasinGeometry = new THREE.BoxGeometry(32, 8, 25);
-      const sinkBasin = new THREE.Mesh(sinkBasinGeometry, sinkMaterial);
-      sinkBasin.position.y = -3.5;  // Below counter level
+      const sinkBasin = new THREE.Mesh(new THREE.BoxGeometry(32, 8, 25), sinkMaterial);
+      sinkBasin.position.y = -3.5;
       sinkBasin.castShadow = true;
       sinkBasin.receiveShadow = true;
       sinkGroup.add(sinkBasin);
       
-      // Faucet outside the basin
       const faucetMaterial = new THREE.MeshStandardMaterial({ 
         color: 0xc8c8c8, 
         metalness: 0.98, 
@@ -391,7 +371,6 @@ export default function Mission3DView({ gameState, setGameState }) {
       scene.add(sinkGroup);
       obstacles.push(sinkRim);
       
-      // Interactive button on sink
       const buttonGeometry = new THREE.CylinderGeometry(1.8, 1.8, 1, 32);
       const buttonMaterial = new THREE.MeshStandardMaterial({ 
         color: activatedButtons.includes('button1') ? 0x10b981 : 0xef4444,
@@ -407,7 +386,6 @@ export default function Mission3DView({ gameState, setGameState }) {
       scene.add(button1);
       puzzleElements.push(button1);
       
-      // Button glow
       const buttonGlow = new THREE.PointLight(
         activatedButtons.includes('button1') ? 0x10b981 : 0xef4444, 
         activatedButtons.includes('button1') ? 3 : 1, 
@@ -416,10 +394,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       buttonGlow.position.copy(button1.position);
       scene.add(buttonGlow);
 
-      // Realistic knife OUTSIDE (visible lever)
       const knifeGroup = new THREE.Group();
-      
-      // Blade
       const bladeGeometry = new THREE.BoxGeometry(2, 0.25, 28);
       const bladeMaterial = new THREE.MeshStandardMaterial({ 
         color: 0xf8f8f8, 
@@ -432,7 +407,6 @@ export default function Mission3DView({ gameState, setGameState }) {
       blade.castShadow = true;
       knifeGroup.add(blade);
       
-      // Handle
       const handleGeometry = new THREE.CylinderGeometry(0.75, 0.75, 7, 20);
       const handleMaterial = new THREE.MeshStandardMaterial({ 
         color: 0x3d2817, 
@@ -445,14 +419,12 @@ export default function Mission3DView({ gameState, setGameState }) {
       handle.castShadow = true;
       knifeGroup.add(handle);
       
-      // Position OUTSIDE kitchen area, clearly visible
       knifeGroup.position.set(100, 1.5, 50);
       knifeGroup.rotation.y = leverStates.lever1 ? Math.PI / 3 : 0;
       knifeGroup.userData = { type: 'lever', id: 'lever1' };
       scene.add(knifeGroup);
       puzzleElements.push(knifeGroup);
 
-      // Ceramic mug
       const mugGeometry = new THREE.CylinderGeometry(5, 4.5, 14, 32);
       const mugMaterial = new THREE.MeshStandardMaterial({ 
         color: 0xffffff, 
@@ -466,16 +438,13 @@ export default function Mission3DView({ gameState, setGameState }) {
       scene.add(mug);
       obstacles.push(mug);
       
-      // Mug handle
       const mugHandleGeometry = new THREE.TorusGeometry(2.5, 0.6, 16, 24, Math.PI);
       const mugHandle = new THREE.Mesh(mugHandleGeometry, mugMaterial);
       mugHandle.rotation.y = Math.PI / 2;
-      mugHandle.position.set(60, 7, -25);
-      mugHandle.position.x += 5;
+      mugHandle.position.set(65, 7, -25);
       mugHandle.castShadow = true;
       scene.add(mugHandle);
 
-      // Flat plate (pressure plate - stays on ground)
       const plateGeometry = new THREE.CylinderGeometry(3, 3, 0.6, 64);
       const plateMaterial = new THREE.MeshStandardMaterial({ 
         color: puzzleStates.plate1 ? 0x10b981 : 0x6b7280,
@@ -485,14 +454,13 @@ export default function Mission3DView({ gameState, setGameState }) {
         roughness: 0.15
       });
       const plate = new THREE.Mesh(plateGeometry, plateMaterial);
-      plate.position.set(45, 0.3, -10);  // Stays on ground
+      plate.position.set(45, 0.3, -10);
       plate.userData = { type: 'pressure_plate', id: 'plate1' };
       plate.castShadow = true;
       plate.receiveShadow = true;
       scene.add(plate);
       puzzleElements.push(plate);
 
-      // Water droplet ON GROUND after completion
       const canReachWater = activatedButtons.includes('button1') && puzzleStates.plate1 && leverStates.lever1;
       const waterDrop = new THREE.Mesh(
         new THREE.SphereGeometry(4, 64, 64),
@@ -510,18 +478,16 @@ export default function Mission3DView({ gameState, setGameState }) {
           clearcoatRoughness: 0
         })
       );
-      waterDrop.position.set(80, canReachWater ? 2 : 35, 10);  // Ground level when accessible
+      waterDrop.position.set(80, canReachWater ? 2 : 35, 10);
       waterDrop.userData = { type: 'water_source', accessible: canReachWater };
       waterDrop.castShadow = true;
       scene.add(waterDrop);
       objectives.push(waterDrop);
       
-      // Water glow
       const waterLight = new THREE.PointLight(0x4dd0e1, canReachWater ? 3 : 0.8, 25);
       waterLight.position.copy(waterDrop.position);
       scene.add(waterLight);
 
-      // Resource collectibles
       const resourcePositions = [
         { name: 'Iron Scrap', pos: [20, 0.5, 20], color: 0x888888 },
         { name: 'Copper Wire', pos: [-40, 0.5, -40], color: 0xb87333 },
@@ -549,24 +515,266 @@ export default function Mission3DView({ gameState, setGameState }) {
       });
 
     } else if (activeMission.mission_number === 2) {
-      scene.background = new THREE.Color(0x0a0a1a);
-      scene.fog = new THREE.Fog(0x0a0a1a, 40, 220);
+      // MISSION 2: LAB WITH SPIDER
+      scene.background = new THREE.Color(0x1a1a2e);
+      scene.fog = new THREE.Fog(0x1a1a2e, 40, 220);
       
-      addLog("Mission 2: Extract data core", 'warning');
+      const ambientLight = new THREE.AmbientLight(0x4a5568, 0.3);
+      scene.add(ambientLight);
+
+      const mainLight = new THREE.DirectionalLight(0xffffff, 1.5);
+      mainLight.position.set(50, 100, 50);
+      mainLight.castShadow = true;
+      mainLight.shadow.mapSize.width = 4096;
+      mainLight.shadow.mapSize.height = 4096;
+      mainLight.shadow.camera.near = 0.5;
+      mainLight.shadow.camera.far = 500;
+      mainLight.shadow.camera.left = -150;
+      mainLight.shadow.camera.right = 150;
+      mainLight.shadow.camera.top = 150;
+      mainLight.shadow.camera.bottom = -150;
+      scene.add(mainLight);
+
+      const redLight = new THREE.PointLight(0xff0000, 2, 100);
+      redLight.position.set(0, 30, 0);
+      scene.add(redLight);
+
+      addLog("Mission 2: Navigate lab, avoid spider, collect keycard", 'warning');
       player.position.set(-100, 1.3, 100);
 
       const labFloor = new THREE.Mesh(
-        new THREE.PlaneGeometry(300, 300, 80, 80),
+        new THREE.PlaneGeometry(300, 300, 100, 100),
         new THREE.MeshStandardMaterial({ 
-          color: 0x1a1a2a, 
-          roughness: 0.95,
-          metalness: 0.35
+          color: 0x2d3748, 
+          roughness: 0.85,
+          metalness: 0.45
         })
       );
       labFloor.rotation.x = -Math.PI / 2;
       labFloor.receiveShadow = true;
       scene.add(labFloor);
 
+      const floorGrid = new THREE.GridHelper(300, 100, 0x4a5568, 0x2d3748);
+      floorGrid.position.y = 0.05;
+      scene.add(floorGrid);
+
+      // Lab walls
+      const labWallMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x374151, 
+        roughness: 0.9,
+        metalness: 0.1
+      });
+      
+      const wallHeight = 50;
+      const walls = [
+        new THREE.Mesh(new THREE.BoxGeometry(300, wallHeight, 3), labWallMaterial),
+        new THREE.Mesh(new THREE.BoxGeometry(3, wallHeight, 300), labWallMaterial),
+        new THREE.Mesh(new THREE.BoxGeometry(3, wallHeight, 300), labWallMaterial),
+      ];
+      walls[0].position.set(0, wallHeight/2, -150);
+      walls[1].position.set(-150, wallHeight/2, 0);
+      walls[2].position.set(150, wallHeight/2, 0);
+      walls.forEach(wall => {
+        wall.castShadow = true;
+        wall.receiveShadow = true;
+        scene.add(wall);
+        obstacles.push(wall);
+      });
+
+      // Lab equipment - microscopes
+      for (let i = 0; i < 3; i++) {
+        const microscope = new THREE.Group();
+        
+        const base = new THREE.Mesh(
+          new THREE.CylinderGeometry(3, 4, 1.5, 32),
+          new THREE.MeshStandardMaterial({ color: 0x6b7280, metalness: 0.7, roughness: 0.4 })
+        );
+        base.castShadow = true;
+        microscope.add(base);
+        
+        const arm = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.5, 0.5, 12, 16),
+          new THREE.MeshStandardMaterial({ color: 0x9ca3af, metalness: 0.8, roughness: 0.3 })
+        );
+        arm.position.y = 6.75;
+        arm.castShadow = true;
+        microscope.add(arm);
+        
+        const lens = new THREE.Mesh(
+          new THREE.CylinderGeometry(1.5, 1, 3, 32),
+          new THREE.MeshStandardMaterial({ color: 0x1f2937, metalness: 0.9, roughness: 0.2 })
+        );
+        lens.position.y = 13;
+        lens.castShadow = true;
+        microscope.add(lens);
+        
+        microscope.position.set(-80 + i * 50, 0.75, -100);
+        scene.add(microscope);
+        obstacles.push(base);
+      }
+
+      // Lab tables with computers
+      for (let i = 0; i < 4; i++) {
+        const table = new THREE.Mesh(
+          new THREE.BoxGeometry(30, 1.5, 20),
+          new THREE.MeshStandardMaterial({ color: 0x4b5563, roughness: 0.7, metalness: 0.3 })
+        );
+        table.position.set(-60 + i * 40, 0.75, 50);
+        table.castShadow = true;
+        table.receiveShadow = true;
+        scene.add(table);
+        obstacles.push(table);
+        
+        // Computer monitor
+        const monitor = new THREE.Mesh(
+          new THREE.BoxGeometry(8, 10, 1),
+          new THREE.MeshStandardMaterial({ color: 0x1f2937, metalness: 0.6, roughness: 0.4 })
+        );
+        monitor.position.set(table.position.x, 6.5, table.position.z);
+        monitor.castShadow = true;
+        scene.add(monitor);
+        
+        // Screen glow
+        const screenGlow = new THREE.Mesh(
+          new THREE.BoxGeometry(7, 9, 0.5),
+          new THREE.MeshStandardMaterial({ 
+            color: 0x00ff88, 
+            emissive: 0x00ff88, 
+            emissiveIntensity: 1.5 
+          })
+        );
+        screenGlow.position.set(table.position.x, 6.5, table.position.z + 0.6);
+        scene.add(screenGlow);
+      }
+
+      // Storage cabinets
+      const cabinetMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x374151, 
+        roughness: 0.8,
+        metalness: 0.2
+      });
+      
+      for (let i = 0; i < 6; i++) {
+        const cabinet = new THREE.Mesh(new THREE.BoxGeometry(15, 25, 10), cabinetMaterial);
+        cabinet.position.set(-120, 12.5, -80 + i * 30);
+        cabinet.castShadow = true;
+        cabinet.receiveShadow = true;
+        scene.add(cabinet);
+        obstacles.push(cabinet);
+      }
+
+      // Deadly LASER GRID (red, lethal)
+      if (!puzzleStates.laser_disabled) {
+        const laserMaterial = new THREE.MeshBasicMaterial({ 
+          color: 0xff0000, 
+          transparent: true, 
+          opacity: 0.7 
+        });
+        
+        for (let i = 0; i < 8; i++) {
+          const laser = new THREE.Mesh(
+            new THREE.BoxGeometry(60, 0.3, 0.3),
+            laserMaterial
+          );
+          laser.position.set(20, 2 + i * 3, 0);
+          laser.userData = { type: 'laser', lethal: true };
+          scene.add(laser);
+          laserGrids.push(laser);
+          
+          const laserGlow = new THREE.PointLight(0xff0000, 1.5, 8);
+          laserGlow.position.copy(laser.position);
+          scene.add(laserGlow);
+        }
+        addLog("⚠️ LETHAL LASER GRID DETECTED", 'error');
+      }
+
+      // KEYCARD (needed to disable lasers)
+      if (!inventory.includes('keycard')) {
+        const keycard = new THREE.Mesh(
+          new THREE.BoxGeometry(2, 0.2, 3),
+          new THREE.MeshStandardMaterial({ 
+            color: 0xfbbf24, 
+            emissive: 0xfbbf24, 
+            emissiveIntensity: 1.2,
+            metalness: 0.9,
+            roughness: 0.1
+          })
+        );
+        keycard.position.set(50, 1, -20);
+        keycard.userData = { type: 'keycard' };
+        keycard.castShadow = true;
+        scene.add(keycard);
+        collectibles.push(keycard);
+        
+        const keycardGlow = new THREE.PointLight(0xfbbf24, 2, 15);
+        keycardGlow.position.copy(keycard.position);
+        scene.add(keycardGlow);
+      }
+
+      // TERMINAL to disable lasers
+      const terminal = new THREE.Group();
+      const terminalBase = new THREE.Mesh(
+        new THREE.BoxGeometry(8, 12, 3),
+        new THREE.MeshStandardMaterial({ color: 0x1f2937, metalness: 0.7, roughness: 0.3 })
+      );
+      terminalBase.castShadow = true;
+      terminal.add(terminalBase);
+      
+      const terminalScreen = new THREE.Mesh(
+        new THREE.BoxGeometry(7, 10, 0.5),
+        new THREE.MeshStandardMaterial({ 
+          color: puzzleStates.terminal_active ? 0x10b981 : 0x3b82f6,
+          emissive: puzzleStates.terminal_active ? 0x10b981 : 0x3b82f6,
+          emissiveIntensity: 2
+        })
+      );
+      terminalScreen.position.z = 1.8;
+      terminal.add(terminalScreen);
+      
+      terminal.position.set(-30, 6, 30);
+      terminal.userData = { type: 'terminal', id: 'terminal1' };
+      scene.add(terminal);
+      puzzleElements.push(terminal);
+
+      // GIANT SPIDER (hostile entity)
+      const spider = new THREE.Group();
+      const spiderBody = new THREE.Mesh(
+        new THREE.SphereGeometry(6, 32, 32),
+        new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.6, metalness: 0.3 })
+      );
+      spiderBody.castShadow = true;
+      spider.add(spiderBody);
+      
+      const spiderHead = new THREE.Mesh(
+        new THREE.SphereGeometry(4, 32, 32),
+        new THREE.MeshStandardMaterial({ color: 0x2d2d2d, roughness: 0.7, metalness: 0.2 })
+      );
+      spiderHead.position.set(0, 0, 8);
+      spiderHead.castShadow = true;
+      spider.add(spiderHead);
+      
+      // Spider legs
+      for (let i = 0; i < 8; i++) {
+        const leg = new THREE.Group();
+        const segment1 = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.4, 0.3, 8, 12),
+          new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.6, metalness: 0.3 })
+        );
+        segment1.rotation.z = Math.PI / 4;
+        segment1.castShadow = true;
+        leg.add(segment1);
+        
+        const angle = (i / 8) * Math.PI * 2;
+        leg.position.set(Math.cos(angle) * 5, -3, Math.sin(angle) * 5);
+        leg.rotation.y = angle;
+        spider.add(leg);
+      }
+      
+      spider.position.set(0, 6, -50);
+      spider.userData = { type: 'spider', hostile: true };
+      scene.add(spider);
+
+      // DATA CORE objective
       const dataCore = new THREE.Mesh(
         new THREE.OctahedronGeometry(6, 2),
         new THREE.MeshPhysicalMaterial({ 
@@ -579,8 +787,8 @@ export default function Mission3DView({ gameState, setGameState }) {
           roughness: 0.08
         })
       );
-      dataCore.position.set(0, 20, 0);
-      dataCore.userData = { type: 'data_core', accessible: true };
+      dataCore.position.set(80, 8, -80);
+      dataCore.userData = { type: 'data_core', accessible: puzzleStates.terminal_active };
       dataCore.castShadow = true;
       scene.add(dataCore);
       objectives.push(dataCore);
@@ -589,51 +797,265 @@ export default function Mission3DView({ gameState, setGameState }) {
       coreLight.position.copy(dataCore.position);
       scene.add(coreLight);
 
+      // Resources
+      const mission2Resources = [
+        { name: 'Data Chip', pos: [-40, 0.5, 70], color: 0x3b82f6 },
+        { name: 'Circuit Board', pos: [60, 0.5, 20], color: 0x10b981 },
+      ];
+
+      mission2Resources.forEach(res => {
+        if (!collectedResources.includes(res.name)) {
+          const resourceMesh = new THREE.Mesh(
+            new THREE.OctahedronGeometry(0.8, 0),
+            new THREE.MeshStandardMaterial({ 
+              color: res.color, 
+              emissive: res.color, 
+              emissiveIntensity: 0.6,
+              metalness: 0.9,
+              roughness: 0.1
+            })
+          );
+          resourceMesh.position.set(...res.pos);
+          resourceMesh.userData = { type: 'resource', name: res.name };
+          resourceMesh.castShadow = true;
+          scene.add(resourceMesh);
+          collectibles.push(resourceMesh);
+        }
+      });
+
     } else if (activeMission.mission_number === 3) {
+      // MISSION 3: DEEP FACILITY
       scene.background = new THREE.Color(0x050510);
       scene.fog = new THREE.Fog(0x050510, 30, 180);
       
-      addLog("Mission 3: Specimen retrieval", 'warning');
-      addLog("Press C to CROUCH under lasers", 'info');
+      const ambientLight = new THREE.AmbientLight(0x1a1a3a, 0.2);
+      scene.add(ambientLight);
+
+      const mainLight = new THREE.DirectionalLight(0x6366f1, 1);
+      mainLight.position.set(40, 80, 40);
+      mainLight.castShadow = true;
+      mainLight.shadow.mapSize.width = 4096;
+      mainLight.shadow.mapSize.height = 4096;
+      scene.add(mainLight);
+
+      const redLight = new THREE.PointLight(0xff0000, 3, 120);
+      redLight.position.set(0, 25, 0);
+      scene.add(redLight);
+
+      addLog("Mission 3: Specimen retrieval. CROUCH (C) under lasers!", 'warning');
       player.position.set(-90, 1.3, 90);
 
       const floor = new THREE.Mesh(
-        new THREE.PlaneGeometry(300, 300, 90, 90),
+        new THREE.PlaneGeometry(300, 300, 120, 120),
         new THREE.MeshStandardMaterial({ 
-          color: 0x0a0a15, 
-          roughness: 0.98,
-          metalness: 0.25
+          color: 0x0f0f1e, 
+          roughness: 0.95,
+          metalness: 0.3
         })
       );
       floor.rotation.x = -Math.PI / 2;
       floor.receiveShadow = true;
       scene.add(floor);
 
-      const redLight = new THREE.PointLight(0xff0000, 4, 150);
-      redLight.position.set(0, 30, 0);
-      scene.add(redLight);
+      const floorGrid = new THREE.GridHelper(300, 120, 0x3730a3, 0x1e1b4b);
+      floorGrid.position.y = 0.05;
+      scene.add(floorGrid);
 
-      const powerCore = new THREE.Mesh(
-        new THREE.IcosahedronGeometry(5, 1),
-        new THREE.MeshPhysicalMaterial({ 
-          color: 0x00ff00,
-          emissive: 0x00ff00,
-          emissiveIntensity: 3,
-          transparent: true,
-          opacity: 0.8,
-          metalness: 0.98,
-          roughness: 0.03
+      // Facility walls
+      const facilityWallMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x1e1b4b, 
+        roughness: 0.95,
+        metalness: 0.15
+      });
+      
+      const wallHeight = 45;
+      const facilityWalls = [
+        new THREE.Mesh(new THREE.BoxGeometry(300, wallHeight, 3), facilityWallMaterial),
+        new THREE.Mesh(new THREE.BoxGeometry(3, wallHeight, 300), facilityWallMaterial),
+        new THREE.Mesh(new THREE.BoxGeometry(3, wallHeight, 300), facilityWallMaterial),
+      ];
+      facilityWalls[0].position.set(0, wallHeight/2, -150);
+      facilityWalls[1].position.set(-150, wallHeight/2, 0);
+      facilityWalls[2].position.set(150, wallHeight/2, 0);
+      facilityWalls.forEach(wall => {
+        wall.castShadow = true;
+        wall.receiveShadow = true;
+        scene.add(wall);
+        obstacles.push(wall);
+      });
+
+      // Containment pods
+      for (let i = 0; i < 5; i++) {
+        const pod = new THREE.Group();
+        
+        const podBase = new THREE.Mesh(
+          new THREE.CylinderGeometry(5, 6, 20, 32),
+          new THREE.MeshStandardMaterial({ 
+            color: 0x312e81, 
+            metalness: 0.8, 
+            roughness: 0.3 
+          })
+        );
+        podBase.castShadow = true;
+        pod.add(podBase);
+        
+        const podGlass = new THREE.Mesh(
+          new THREE.CylinderGeometry(4.5, 5.5, 18, 32, 1, true),
+          new THREE.MeshPhysicalMaterial({ 
+            color: 0x4c1d95,
+            transparent: true,
+            opacity: 0.3,
+            metalness: 0.1,
+            roughness: 0.1,
+            transmission: 0.9
+          })
+        );
+        pod.add(podGlass);
+        
+        pod.position.set(-80 + i * 40, 10, -100);
+        scene.add(pod);
+        obstacles.push(podBase);
+        
+        const podLight = new THREE.PointLight(0x8b5cf6, 1.5, 20);
+        podLight.position.copy(pod.position);
+        scene.add(podLight);
+      }
+
+      // Control panels
+      for (let i = 0; i < 4; i++) {
+        const panel = new THREE.Mesh(
+          new THREE.BoxGeometry(12, 15, 2),
+          new THREE.MeshStandardMaterial({ 
+            color: 0x1e293b, 
+            metalness: 0.7, 
+            roughness: 0.4 
+          })
+        );
+        panel.position.set(-70 + i * 45, 7.5, 80);
+        panel.castShadow = true;
+        scene.add(panel);
+        
+        const panelScreen = new THREE.Mesh(
+          new THREE.BoxGeometry(10, 12, 0.5),
+          new THREE.MeshStandardMaterial({ 
+            color: 0xef4444, 
+            emissive: 0xef4444, 
+            emissiveIntensity: 1.5 
+          })
+        );
+        panelScreen.position.set(panel.position.x, panel.position.y, panel.position.z + 1.3);
+        scene.add(panelScreen);
+      }
+
+      // Cryo chamber obstacles
+      for (let i = 0; i < 3; i++) {
+        const chamber = new THREE.Mesh(
+          new THREE.BoxGeometry(20, 30, 15),
+          new THREE.MeshStandardMaterial({ 
+            color: 0x1e3a8a, 
+            metalness: 0.85, 
+            roughness: 0.25 
+          })
+        );
+        chamber.position.set(40 + i * 35, 15, -20);
+        chamber.castShadow = true;
+        chamber.receiveShadow = true;
+        scene.add(chamber);
+        obstacles.push(chamber);
+        
+        const chamberGlow = new THREE.PointLight(0x3b82f6, 2, 25);
+        chamberGlow.position.copy(chamber.position);
+        scene.add(chamberGlow);
+      }
+
+      // Electric barrier (must crouch under)
+      if (!puzzleStates.barrier_disabled) {
+        for (let i = 0; i < 10; i++) {
+          const barrier = new THREE.Mesh(
+            new THREE.BoxGeometry(0.4, 8, 80),
+            new THREE.MeshBasicMaterial({ 
+              color: 0x00ffff, 
+              transparent: true, 
+              opacity: 0.8 
+            })
+          );
+          barrier.position.set(-20 + i * 2, 8, 0);
+          barrier.userData = { type: 'electric_barrier', lethal: true, canCrouch: true };
+          scene.add(barrier);
+          laserGrids.push(barrier);
+          
+          const barrierGlow = new THREE.PointLight(0x00ffff, 1, 12);
+          barrierGlow.position.copy(barrier.position);
+          scene.add(barrierGlow);
+        }
+        addLog("⚠️ ELECTRIC BARRIER - CROUCH to pass", 'error');
+      }
+
+      // Wire puzzle button
+      const wirePuzzle = new THREE.Mesh(
+        new THREE.BoxGeometry(8, 10, 3),
+        new THREE.MeshStandardMaterial({ 
+          color: puzzleStates.wire_solved ? 0x10b981 : 0xef4444,
+          emissive: puzzleStates.wire_solved ? 0x10b981 : 0xef4444,
+          emissiveIntensity: 1.5,
+          metalness: 0.8,
+          roughness: 0.3
         })
       );
-      powerCore.position.set(0, 7, -120);
-      powerCore.userData = { type: 'power_core', accessible: true, needsHack: true };
-      powerCore.castShadow = true;
-      scene.add(powerCore);
-      objectives.push(powerCore);
+      wirePuzzle.position.set(-50, 5, -50);
+      wirePuzzle.userData = { type: 'wire_puzzle', id: 'wire1' };
+      wirePuzzle.castShadow = true;
+      scene.add(wirePuzzle);
+      puzzleElements.push(wirePuzzle);
+
+      // Specimen in containment
+      const specimen = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(4, 1),
+        new THREE.MeshPhysicalMaterial({ 
+          color: 0xff00ff,
+          emissive: 0xff00ff,
+          emissiveIntensity: 3,
+          transparent: true,
+          opacity: 0.85,
+          metalness: 0.95,
+          roughness: 0.05
+        })
+      );
+      specimen.position.set(0, 5, -120);
+      specimen.userData = { type: 'specimen', accessible: puzzleStates.wire_solved };
+      specimen.castShadow = true;
+      scene.add(specimen);
+      objectives.push(specimen);
       
-      const coreLight = new THREE.PointLight(0x00ff00, 5, 60);
-      coreLight.position.copy(powerCore.position);
-      scene.add(coreLight);
+      const specimenLight = new THREE.PointLight(0xff00ff, 5, 60);
+      specimenLight.position.copy(specimen.position);
+      scene.add(specimenLight);
+
+      // Resources
+      const mission3Resources = [
+        { name: 'Quantum Core', pos: [-70, 0.5, 40], color: 0x8b5cf6 },
+        { name: 'Energy Cell', pos: [50, 0.5, -70], color: 0xfbbf24 },
+      ];
+
+      mission3Resources.forEach(res => {
+        if (!collectedResources.includes(res.name)) {
+          const resourceMesh = new THREE.Mesh(
+            new THREE.OctahedronGeometry(0.8, 0),
+            new THREE.MeshStandardMaterial({ 
+              color: res.color, 
+              emissive: res.color, 
+              emissiveIntensity: 0.7,
+              metalness: 0.95,
+              roughness: 0.05
+            })
+          );
+          resourceMesh.position.set(...res.pos);
+          resourceMesh.userData = { type: 'resource', name: res.name };
+          resourceMesh.castShadow = true;
+          scene.add(resourceMesh);
+          collectibles.push(resourceMesh);
+        }
+      });
     }
 
     const keys = {};
@@ -645,7 +1067,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       if (e.key.toLowerCase() === 'e') {
         puzzleElements.forEach(elem => {
           const distance = player.position.distanceTo(elem.position);
-          if (distance < 5) {
+          if (distance < 8) {
             if (elem.userData.type === 'button') {
               if (!activatedButtons.includes(elem.userData.id)) {
                 setActivatedButtons(prev => [...prev, elem.userData.id]);
@@ -654,25 +1076,35 @@ export default function Mission3DView({ gameState, setGameState }) {
             } else if (elem.userData.type === 'lever') {
               setLeverStates(prev => ({ ...prev, [elem.userData.id]: !prev[elem.userData.id] }));
               addLog(`✓ Knife lever toggled!`, 'info');
+            } else if (elem.userData.type === 'terminal') {
+              if (inventory.includes('keycard')) {
+                setPuzzleStates(prev => ({ ...prev, terminal_active: true, laser_disabled: true }));
+                addLog(`✓ Terminal activated! Lasers disabled`, 'success');
+              } else {
+                addLog(`⚠️ Keycard required!`, 'error');
+              }
+            } else if (elem.userData.type === 'wire_puzzle') {
+              setPuzzleStates(prev => ({ ...prev, wire_solved: true, barrier_disabled: true }));
+              addLog(`✓ Wire puzzle solved! Barrier disabled`, 'success');
             }
           }
         });
 
         collectibles.forEach((obj, idx) => {
           const distance = player.position.distanceTo(obj.position);
-          if (distance < 4 && obj.userData.type === 'resource') {
-            setCollectedResources(prev => [...prev, obj.userData.name]);
-            collectResourceMutation.mutate(obj.userData.name);
-            addLog(`✓ Collected: ${obj.userData.name}`, 'success');
-            scene.remove(obj);
-            collectibles.splice(idx, 1);
-          }
-        });
-
-        objectives.forEach(obj => {
-          const distance = player.position.distanceTo(obj.position);
-          if (distance < 7 && obj.userData.type === 'power_core' && obj.userData.needsHack) {
-            setShowHackingPuzzle(true);
+          if (distance < 5) {
+            if (obj.userData.type === 'resource') {
+              setCollectedResources(prev => [...prev, obj.userData.name]);
+              collectResourceMutation.mutate(obj.userData.name);
+              addLog(`✓ Collected: ${obj.userData.name}`, 'success');
+              scene.remove(obj);
+              collectibles.splice(idx, 1);
+            } else if (obj.userData.type === 'keycard') {
+              setInventory(prev => [...prev, 'keycard']);
+              addLog(`✓ Keycard acquired!`, 'success');
+              scene.remove(obj);
+              collectibles.splice(idx, 1);
+            }
           }
         });
       }
@@ -701,7 +1133,6 @@ export default function Mission3DView({ gameState, setGameState }) {
 
       const isSpacePressed = keys[' '];
 
-      // Rope mechanics
       if (isSpacePressed && !isOnRope) {
         const ropeMaterial = new THREE.LineBasicMaterial({ color: 0xd0d0d0, linewidth: 2 });
         const ropeGeometry = new THREE.BufferGeometry().setFromPoints([
@@ -719,7 +1150,6 @@ export default function Mission3DView({ gameState, setGameState }) {
         isOnRope = false;
       }
 
-      // Crouching animation
       if (isCrouching) {
         player.scale.y = THREE.MathUtils.lerp(player.scale.y, 0.5, delta * 10);
       } else {
@@ -735,10 +1165,12 @@ export default function Mission3DView({ gameState, setGameState }) {
         if (keys['a']) player.position.x -= ropeSpeed * delta * 0.7;
         if (keys['d']) player.position.x += ropeSpeed * delta * 0.7;
 
-        ropeLine.geometry.setFromPoints([
-          new THREE.Vector3(player.position.x, player.position.y, player.position.z),
-          new THREE.Vector3(player.position.x, ceilingHeight, player.position.z)
-        ]);
+        if (ropeLine) {
+          ropeLine.geometry.setFromPoints([
+            new THREE.Vector3(player.position.x, player.position.y, player.position.z),
+            new THREE.Vector3(player.position.x, ceilingHeight, player.position.z)
+          ]);
+        }
       } else {
         if (!isOnGround) playerVelocityY += gravity * delta;
 
@@ -756,7 +1188,6 @@ export default function Mission3DView({ gameState, setGameState }) {
         }
       }
 
-      // Realistic animations
       if (isMoving && isOnGround && !isCrouching) {
         headBob += delta * 10;
         player.position.y = playerHalfHeight + Math.sin(headBob) * 0.12;
@@ -776,7 +1207,6 @@ export default function Mission3DView({ gameState, setGameState }) {
         rightLeg.rotation.x = THREE.MathUtils.lerp(rightLeg.rotation.x, 0, delta * 8);
       }
 
-      // Player rotation
       if (isMoving) {
         let targetRotation = 0;
         if (keys['w']) targetRotation = 0;
@@ -786,7 +1216,29 @@ export default function Mission3DView({ gameState, setGameState }) {
         player.rotation.y = THREE.MathUtils.lerp(player.rotation.y, targetRotation, delta * 10);
       }
 
-      // Puzzle interactions
+      // Laser collision detection
+      laserGrids.forEach(laser => {
+        const distance = player.position.distanceTo(laser.position);
+        if (distance < 5) {
+          if (laser.userData.canCrouch && isCrouching) {
+            // Safe - crouching under barrier
+          } else if (!laser.userData.canCrouch || !isCrouching) {
+            setPlayerHealth(prev => {
+              const newHealth = Math.max(0, prev - 50 * delta);
+              if (newHealth <= 0) {
+                addLog("💀 MISSION FAILED - Lethal hazard", 'error');
+                setTimeout(() => {
+                  setShowBriefing(true);
+                  setMissionStarted(false);
+                  setPlayerHealth(100);
+                }, 1000);
+              }
+              return newHealth;
+            });
+          }
+        }
+      });
+
       puzzleElements.forEach(elem => {
         if (elem.userData.type === 'pressure_plate') {
           const distance = new THREE.Vector2(player.position.x, player.position.z)
@@ -798,25 +1250,25 @@ export default function Mission3DView({ gameState, setGameState }) {
         }
       });
 
-      // Objective completion
       objectives.forEach(obj => {
         const distance = player.position.distanceTo(obj.position);
-        if (!missionComplete && distance < 7) {
+        if (!missionComplete && distance < 8) {
           if (obj.userData.type === 'water_source' && obj.userData.accessible) {
             missionComplete = true;
             completeMission();
-          } else if (obj.userData.type === 'data_core') {
+          } else if (obj.userData.type === 'data_core' && obj.userData.accessible) {
+            missionComplete = true;
+            completeMission();
+          } else if (obj.userData.type === 'specimen' && obj.userData.accessible) {
             missionComplete = true;
             completeMission();
           }
         }
-        // Floating animation
         obj.position.y += Math.sin(time * 2 + obj.position.x) * 0.02;
         obj.rotation.y += delta;
         obj.rotation.x = Math.sin(time * 0.5) * 0.15;
       });
 
-      // Collectibles floating
       collectibles.forEach(obj => {
         obj.position.y = obj.userData.originalY || obj.position.y;
         obj.userData.originalY = obj.position.y;
@@ -824,7 +1276,6 @@ export default function Mission3DView({ gameState, setGameState }) {
         obj.rotation.y += delta * 2;
       });
 
-      // Advanced camera with cinematic look
       const cameraOffset = new THREE.Vector3(
         mouseX * 12,
         22 + mouseY * 6,
@@ -853,12 +1304,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       if (ropeLine) scene.remove(ropeLine);
       renderer.dispose();
     };
-  }, [activeMission, puzzleStates, missionStarted, leverStates, activatedButtons, collectedResources]);
-
-  const handleHackingComplete = () => {
-    setShowHackingPuzzle(false);
-    completeMission();
-  };
+  }, [activeMission, puzzleStates, missionStarted, leverStates, activatedButtons, collectedResources, inventory]);
 
   if (!activeMission) {
     return (
@@ -871,8 +1317,8 @@ export default function Mission3DView({ gameState, setGameState }) {
   return (
     <div className="grid lg:grid-cols-4 gap-4 p-6">
       {showBriefing && <MissionBriefing mission={activeMission} onStart={() => { setShowBriefing(false); setMissionStarted(true); }} puzzleStates={puzzleStates} inventory={inventory} />}
-      <GameAIAssistant mission={activeMission} puzzleStates={puzzleStates} inventory={inventory} playerPosition={playerPosition} isOpen={showAIAssistant} onClose={() => setShowAIAssistant(false)} />
-      {showHackingPuzzle && <PowerCoreHackingPuzzle onComplete={handleHackingComplete} onClose={() => setShowHackingPuzzle(false)} />}
+      {showAIAssistant && <GameAIAssistant mission={activeMission} puzzleStates={puzzleStates} inventory={inventory} playerPosition={playerPosition} isOpen={showAIAssistant} onClose={() => setShowAIAssistant(false)} />}
+      {showHackingPuzzle && <PowerCoreHackingPuzzle onComplete={() => { setShowHackingPuzzle(false); completeMission(); }} onClose={() => setShowHackingPuzzle(false)} />}
 
       <div className="lg:col-span-3">
         <Card className="bg-black border-blue-500/20 overflow-hidden">
@@ -882,7 +1328,7 @@ export default function Mission3DView({ gameState, setGameState }) {
             <div className="absolute top-4 left-4 bg-black/95 backdrop-blur-md border border-red-500/60 rounded-lg p-3 z-10 shadow-2xl">
               <div className="flex items-center gap-2 mb-2">
                 <Heart className={`w-5 h-5 ${playerHealth > 50 ? 'text-green-400' : 'text-red-400'}`} />
-                <span className="text-white font-mono text-sm font-bold">HP: {playerHealth}%</span>
+                <span className="text-white font-mono text-sm font-bold">HP: {Math.round(playerHealth)}%</span>
               </div>
               <div className="w-40 bg-gray-900 rounded-full h-3 border border-gray-700 overflow-hidden">
                 <div 
@@ -895,26 +1341,27 @@ export default function Mission3DView({ gameState, setGameState }) {
             <div className="absolute top-4 right-4 bg-black/95 backdrop-blur-md border border-blue-500/60 rounded-lg p-3 z-10 shadow-2xl">
               <div className="flex items-center gap-2 mb-1">
                 <Package className="w-4 h-4 text-blue-400" />
-                <span className="text-blue-400 font-mono text-xs font-bold">RESOURCES</span>
+                <span className="text-blue-400 font-mono text-xs font-bold">RESOURCES: {collectedResources.length}</span>
               </div>
-              <p className="text-gray-300 font-mono text-xs">{collectedResources.length} collected</p>
+              {inventory.includes('keycard') && (
+                <p className="text-yellow-400 font-mono text-xs">🔑 Keycard</p>
+              )}
             </div>
 
             <div className="absolute top-28 left-4 bg-black/95 backdrop-blur-md border border-blue-500/60 rounded-lg p-3 z-10 shadow-2xl">
               <p className="text-blue-400 font-mono text-sm font-bold tracking-wider">MISSION {activeMission.mission_number}</p>
               <p className="text-gray-300 font-mono text-xs mt-1">{activeMission.title}</p>
-              <p className="text-gray-500 font-mono text-xs mt-0.5">{activeMission.location}</p>
             </div>
 
             <div className="absolute top-4 right-4 z-10">
               <Button onClick={() => setShowAIAssistant(true)} className="bg-cyan-600/95 hover:bg-cyan-700 backdrop-blur-md font-mono text-xs shadow-lg" size="sm">
-                <Bot className="w-4 h-4 mr-1" />AI ASSIST
+                <Bot className="w-4 h-4 mr-1" />AI
               </Button>
             </div>
             
             <div className="absolute bottom-4 left-4 bg-black/95 backdrop-blur-md rounded-lg p-3 font-mono text-xs text-gray-300 hidden md:block z-10 border border-gray-700 shadow-2xl">
               <p className="font-bold text-white mb-1">CONTROLS:</p>
-              <p>WASD: Move | SPACE: Rope | C: Crouch | E: Interact | Mouse: Look</p>
+              <p>WASD: Move | SPACE: Rope | C: Crouch | E: Interact</p>
             </div>
           </div>
         </Card>
@@ -930,19 +1377,37 @@ export default function Mission3DView({ gameState, setGameState }) {
           <div className="p-4 space-y-2">
             {activeMission.mission_number === 1 && (
               <>
-                <div className={`flex items-center gap-2 p-2 rounded transition-all ${activatedButtons.includes('button1') ? 'bg-green-900/40 border border-green-500/40' : 'bg-gray-800/40 border border-gray-700'}`}>
+                <div className={`flex items-center gap-2 p-2 rounded ${activatedButtons.includes('button1') ? 'bg-green-900/40 border border-green-500/40' : 'bg-gray-800/40'}`}>
                   <CheckCircle className={`w-4 h-4 ${activatedButtons.includes('button1') ? 'text-green-400' : 'text-gray-600'}`} />
                   <span className="text-sm font-mono text-white">Sink Button</span>
                 </div>
-                <div className={`flex items-center gap-2 p-2 rounded transition-all ${puzzleStates.plate1 ? 'bg-green-900/40 border border-green-500/40' : 'bg-gray-800/40 border border-gray-700'}`}>
+                <div className={`flex items-center gap-2 p-2 rounded ${puzzleStates.plate1 ? 'bg-green-900/40 border border-green-500/40' : 'bg-gray-800/40'}`}>
                   <CheckCircle className={`w-4 h-4 ${puzzleStates.plate1 ? 'text-green-400' : 'text-gray-600'}`} />
                   <span className="text-sm font-mono text-white">Pressure Plate</span>
                 </div>
-                <div className={`flex items-center gap-2 p-2 rounded transition-all ${leverStates.lever1 ? 'bg-green-900/40 border border-green-500/40' : 'bg-gray-800/40 border border-gray-700'}`}>
+                <div className={`flex items-center gap-2 p-2 rounded ${leverStates.lever1 ? 'bg-green-900/40 border border-green-500/40' : 'bg-gray-800/40'}`}>
                   <CheckCircle className={`w-4 h-4 ${leverStates.lever1 ? 'text-green-400' : 'text-gray-600'}`} />
                   <span className="text-sm font-mono text-white">Knife Lever</span>
                 </div>
               </>
+            )}
+            {activeMission.mission_number === 2 && (
+              <>
+                <div className={`flex items-center gap-2 p-2 rounded ${inventory.includes('keycard') ? 'bg-green-900/40 border border-green-500/40' : 'bg-gray-800/40'}`}>
+                  <CheckCircle className={`w-4 h-4 ${inventory.includes('keycard') ? 'text-green-400' : 'text-gray-600'}`} />
+                  <span className="text-sm font-mono text-white">Collect Keycard</span>
+                </div>
+                <div className={`flex items-center gap-2 p-2 rounded ${puzzleStates.terminal_active ? 'bg-green-900/40 border border-green-500/40' : 'bg-gray-800/40'}`}>
+                  <CheckCircle className={`w-4 h-4 ${puzzleStates.terminal_active ? 'text-green-400' : 'text-gray-600'}`} />
+                  <span className="text-sm font-mono text-white">Activate Terminal</span>
+                </div>
+              </>
+            )}
+            {activeMission.mission_number === 3 && (
+              <div className={`flex items-center gap-2 p-2 rounded ${puzzleStates.wire_solved ? 'bg-green-900/40 border border-green-500/40' : 'bg-gray-800/40'}`}>
+                <CheckCircle className={`w-4 h-4 ${puzzleStates.wire_solved ? 'text-green-400' : 'text-gray-600'}`} />
+                <span className="text-sm font-mono text-white">Solve Wire Puzzle</span>
+              </div>
             )}
           </div>
         </Card>
@@ -953,7 +1418,7 @@ export default function Mission3DView({ gameState, setGameState }) {
           </div>
           <div className="p-4 space-y-1 max-h-[300px] overflow-y-auto">
             {missionLog.slice(-10).reverse().map((log, i) => (
-              <div key={i} className="text-xs font-mono animate-fade-in">
+              <div key={i} className="text-xs font-mono">
                 <span className="text-gray-600">[{log.time}]</span>{' '}
                 <span className={log.type === 'error' ? 'text-red-400' : log.type === 'warning' ? 'text-yellow-400' : log.type === 'success' ? 'text-green-400' : 'text-gray-400'}>
                   {log.message}
