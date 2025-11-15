@@ -10,11 +10,13 @@ import CommsPanel from "../components/game/CommsPanel";
 import GamepassMenu from "../components/game/GamepassMenu";
 import FinalChoice from "../components/game/FinalChoice";
 import MatrixEscape from "../components/game/MatrixEscape";
+import TaiNiMovie from "../components/game/TaiNiMovie";
 
 export default function Simulator() {
   const [activeTab, setActiveTab] = useState("monitor");
   const [showFinalChoice, setShowFinalChoice] = useState(false);
   const [showMatrixEscape, setShowMatrixEscape] = useState(false);
+  const [showTaiNiMovie, setShowTaiNiMovie] = useState(false);
   const [gameState, setGameState] = useState({
     completedMissions: [],
     unlockedChannels: ['#general'],
@@ -42,8 +44,12 @@ export default function Simulator() {
     }
   }, [missions]);
 
+  if (showTaiNiMovie) {
+    return <TaiNiMovie onClose={() => setShowTaiNiMovie(false)} />;
+  }
+
   if (showMatrixEscape) {
-    return <MatrixEscape />;
+    return <MatrixEscape onComplete={() => setShowTaiNiMovie(true)} />;
   }
 
   if (showFinalChoice) {

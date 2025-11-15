@@ -1,8 +1,9 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import * as THREE from "three";
 
-export default function MatrixEscape() {
+export default function MatrixEscape({ onComplete }) {
   const mountRef = useRef(null);
   const [text, setText] = useState("");
   const [showFinal, setShowFinal] = useState(false);
@@ -23,6 +24,13 @@ export default function MatrixEscape() {
     "WELCOME TO THE REAL WORLD"
   ];
 
+  // Change the existing onComplete call to use the prop
+  const handleComplete = () => {
+    if (onComplete) {
+      onComplete();
+    }
+  };
+
   useEffect(() => {
     let currentIndex = 0;
     let currentText = "";
@@ -42,12 +50,16 @@ export default function MatrixEscape() {
         }
       } else {
         clearInterval(typeWriter);
-        setTimeout(() => setShowFinal(true), 2000);
+        // Update the final success section to call handleComplete
+        setTimeout(() => {
+          setShowFinal(true);
+          handleComplete();
+        }, 2000);
       }
     }, 50);
 
     return () => clearInterval(typeWriter);
-  }, []);
+  }, [handleComplete]); // Add handleComplete to dependency array to ensure latest version is used
 
   useEffect(() => {
     if (!mountRef.current) return;
