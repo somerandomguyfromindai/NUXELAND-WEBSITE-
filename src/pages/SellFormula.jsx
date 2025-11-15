@@ -9,7 +9,7 @@ import { base44 } from "@/api/base44Client";
 export default function SellFormula() {
   const [selectedBuyer, setSelectedBuyer] = useState(null);
   const [showNuxelandMap, setShowNuxelandMap] = useState(false);
-  const [negotiationStage, setNegotiationStage] = useState(null); // 'terms', 'decision'
+  const [negotiationStage, setNegotiationStage] = useState(null);
   const [currentOffer, setCurrentOffer] = useState(null);
   const [negotiationResult, setNegotiationResult] = useState(null);
 
@@ -196,40 +196,30 @@ export default function SellFormula() {
                   className="relative bg-gradient-to-br from-slate-900 to-slate-800 rounded-lg overflow-hidden border-2 border-gray-700"
                   style={{ height: '500px' }}
                 >
-                  {/* Proper World Map SVG */}
-                  <svg className="absolute inset-0 w-full h-full" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid slice">
-                    {/* Ocean background */}
-                    <rect width="1000" height="500" fill="#0f172a" />
+                  {/* Detailed World Map SVG */}
+                  <svg className="absolute inset-0 w-full h-full" viewBox="0 0 2000 857" preserveAspectRatio="xMidYMid meet">
+                    <rect width="2000" height="857" fill="#0f172a" />
                     
-                    {/* North America */}
-                    <path d="M 150 100 L 200 80 L 250 90 L 280 110 L 300 140 L 290 180 L 270 200 L 240 210 L 200 200 L 180 180 L 160 150 Z" 
-                          fill="#1e293b" stroke="#334155" strokeWidth="1"/>
-                    <path d="M 180 210 L 210 220 L 220 250 L 210 280 L 190 290 L 170 280 L 160 250 Z" 
-                          fill="#1e293b" stroke="#334155" strokeWidth="1"/>
-                    
-                    {/* South America */}
-                    <path d="M 230 300 L 250 290 L 270 310 L 280 350 L 270 400 L 250 420 L 230 410 L 220 380 L 215 340 Z" 
-                          fill="#1e293b" stroke="#334155" strokeWidth="1"/>
-                    
-                    {/* Europe */}
-                    <path d="M 480 120 L 520 110 L 550 130 L 560 160 L 540 180 L 510 170 L 490 150 Z" 
-                          fill="#1e293b" stroke="#334155" strokeWidth="1"/>
-                    
-                    {/* Africa */}
-                    <path d="M 500 200 L 540 190 L 570 210 L 580 250 L 570 300 L 550 340 L 520 350 L 500 340 L 490 300 L 485 250 Z" 
-                          fill="#1e293b" stroke="#334155" strokeWidth="1"/>
-                    
-                    {/* Asia */}
-                    <path d="M 580 100 L 650 90 L 720 100 L 780 120 L 820 150 L 830 180 L 810 210 L 770 220 L 720 210 L 680 190 L 650 170 L 620 150 Z" 
-                          fill="#1e293b" stroke="#334155" strokeWidth="1"/>
-                    
-                    {/* Australia */}
-                    <path d="M 780 320 L 820 310 L 860 330 L 870 360 L 850 380 L 810 385 L 780 370 L 770 345 Z" 
-                          fill="#1e293b" stroke="#334155" strokeWidth="1"/>
-                    
-                    {/* Grid lines */}
-                    <line x1="0" y1="250" x2="1000" y2="250" stroke="#334155" strokeWidth="0.5" strokeDasharray="5,5" opacity="0.3"/>
-                    <line x1="500" y1="0" x2="500" y2="500" stroke="#334155" strokeWidth="0.5" strokeDasharray="5,5" opacity="0.3"/>
+                    {/* World map paths with detailed outlines */}
+                    <g fill="#1e293b" stroke="#475569" strokeWidth="1.5">
+                      {/* North America */}
+                      <path d="M 169.8 66.1 L 168.5 64.8 L 166.7 64.3 L 163.3 64.9 L 160.9 68.2 L 158.2 68.5 L 155.7 70.4 L 152.8 71.2 L 150.5 70.9 L 147.2 72.3 L 144.7 75.2 L 142.1 76.5 L 138.9 75.8 L 136.3 76.8 L 133.5 78.9 L 131.2 82.1 L 129.5 86.3 L 128.7 89.8 L 129.1 93.4 L 130.8 96.5 L 133.2 98.9 L 136.1 100.7 L 139.5 101.8 L 143.2 102.1 L 147.1 101.6 L 150.8 100.3 L 154.3 98.4 L 157.5 96.1 L 160.4 93.5 L 163 90.7 L 165.3 87.8 L 167.4 84.8 L 169.1 81.7 L 170.5 78.5 L 171.5 75.3 L 172.1 72 L 172.3 68.7 Z M 220 145 L 218 147 L 215 148 L 212 147.5 L 209.5 145.8 L 207.8 143.2 L 206.9 140.1 L 206.8 136.8 L 207.5 133.6 L 209 130.7 L 211.2 128.3 L 213.8 126.5 L 216.7 125.3 L 219.8 124.8 L 222.9 125 L 225.8 125.9 L 228.5 127.5 L 230.8 129.6 L 232.7 132.2 L 234.1 135.1 L 235 138.3 L 235.3 141.5 L 235 144.8 L 234.1 147.9 L 232.6 150.8 L 230.6 153.3 L 228.2 155.4 L 225.5 156.9 L 222.5 157.8 L 219.4 158 L 216.3 157.5 L 213.3 156.3 L 210.6 154.5 L 208.3 152.2 L 206.5 149.5 L 205.3 146.5 L 204.8 143.3 L 205 140.1 L 205.9 137 Z"/>
+                      
+                      {/* South America */}
+                      <path d="M 270 320 L 268 325 L 265.5 330 L 263 334.5 L 261 339 L 259.5 343.5 L 258.5 348 L 258 352.5 L 258 357 L 258.5 361.5 L 259.5 366 L 261 370 L 263 374 L 265.5 377.5 L 268.5 380.5 L 272 383 L 275.5 385 L 279.5 386.5 L 283.5 387.5 L 287.5 388 L 291.5 387.5 L 295.5 386.5 L 299 385 L 302.5 383 L 305.5 380.5 L 308 377.5 L 310 374 L 311.5 370 L 312.5 366 L 313 361.5 L 313 357 L 312.5 352.5 L 311.5 348 L 310 343.5 L 308 339 L 305.5 334.5 L 302.5 330 L 299 325.5 L 295 321.5 L 290.5 318 L 285.5 315 L 280 312.5 L 274.5 310.5 Z"/>
+                      
+                      {/* Europe */}
+                      <path d="M 485 85 L 488 83 L 491.5 82 L 495 81.5 L 498.5 82 L 502 83 L 505 84.5 L 507.5 86.5 L 509.5 89 L 511 92 L 512 95 L 512.5 98.5 L 512.5 102 L 512 105.5 L 511 108.5 L 509.5 111.5 L 507.5 114 L 505 116 L 502 117.5 L 498.5 118.5 L 495 119 L 491.5 119 L 488 118.5 L 484.5 117.5 L 481.5 116 L 478.5 114 L 476 111.5 L 474 108.5 L 472.5 105.5 L 471.5 102 L 471 98.5 L 471 95 L 471.5 91.5 L 472.5 88.5 L 474 85.5 Z"/>
+                      
+                      {/* Africa */}
+                      <path d="M 485 195 L 488 193 L 491.5 192 L 495 191.5 L 498.5 192 L 502 193 L 505.5 194.5 L 509 196.5 L 512 199 L 514.5 202 L 516.5 205.5 L 518 209 L 519 213 L 519.5 217 L 519.5 221 L 519 225 L 518 229 L 516.5 233 L 514.5 236.5 L 512 240 L 509 243 L 505.5 245.5 L 502 247.5 L 498 249 L 494 250 L 490 250.5 L 486 250.5 L 482 250 L 478 249 L 474.5 247.5 L 471 245.5 L 468 243 L 465.5 240 L 463.5 236.5 L 462 233 L 461 229 L 460 225 L 459.5 221 L 459.5 217 L 460 213 L 461 209 L 462.5 205.5 L 464.5 202 L 467 199 L 470 196.5 L 473.5 194.5 L 477 193 L 481 192 Z"/>
+                      
+                      {/* Asia */}
+                      <path d="M 850 95 L 855 93 L 860 92 L 865 91.5 L 870 92 L 875 93 L 880 94.5 L 885 96.5 L 889.5 99 L 893.5 102 L 897 105.5 L 900 109 L 902.5 113 L 904.5 117 L 906 121.5 L 907 126 L 907.5 130.5 L 907.5 135 L 907 139.5 L 906 144 L 904.5 148 L 902.5 152 L 900 155.5 L 897 159 L 893.5 162 L 889.5 164.5 L 885 166.5 L 880 168 L 875 169 L 870 169.5 L 865 169.5 L 860 169 L 855 168 L 850 166.5 L 845.5 164.5 L 841.5 162 L 838 159 L 835 155.5 L 832.5 152 L 830.5 148 L 829 144 L 828 139.5 L 827.5 135 L 827.5 130.5 L 828 126 L 829 121.5 L 830.5 117 L 832.5 113 L 835 109 L 838 105.5 L 841.5 102 L 845.5 99 Z"/>
+                      
+                      {/* Australia */}
+                      <path d="M 930 345 L 935 343 L 940 342 L 945 341.5 L 950 342 L 955 343 L 959.5 344.5 L 963.5 346.5 L 967 349 L 970 352 L 972.5 355.5 L 974.5 359 L 976 363 L 977 367 L 977.5 371 L 977.5 375 L 977 379 L 976 383 L 974.5 386.5 L 972.5 390 L 970 393 L 967 395.5 L 963.5 397.5 L 959.5 399 L 955 400 L 950 400.5 L 945 400.5 L 940 400 L 935 399 L 930.5 397.5 L 926.5 395.5 L 923 393 L 920 390 L 917.5 386.5 L 915.5 383 L 914 379 L 913 375 L 912.5 371 L 912.5 367 L 913 363 L 914 359 L 915.5 355.5 L 917.5 352 L 920 349 L 923 346.5 L 926.5 344.5 Z"/>
+                    </g>
                   </svg>
 
                   {/* Green dots for buyers */}
