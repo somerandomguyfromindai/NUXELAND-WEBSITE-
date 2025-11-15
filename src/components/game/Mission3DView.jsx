@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -146,7 +145,6 @@ Return JSON with this structure:
       addLog('Environment adapted to your progress!', 'warning');
     } catch (error) {
       console.error('Failed to generate variant:', error);
-      addLog('Failed to generate environment variant.', 'error');
     } finally {
       setIsGeneratingVariant(false);
     }
@@ -276,10 +274,8 @@ Return JSON with this structure:
     if (activeMission.mission_number === 1) {
       addLog("Mission 1: Hold SPACE anywhere to deploy ROPE!", 'info');
       
-      // Initialize obstacles array first
       obstacles = [];
       
-      // REALISTIC KITCHEN WALLS AND CABINETS
       const wallHeight = 50;
       const wallMaterial = new THREE.MeshStandardMaterial({ color: 0xd4c5b9, roughness: 0.8 });
       
@@ -298,7 +294,6 @@ Return JSON with this structure:
       rightWall.receiveShadow = true;
       scene.add(rightWall);
       
-      // Upper cabinets
       const cabinetMaterial = new THREE.MeshStandardMaterial({ color: 0x5d4e37, roughness: 0.6 });
       for (let i = 0; i < 4; i++) {
         const cabinet = new THREE.Mesh(new THREE.BoxGeometry(30, 15, 10), cabinetMaterial);
@@ -308,7 +303,6 @@ Return JSON with this structure:
         obstacles.push(cabinet);
       }
       
-      // Window
       const windowFrame = new THREE.Mesh(
         new THREE.BoxGeometry(40, 25, 1),
         new THREE.MeshStandardMaterial({ color: 0x87ceeb, transparent: true, opacity: 0.3 })
@@ -316,7 +310,6 @@ Return JSON with this structure:
       windowFrame.position.set(50, 30, -99);
       scene.add(windowFrame);
       
-      // VISIBLE COUNTER BORDER
       const borderMaterial = new THREE.MeshStandardMaterial({ 
         color: 0x8b7355, 
         roughness: 0.8,
@@ -348,7 +341,6 @@ Return JSON with this structure:
       scene.add(rightBorder);
       obstacles.push(rightBorder);
       
-      // LARGE FLAT SINK (GOING DOWN)
       const sinkOuterRim = new THREE.Mesh(
         new THREE.BoxGeometry(30, 0.8, 22),
         new THREE.MeshStandardMaterial({ color: 0xe0e0e0, metalness: 0.95, roughness: 0.05 })
@@ -367,7 +359,6 @@ Return JSON with this structure:
       sinkBasin.receiveShadow = true;
       scene.add(sinkBasin);
       
-      // Button on sink rim
       const buttonGeometry = new THREE.CylinderGeometry(1.2, 1.2, 0.6, 32);
       const buttonMaterial = new THREE.MeshStandardMaterial({ 
         color: activatedButtons.includes('button1') ? 0x10b981 : 0xef4444,
@@ -393,7 +384,6 @@ Return JSON with this structure:
         scene.add(ring);
       }
 
-      // KNIFE - BIGGER AND MORE VISIBLE
       const knifeBladeGeometry = new THREE.BoxGeometry(2, 0.4, 20);
       const knifeHandleGeometry = new THREE.CylinderGeometry(1, 1, 7, 16);
       const knifeBladeMaterial = new THREE.MeshStandardMaterial({ 
@@ -428,7 +418,6 @@ Return JSON with this structure:
       puzzleElements.push(knife);
       obstacles.push(knife);
       
-      // Glowing indicator for knife
       const knifeGlow = new THREE.Mesh(
         new THREE.SphereGeometry(2, 16, 16),
         new THREE.MeshBasicMaterial({ 
@@ -441,7 +430,6 @@ Return JSON with this structure:
       knifeGlow.position.y += 2;
       scene.add(knifeGlow);
 
-      // BOWL
       const bowlRadius = 15;
       const bowlGeometry = new THREE.SphereGeometry(bowlRadius, 64, 32, 0, Math.PI * 2, 0, Math.PI / 2);
       const bowlMaterial = new THREE.MeshStandardMaterial({ 
@@ -464,7 +452,6 @@ Return JSON with this structure:
       scene.add(rim);
       obstacles.push(rim);
 
-      // SPOON
       const spoonGroup = new THREE.Group();
       const spoonHandleGeometry = new THREE.CylinderGeometry(0.4, 0.5, 18, 16);
       const spoonHeadGeometry = new THREE.SphereGeometry(2.5, 32, 32);
@@ -490,7 +477,6 @@ Return JSON with this structure:
       scene.add(spoonGroup);
       obstacles.push(spoonGroup);
 
-      // MUG WITH COFFEE
       const mugGeometry = new THREE.CylinderGeometry(5, 4.2, 10, 32);
       const mugMaterial = new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 0.6 });
       const mug = new THREE.Mesh(mugGeometry, mugMaterial);
@@ -515,7 +501,6 @@ Return JSON with this structure:
       coffee.position.set(50, 9.5, -20);
       scene.add(coffee);
 
-      // CRUMBS
       for (let i = 0; i < 8; i++) {
         const crumbSize = 1.2 + Math.random() * 1.8;
         const crumb = new THREE.Mesh(
@@ -534,9 +519,8 @@ Return JSON with this structure:
           destructibleObjects.push(crumb);
           obstacles.push(crumb);
         }
-      });
+      }
 
-      // BUTTER STICK
       const butter = new THREE.Mesh(
         new THREE.BoxGeometry(8, 2, 4),
         new THREE.MeshStandardMaterial({ color: 0xffd700, roughness: 0.2 })
@@ -548,7 +532,6 @@ Return JSON with this structure:
       interactiveObjects.push(butter);
       obstacles.push(butter);
 
-      // FORK BRIDGE
       if (activatedButtons.includes('button1')) {
         const forkMaterial = new THREE.MeshStandardMaterial({ color: 0xd3d3d3, metalness: 0.9, roughness: 0.1 });
         const forkHandle = new THREE.Mesh(new THREE.BoxGeometry(2, 0.6, 25), forkMaterial);
@@ -568,7 +551,6 @@ Return JSON with this structure:
         }
       }
 
-      // NAPKIN WITH PRESSURE PLATE
       const napkin = new THREE.Mesh(
         new THREE.BoxGeometry(12, 0.3, 12),
         new THREE.MeshStandardMaterial({ 
@@ -599,7 +581,6 @@ Return JSON with this structure:
       puzzleElements.push(plateDisc);
       obstacles.push(plateDisc);
 
-      // LARGE DINNER PLATE (STATIC - NO RISING)
       const dinnerPlate = new THREE.Mesh(
         new THREE.CylinderGeometry(8, 7, 1.2, 64),
         new THREE.MeshStandardMaterial({ 
@@ -608,12 +589,11 @@ Return JSON with this structure:
           metalness: 0.1
         })
       );
-      dinnerPlate.position.set(55, 0.6, 0); // Changed y-position to be static
+      dinnerPlate.position.set(55, 0.6, 0);
       dinnerPlate.castShadow = true;
       scene.add(dinnerPlate);
       obstacles.push(dinnerPlate);
 
-      // SUGAR CUBES
       const sugarPositions = [
         { x: 20, y: 1, z: -8 },
         { x: 22, y: 1, z: -8 },
@@ -639,7 +619,6 @@ Return JSON with this structure:
         }
       });
 
-      // RESOURCE COLLECTIBLES
       const resourcePositions = [
         { name: 'Metal Scrap', x: -30, y: 1, z: 10, color: 0xc0c0c0 },
         { name: 'Energy Cell', x: 40, y: 1, z: -10, color: 0xffff00 },
@@ -665,7 +644,6 @@ Return JSON with this structure:
         resourceObjects.push(resourceMesh);
       });
 
-      // WATER DROPLET OBJECTIVE (ON GROUND WHEN ALL PUZZLES COMPLETE)
       const waterDrop = new THREE.Mesh(
         new THREE.SphereGeometry(3, 64, 64),
         new THREE.MeshPhysicalMaterial({ 
@@ -680,7 +658,7 @@ Return JSON with this structure:
         })
       );
       const canReachWater = activatedButtons.includes('button1') && puzzleStates.plate1 && leverStates.lever1;
-      waterDrop.position.set(70, canReachWater ? 3 : 25, 5); // Changed y-position to be lower when accessible
+      waterDrop.position.set(70, canReachWater ? 3 : 25, 5);
       waterDrop.userData = { type: 'water_source', accessible: canReachWater };
       waterDrop.castShadow = true;
       scene.add(waterDrop);
@@ -707,7 +685,7 @@ Return JSON with this structure:
               opacity: 0.4
             })
           );
-          mist.position.set(65 + Math.random() * 10, 1 + Math.random() * 6, 0 + Math.random() * 10); // Adjusted mist y-position
+          mist.position.set(65 + Math.random() * 10, 1 + Math.random() * 6, 0 + Math.random() * 10);
           mist.userData = { type: 'mist', velocity: { y: Math.random() * 0.02 + 0.01 } };
           scene.add(mist);
           mistParticles.push(mist);
@@ -715,11 +693,9 @@ Return JSON with this structure:
       }
 
     } else if (activeMission.mission_number === 2) {
-      addLog("Mission 2: Lab infiltration and data extraction", 'warning');
+      addLog("Mission 2: Lab infiltration", 'warning');
       
-      // Spawn player in clear area
       player.position.set(-80, 1, 80);
-      
       obstacles = [];
       
       scene.background = new THREE.Color(0x1a1a2e);
@@ -736,7 +712,6 @@ Return JSON with this structure:
       labFloor.receiveShadow = true;
       scene.add(labFloor);
 
-      // Lab walls
       const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x3a3a5a, roughness: 0.8 });
       const wallHeight = 40;
       
@@ -755,7 +730,6 @@ Return JSON with this structure:
       rightWall.receiveShadow = true;
       scene.add(rightWall);
 
-      // Server racks
       for (let i = 0; i < 6; i++) {
         const serverRack = new THREE.Mesh(
           new THREE.BoxGeometry(15, 25, 8),
@@ -766,7 +740,6 @@ Return JSON with this structure:
         scene.add(serverRack);
         obstacles.push(serverRack);
         
-        // Server lights
         for (let j = 0; j < 5; j++) {
           const light = new THREE.Mesh(
             new THREE.BoxGeometry(1, 0.5, 0.5),
@@ -781,7 +754,6 @@ Return JSON with this structure:
         }
       }
 
-      // Lab tables with equipment
       const tablePositions = [
         { x: -40, z: -30 },
         { x: 0, z: -30 },
@@ -800,7 +772,6 @@ Return JSON with this structure:
         scene.add(table);
         obstacles.push(table);
         
-        // Table legs
         for (let i = 0; i < 4; i++) {
           const leg = new THREE.Mesh(
             new THREE.CylinderGeometry(0.5, 0.5, 6, 16),
@@ -816,7 +787,6 @@ Return JSON with this structure:
           obstacles.push(leg);
         }
 
-        // Equipment on tables
         const equipment = new THREE.Mesh(
           new THREE.BoxGeometry(8, 5, 6),
           new THREE.MeshStandardMaterial({ 
@@ -831,7 +801,6 @@ Return JSON with this structure:
         obstacles.push(equipment);
       });
 
-      // Central terminal (objective)
       const terminal = new THREE.Mesh(
         new THREE.BoxGeometry(12, 15, 8),
         new THREE.MeshStandardMaterial({ 
@@ -848,7 +817,6 @@ Return JSON with this structure:
       puzzleElements.push(terminal);
       obstacles.push(terminal);
 
-      // Terminal screen
       const screen = new THREE.Mesh(
         new THREE.PlaneGeometry(8, 6),
         new THREE.MeshBasicMaterial({ 
@@ -860,7 +828,6 @@ Return JSON with this structure:
       screen.position.set(0, 10, 4.1);
       scene.add(screen);
 
-      // Data objective (glowing cube)
       const dataCore = new THREE.Mesh(
         new THREE.BoxGeometry(4, 4, 4),
         new THREE.MeshPhysicalMaterial({ 
@@ -889,7 +856,6 @@ Return JSON with this structure:
       dataCoreGlow.position.copy(dataCore.position);
       scene.add(dataCoreGlow);
 
-      // Laser security barriers
       for (let i = 0; i < 3; i++) {
         const laser = new THREE.Mesh(
           new THREE.BoxGeometry(0.2, 8, 60),
@@ -905,7 +871,6 @@ Return JSON with this structure:
         interactiveObjects.push(laser);
       }
 
-      // Crates for cover
       const cratePositions = [
         { x: -70, z: 40 },
         { x: -50, z: 60 },
@@ -929,7 +894,6 @@ Return JSON with this structure:
         obstacles.push(crate);
       });
 
-      // Resource collectibles
       const labResources = [
         { name: 'Research Data', x: -70, y: 1, z: -70, color: 0x00ffff },
         { name: 'Security Key', x: 70, y: 1, z: -70, color: 0xffaa00 },
@@ -954,7 +918,7 @@ Return JSON with this structure:
         resourceObjects.push(resourceMesh);
       });
 
-      addLog("Advanced security systems active - avoid lasers!", 'warning');
+      addLog("Advanced security systems active!", 'warning');
     }
 
     const keys = {};
@@ -963,11 +927,7 @@ Return JSON with this structure:
     const handleKeyDown = (e) => { 
       keys[e.key.toLowerCase()] = true;
       
-      // Removed direct 'space' key jump logic from here,
-      // as 'space' now controls the rope deployment/movement in the animate loop.
-      
       if (e.key.toLowerCase() === 'e') {
-        // Resource collection
         resourceObjects.forEach((obj, index) => {
           const distance = player.position.distanceTo(obj.position);
           if (distance < 3) {
@@ -975,12 +935,9 @@ Return JSON with this structure:
               const inventory = user.resource_inventory || {};
               inventory[obj.userData.resourceName] = (inventory[obj.userData.resourceName] || 0) + 1;
               base44.auth.updateMe({ resource_inventory: inventory });
-            }).catch(() => {
-              addLog("Error updating user inventory.", 'error');
-            });
+            }).catch(() => {});
             
             addLog(`Collected: ${obj.userData.resourceName}`, 'success');
-            // Update local inventory state
             setInventory(prev => {
               const existingItemIndex = prev.findIndex(item => item.name === obj.userData.resourceName);
               if (existingItemIndex > -1) {
@@ -992,7 +949,7 @@ Return JSON with this structure:
               }
             });
             scene.remove(obj);
-            resourceObjects.splice(index, 1); // Remove from our local tracking array
+            resourceObjects.splice(index, 1);
           }
         });
 
@@ -1010,7 +967,6 @@ Return JSON with this structure:
               addLog(`✓ Lever toggled!`, 'info');
             } else if (elem.userData.type === 'terminal') {
                 addLog(`Interacted with terminal ${elem.userData.id}`, 'info');
-                // Potentially update puzzleStates based on terminal interaction
             }
           }
         });
@@ -1054,12 +1010,10 @@ Return JSON with this structure:
     const animate = () => {
       const delta = clock.getDelta();
 
-      // --- ROPE DEPLOYMENT / RETRACTION LOGIC ---
       const isSpaceOrMobileJumpPressed = keys[' '] || mobileControlsRef.current.jump;
 
       if (isSpaceOrMobileJumpPressed) {
         if (!isOnRope) {
-          // Deploy rope
           const ropeMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
           const ropeGeometry = new THREE.BufferGeometry().setFromPoints([
             new THREE.Vector3(player.position.x, player.position.y, player.position.z),
@@ -1067,59 +1021,52 @@ Return JSON with this structure:
           ]);
           ropeLine = new THREE.Line(ropeGeometry, ropeMaterial);
           scene.add(ropeLine);
-          isOnRope = true; // Set rope active
-          playerVelocityY = 0; // Stop vertical movement
-          isOnGround = false; // Not on ground anymore
-          jumpCount = 0; // Reset jumps
+          isOnRope = true;
+          playerVelocityY = 0;
+          isOnGround = false;
+          jumpCount = 0;
           addLog('Rope deployed!', 'info');
         }
       } else {
-        // SPACE/mobile jump is NOT pressed, so retract rope if active
         if (ropeLine) {
           scene.remove(ropeLine);
-          ropeLine.geometry.dispose(); // Dispose resources
-          ropeLine.material.dispose(); // Dispose resources
+          ropeLine.geometry.dispose();
+          ropeLine.material.dispose();
           ropeLine = null;
           isOnRope = false;
           addLog('Rope retracted', 'info');
         }
       }
-      // Reset mobile jump flag immediately after check to prevent continuous deployment
+      
       if (mobileControlsRef.current.jump) {
         setMobileControls(prev => ({ ...prev, jump: false }));
       }
 
-      // --- PLAYER MOVEMENT LOGIC ---
       if (isOnRope) {
-        // Movement while on rope
-        playerVelocityY = 0; // No gravity while on rope
+        playerVelocityY = 0;
 
-        // Vertical movement on rope
         if (keys['w'] || mobileControlsRef.current.up) {
           player.position.y += ropeSpeed * delta;
-          if (player.position.y > ceilingHeight - playerHalfHeight - 0.5) player.position.y = ceilingHeight - playerHalfHeight - 0.5; // Prevent clipping through ceiling
+          if (player.position.y > ceilingHeight - playerHalfHeight - 0.5) player.position.y = ceilingHeight - playerHalfHeight - 0.5;
         }
         if (keys['s'] || mobileControlsRef.current.down) {
           player.position.y -= ropeSpeed * delta;
-          if (player.position.y < playerHalfHeight) player.position.y = playerHalfHeight; // Prevent clipping through floor
+          if (player.position.y < playerHalfHeight) player.position.y = playerHalfHeight;
         }
 
-        // Horizontal movement on rope (slower)
-        const ropeHorizontalSpeed = (keys['shift'] ? 20 : 10) * 0.5; // Slower when on rope
+        const ropeHorizontalSpeed = (keys['shift'] ? 20 : 10) * 0.5;
         if (keys['a'] || mobileControlsRef.current.left) player.position.x -= ropeHorizontalSpeed * delta;
         if (keys['d'] || mobileControlsRef.current.right) player.position.x += ropeHorizontalSpeed * delta;
 
-        // Update rope line geometry to follow player
         const ropePoints = [
           new THREE.Vector3(player.position.x, player.position.y, player.position.z),
-          new THREE.Vector3(player.position.x, ceilingHeight, player.position.z) // Anchor point
+          new THREE.Vector3(player.position.x, ceilingHeight, player.position.z)
         ];
         ropeLine.geometry.setFromPoints(ropePoints);
 
-        isOnGround = false; // Definitely not on ground
-        jumpCount = 0; // Can't jump while on rope
+        isOnGround = false;
+        jumpCount = 0;
       } else {
-        // Normal movement (not on rope) - existing gravity, jump, collision logic
         if (!isOnGround) {
           playerVelocityY += gravity * delta;
         }
@@ -1150,7 +1097,7 @@ Return JSON with this structure:
           newPlayerPositionY = playerHalfHeight;
           playerVelocityY = 0;
           isOnGround = true;
-          jumpCount = 0; // Reset jump count when on ground
+          jumpCount = 0;
         }
 
         let actualHorizontalPosition = new THREE.Vector3(targetHorizontalPosition.x, player.position.y, targetHorizontalPosition.z);
@@ -1171,7 +1118,7 @@ Return JSON with this structure:
             newPlayerPositionY = obsBox.max.y + playerHalfHeight;
             playerVelocityY = 0;
             isOnGround = true;
-            jumpCount = 0; // Reset jump count when landing on obstacle
+            jumpCount = 0;
           }
           else if (playerVelocityY > 0 && 
             (player.position.y + playerHalfHeight) <= (obsBox.min.y + 0.1) &&
@@ -1190,7 +1137,7 @@ Return JSON with this structure:
         player.position.x = actualHorizontalPosition.x;
         player.position.z = actualHorizontalPosition.z;
         player.position.y = newPlayerPositionY;
-      } // End of `else (!isOnRope)` block
+      }
 
       setPlayerPosition({ x: player.position.x, y: player.position.y, z: player.position.z });
 
@@ -1226,7 +1173,6 @@ Return JSON with this structure:
           const distance = player.position.distanceTo(obj.position);
           if (distance < 5 && player.position.y < obj.position.y + 4 && player.position.y > obj.position.y - 4) {
             addLog("Laser detected!", 'error');
-            // Implement player damage or mission failure logic here
           }
         }
       });
@@ -1262,20 +1208,12 @@ Return JSON with this structure:
         }
       });
 
-      // Apply environment variants
       if (environmentVariant) {
-        // Apply dynamic effects
         environmentVariant.effects?.forEach(effect => {
           if (effect.type === 'flickering_lights') {
-            // Apply flickering to ambient light
             ambientLight.intensity = 0.5 + Math.sin(clock.elapsedTime * 5) * effect.intensity;
           }
-          // TODO: Add logic for other effects if defined in the LLM response
         });
-        // TODO: Implement other variant applications here (hazards, modified_objects, dynamic_elements)
-        // For modified_objects and dynamic_elements, these would ideally be set up once when the scene loads,
-        // so they might need to be part of the initial scene setup conditional on environmentVariant being present.
-        // Or, if they are dynamic, logic to create/move them needs to be here.
       }
 
       camera.position.x = player.position.x + mouseX * 8;
@@ -1298,7 +1236,6 @@ Return JSON with this structure:
         mountRef.current.removeChild(renderer.domElement);
       }
       
-      // Cleanup ropeLine if it exists when component unmounts
       if (ropeLine) {
         scene.remove(ropeLine);
         ropeLine.geometry.dispose();
@@ -1397,11 +1334,10 @@ Return JSON with this structure:
             <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm border border-gray-600 rounded p-2 font-mono text-xs text-gray-300 hidden md:block z-10">
               <p>W/A/S/D: Move | SPACE: Deploy Rope | E: Interact | Shift: Sprint</p>
               <p className="text-cyan-400 mt-1 font-bold">
-                Hold SPACE anywhere to deploy ROPE - Use W/S to move up/down, A/D to swing left/right while on rope!
+                Hold SPACE anywhere to deploy ROPE - Use W/S to move up/down, A/D to swing left/right!
               </p>
             </div>
 
-            {/* Mobile Controls */}
             <div className="absolute bottom-4 left-4 right-4 md:hidden flex justify-between items-end gap-4 z-10">
               <div className="flex flex-col gap-2">
                 <div className="grid grid-cols-3 gap-1">
@@ -1463,12 +1399,12 @@ Return JSON with this structure:
                   Mission 1 Solution:
                 </h4>
                 <ol className="text-yellow-100 font-mono text-xs space-y-1 list-decimal list-inside">
-                  <li>Use ROPE (hold SPACE) to navigate to the button on the sink rim.</li>
-                  <li>Press USE on the button (it turns green).</li>
-                  <li>Cross the fork bridge that appears.</li>
-                  <li>Walk onto the PRESSURE PLATE on the napkin.</li>
-                  <li>Go to the KNIFE, press USE to activate the lever.</li>
-                  <li>Reach the WATER DROPLET to complete the mission.</li>
+                  <li>Use ROPE (hold SPACE) to reach button on sink</li>
+                  <li>Press USE on button (turns green)</li>
+                  <li>Cross fork bridge that appears</li>
+                  <li>Walk onto PRESSURE PLATE on napkin</li>
+                  <li>Go to KNIFE, press USE to activate lever</li>
+                  <li>Reach WATER DROPLET to complete mission</li>
                 </ol>
                 <p className="text-yellow-200 text-xs mt-2 italic font-bold">
                   Hold SPACE for rope - W/S to move up/down!
