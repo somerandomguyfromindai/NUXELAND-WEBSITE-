@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -23,6 +24,7 @@ const antConsoleItems = [
   { title: "Map", url: createPageUrl("Map"), icon: MapPin },
   { title: "Resources", url: createPageUrl("Resources"), icon: Package },
   { title: "Experiment Lab", url: createPageUrl("Dashboard"), icon: BarChart3 },
+  { title: "Formula R&D", url: createPageUrl("FormulaRD"), icon: Atom },
 ];
 
 const livingTheGameItems = [
