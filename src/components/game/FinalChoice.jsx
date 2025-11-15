@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -526,7 +527,7 @@ export default function FinalChoice({ gameState, onChoice }) {
                 INITIATE ARK PROTOCOL
               </h4>
               <p className="text-gray-300 font-mono text-sm text-center mb-4">
-                Mass miniaturization chambers. 2 billion humans saved. 34% survival rate.
+                Mass miniaturization chambers. Save 2 billion humans from global catastrophe. 34% survival rate.
               </p>
               <div className="space-y-2">
                 <div className="bg-green-900/20 rounded p-2">
