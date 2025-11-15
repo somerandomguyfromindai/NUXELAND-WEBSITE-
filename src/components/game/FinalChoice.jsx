@@ -41,10 +41,9 @@ export default function FinalChoice({ gameState, onChoice }) {
   const handleKeyPress = (e) => {
     if (stage !== 'challenge' || !selectedChoice) return;
     
-    const key = e.key.toUpperCase();
-    if (['ARROWUP', 'ARROWDOWN', 'ARROWLEFT', 'ARROWRIGHT'].includes(e.key)) {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
       e.preventDefault();
-      const direction = key.replace('ARROW', '');
+      const direction = e.key.replace('Arrow', '').toUpperCase();
       const newProgress = [...sequenceProgress, direction];
       setSequenceProgress(newProgress);
 
@@ -200,9 +199,17 @@ export default function FinalChoice({ gameState, onChoice }) {
     const challenge = getChallengeForChoice();
     return (
       <div className="min-h-screen bg-[#0A0E1A] flex items-center justify-center p-4">
-        <Card className={`max-w-2xl w-full bg-[#0F1729] border-${challenge.color}-500/50`}>
+        <Card className={`max-w-2xl w-full bg-[#0F1729] border-2 ${
+          challenge.color === 'blue' ? 'border-blue-500/50' :
+          challenge.color === 'green' ? 'border-green-500/50' :
+          'border-purple-500/50'
+        }`}>
           <CardHeader>
-            <CardTitle className={`text-${challenge.color}-400 font-mono text-center text-2xl`}>
+            <CardTitle className={`font-mono text-center text-2xl ${
+              challenge.color === 'blue' ? 'text-blue-400' :
+              challenge.color === 'green' ? 'text-green-400' :
+              'text-purple-400'
+            }`}>
               {challenge.title}
             </CardTitle>
           </CardHeader>
@@ -211,22 +218,31 @@ export default function FinalChoice({ gameState, onChoice }) {
               <p className="text-gray-300 font-mono text-sm text-center mb-4">
                 {challenge.description}
               </p>
-              <p className="text-yellow-400 font-mono text-xs text-center">
+              <p className="text-yellow-400 font-mono text-xs text-center font-bold">
                 Use ARROW KEYS to input the sequence
+              </p>
+              <p className="text-cyan-400 font-mono text-xs text-center mt-2">
+                Sequence: ↑ ↓ ← → ↑ ←
               </p>
             </div>
 
             <div className="flex justify-center gap-2">
-              {correctSequence.map((_, i) => (
+              {correctSequence.map((dir, i) => (
                 <div 
                   key={i}
-                  className={`w-12 h-12 rounded border-2 flex items-center justify-center font-mono font-bold ${
+                  className={`w-16 h-16 rounded border-2 flex items-center justify-center font-mono font-bold text-2xl ${
                     sequenceProgress[i] 
-                      ? `bg-${challenge.color}-500/20 border-${challenge.color}-500 text-${challenge.color}-400`
+                      ? `${challenge.color === 'blue' ? 'bg-blue-500/20 border-blue-500 text-blue-400' :
+                          challenge.color === 'green' ? 'bg-green-500/20 border-green-500 text-green-400' :
+                          'bg-purple-500/20 border-purple-500 text-purple-400'}`
                       : 'bg-gray-800 border-gray-600 text-gray-600'
                   }`}
                 >
-                  {sequenceProgress[i] ? sequenceProgress[i][0] : '?'}
+                  {sequenceProgress[i] ? 
+                    (sequenceProgress[i] === 'UP' ? '↑' :
+                     sequenceProgress[i] === 'DOWN' ? '↓' :
+                     sequenceProgress[i] === 'LEFT' ? '←' : '→')
+                    : '?'}
                 </div>
               ))}
             </div>
@@ -241,19 +257,43 @@ export default function FinalChoice({ gameState, onChoice }) {
 
             <div className="grid grid-cols-3 gap-4 max-w-xs mx-auto">
               <div></div>
-              <div className="w-12 h-12 bg-gray-700 rounded flex items-center justify-center text-white font-mono">
+              <Button
+                onClick={() => {
+                  const event = new KeyboardEvent('keydown', { key: 'ArrowUp' });
+                  window.dispatchEvent(event);
+                }}
+                className="w-14 h-14 bg-gray-700 hover:bg-gray-600 text-white font-mono text-2xl"
+              >
                 ↑
-              </div>
+              </Button>
               <div></div>
-              <div className="w-12 h-12 bg-gray-700 rounded flex items-center justify-center text-white font-mono">
+              <Button
+                onClick={() => {
+                  const event = new KeyboardEvent('keydown', { key: 'ArrowLeft' });
+                  window.dispatchEvent(event);
+                }}
+                className="w-14 h-14 bg-gray-700 hover:bg-gray-600 text-white font-mono text-2xl"
+              >
                 ←
-              </div>
-              <div className="w-12 h-12 bg-gray-700 rounded flex items-center justify-center text-white font-mono">
+              </Button>
+              <Button
+                onClick={() => {
+                  const event = new KeyboardEvent('keydown', { key: 'ArrowDown' });
+                  window.dispatchEvent(event);
+                }}
+                className="w-14 h-14 bg-gray-700 hover:bg-gray-600 text-white font-mono text-2xl"
+              >
                 ↓
-              </div>
-              <div className="w-12 h-12 bg-gray-700 rounded flex items-center justify-center text-white font-mono">
+              </Button>
+              <Button
+                onClick={() => {
+                  const event = new KeyboardEvent('keydown', { key: 'ArrowRight' });
+                  window.dispatchEvent(event);
+                }}
+                className="w-14 h-14 bg-gray-700 hover:bg-gray-600 text-white font-mono text-2xl"
+              >
                 →
-              </div>
+              </Button>
             </div>
           </CardContent>
         </Card>
