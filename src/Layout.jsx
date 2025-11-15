@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Atom, Home, FlaskConical, BarChart3, Users, Menu, X, Clock, MapPin, Package, Bot } from "lucide-react";
+import { Atom, Home, FlaskConical, Clock, MapPin, Package, ShoppingCart, BarChart3, Users, Menu, X, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import NuxelandAgent from "@/components/ai/NuxelandAgent";
@@ -13,8 +12,8 @@ const navigationItems = [
   { title: "Timeline", url: createPageUrl("MissionTimeline"), icon: Clock },
   { title: "Map", url: createPageUrl("Map"), icon: MapPin },
   { title: "Resources", url: createPageUrl("Resources"), icon: Package },
-  { title: "Shop", url: createPageUrl("Shop"), icon: BarChart3 },
-  { title: "Experiment Lab", url: createPageUrl("Dashboard"), icon: BarChart3 }, // Changed from "Dashboard" to "Experiment Lab"
+  { title: "Shop", url: createPageUrl("Shop"), icon: ShoppingCart },
+  { title: "Experiment Lab", url: createPageUrl("Dashboard"), icon: BarChart3 },
   { title: "Community", url: createPageUrl("Community"), icon: Users },
 ];
 
@@ -97,12 +96,27 @@ export default function Layout({ children, currentPageName }) {
         .animate-pulse-glow {
           animation: pulse-glow 2s ease-in-out infinite;
         }
+
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .animate-fade-in {
+          animation: fade-in 0.3s ease-out;
+        }
       `}</style>
 
       <header 
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           scrolled 
-            ? 'bg-[#0A0E1A]/95 backdrop-blur-md border-b border-white/10' 
+            ? 'bg-[#0A0E1A]/98 backdrop-blur-xl border-b border-white/10 shadow-2xl' 
             : 'bg-transparent'
         }`}
       >
@@ -119,7 +133,7 @@ export default function Layout({ children, currentPageName }) {
               </div>
             </Link>
 
-            <nav className="hidden md:flex items-center gap-8">
+            <nav className="hidden md:flex items-center gap-6">
               {navigationItems.map((item) => (
                 <Link
                   key={item.title}
@@ -162,7 +176,7 @@ export default function Layout({ children, currentPageName }) {
         </div>
 
         {mobileMenuOpen && (
-          <div className="md:hidden bg-[#0A0E1A]/98 backdrop-blur-md border-t border-white/10">
+          <div className="md:hidden bg-[#0A0E1A]/98 backdrop-blur-xl border-t border-white/10">
             <div className="px-4 py-4 space-y-3">
               {navigationItems.map((item) => (
                 <Link
@@ -191,7 +205,7 @@ export default function Layout({ children, currentPageName }) {
       {/* AI Agent Button */}
       <button
         onClick={() => setAgentOpen(!agentOpen)}
-        className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shadow-2xl hover:scale-110 transition-transform"
+        className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shadow-2xl hover:scale-110 transition-transform animate-pulse-glow"
       >
         <Bot className="w-7 h-7 text-white" />
       </button>
