@@ -18,6 +18,7 @@ const navigationItems = [
 ];
 
 const antConsoleItems = [
+  { title: "Simulator", url: createPageUrl("Simulator"), icon: FlaskConical },
   { title: "Timeline", url: createPageUrl("MissionTimeline"), icon: Clock },
   { title: "Map", url: createPageUrl("Map"), icon: MapPin },
   { title: "Resources", url: createPageUrl("Resources"), icon: Package },
@@ -167,18 +168,15 @@ export default function Layout({ children, currentPageName }) {
                   A.N.T. Console
                   <ChevronDown className="w-3 h-3" />
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="bg-[#0F1729] border-gray-700">
-                  <DropdownMenuItem asChild>
-                    <Link to={createPageUrl("Simulator")} className="flex items-center gap-2 cursor-pointer">
-                      <FlaskConical className="w-4 h-4" />
-                      Simulator
-                    </Link>
-                  </DropdownMenuItem>
+                <DropdownMenuContent className="bg-[#0F1729] border-blue-500/50 shadow-2xl min-w-[220px]">
                   {antConsoleItems.map((item) => (
                     <DropdownMenuItem key={item.title} asChild>
-                      <Link to={item.url} className="flex items-center gap-2 cursor-pointer">
-                        <item.icon className="w-4 h-4" />
-                        {item.title}
+                      <Link 
+                        to={item.url} 
+                        className="flex items-center gap-3 cursor-pointer px-4 py-3 text-base text-white hover:bg-blue-500/20 hover:text-blue-400 transition-colors"
+                      >
+                        <item.icon className="w-5 h-5" />
+                        <span className="font-medium">{item.title}</span>
                       </Link>
                     </DropdownMenuItem>
                   ))}
@@ -191,12 +189,15 @@ export default function Layout({ children, currentPageName }) {
                   Living the Game
                   <ChevronDown className="w-3 h-3" />
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="bg-[#0F1729] border-gray-700">
+                <DropdownMenuContent className="bg-[#0F1729] border-purple-500/50 shadow-2xl min-w-[220px]">
                   {livingTheGameItems.map((item) => (
                     <DropdownMenuItem key={item.title} asChild>
-                      <Link to={item.url} className="flex items-center gap-2 cursor-pointer">
-                        <item.icon className="w-4 h-4" />
-                        {item.title}
+                      <Link 
+                        to={item.url} 
+                        className="flex items-center gap-3 cursor-pointer px-4 py-3 text-base text-white hover:bg-purple-500/20 hover:text-purple-400 transition-colors"
+                      >
+                        <item.icon className="w-5 h-5" />
+                        <span className="font-medium">{item.title}</span>
                       </Link>
                     </DropdownMenuItem>
                   ))}
@@ -249,15 +250,7 @@ export default function Layout({ children, currentPageName }) {
               ))}
 
               <div className="border-t border-white/10 pt-3">
-                <p className="text-gray-400 text-xs px-4 mb-2 font-medium">A.N.T. CONSOLE</p>
-                <Link
-                  to={createPageUrl("Simulator")}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-white/5"
-                >
-                  <FlaskConical className="w-5 h-5" />
-                  <span className="font-medium">Simulator</span>
-                </Link>
+                <p className="text-blue-400 text-xs px-4 mb-2 font-bold">A.N.T. CONSOLE</p>
                 {antConsoleItems.map((item) => (
                   <Link
                     key={item.title}
@@ -272,7 +265,7 @@ export default function Layout({ children, currentPageName }) {
               </div>
 
               <div className="border-t border-white/10 pt-3">
-                <p className="text-gray-400 text-xs px-4 mb-2 font-medium">LIVING THE GAME</p>
+                <p className="text-purple-400 text-xs px-4 mb-2 font-bold">LIVING THE GAME</p>
                 {livingTheGameItems.map((item) => (
                   <Link
                     key={item.title}
