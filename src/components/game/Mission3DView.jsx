@@ -32,11 +32,17 @@ export default function Mission3DView({ gameState, setGameState }) {
   const mobileControlsRef = useRef(mobileControls);
   const [environmentVariant, setEnvironmentVariant] = useState(null);
   const [isGeneratingVariant, setIsGeneratingVariant] = useState(false);
+  const healthRef = useRef(health);
+  const lastDamageTimeRef = useRef(0);
   const queryClient = useQueryClient();
 
   useEffect(() => {
     mobileControlsRef.current = mobileControls;
   }, [mobileControls]);
+
+  useEffect(() => {
+    healthRef.current = health;
+  }, [health]);
 
   const { data: missions } = useQuery({
     queryKey: ['missions'],
@@ -56,16 +62,6 @@ export default function Mission3DView({ gameState, setGameState }) {
 
   const addLog = (message, type = 'info') => {
     setMissionLog(prev => [...prev, { message, type, time: new Date().toLocaleTimeString() }]);
-  };
-
-  const takeDamage = (amount) => {
-    setHealth(prev => {
-      const newHealth = Math.max(0, prev - amount);
-      if (newHealth <= 0) {
-        addLog('MISSION FAILED - Health depleted', 'error');
-      }
-      return newHealth;
-    });
   };
 
   const completeMission = () => {
@@ -123,7 +119,7 @@ export default function Mission3DView({ gameState, setGameState }) {
 Current player actions:
 ${JSON.stringify(playerActions, null, 2)}
 
-Generate environmental variations based on player progress. Add 2-3 hazards or dynamic elements.
+Generate environmental variations based on player progress. Add 2-3 hazards or dynamic elements to increase challenge.
 
 Return JSON with:
 {
@@ -257,7 +253,6 @@ Return JSON with:
     let mistParticles = [];
     let missionComplete = false;
     let resourceObjects = [];
-    let lastDamageTime = 0;
     
     let playerVelocityY = 0;
     let isOnGround = true;
@@ -273,14 +268,14 @@ Return JSON with:
     const ceilingHeight = 50;
 
     if (activeMission.mission_number === 1) {
-      addLog("Mission 1: Kitchen Infiltration", 'info');
+      addLog("Mission 1: Kitchen - Hold SPACE to deploy rope!", 'info');
       
       obstacles = [];
       
       const wallHeight = 50;
       const wallMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0xf0e6d2, 
-        roughness: 0.95,
+        color: 0xd4c5b9, 
+        roughness: 0.8,
         normalScale: new THREE.Vector2(0.5, 0.5)
       });
       
@@ -300,8 +295,8 @@ Return JSON with:
       scene.add(rightWall);
       
       const cabinetMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x6b5744, 
-        roughness: 0.7,
+        color: 0x5d4e37, 
+        roughness: 0.6,
         metalness: 0.1
       });
       for (let i = 0; i < 4; i++) {
@@ -315,11 +310,10 @@ Return JSON with:
       const windowFrame = new THREE.Mesh(
         new THREE.BoxGeometry(40, 25, 1),
         new THREE.MeshStandardMaterial({ 
-          color: 0xa8d8ea, 
+          color: 0x87ceeb, 
           transparent: true, 
-          opacity: 0.4,
-          roughness: 0.1,
-          metalness: 0.9
+          opacity: 0.3,
+          transmission: 0.9
         })
       );
       windowFrame.position.set(50, 30, -99);
@@ -327,8 +321,8 @@ Return JSON with:
       
       const borderMaterial = new THREE.MeshStandardMaterial({ 
         color: 0x8b7355, 
-        roughness: 0.9,
-        metalness: 0.05
+        roughness: 0.8,
+        metalness: 0.1
       });
       const borderHeight = 3;
       
@@ -359,10 +353,11 @@ Return JSON with:
       const sinkOuterRim = new THREE.Mesh(
         new THREE.BoxGeometry(30, 0.8, 22),
         new THREE.MeshStandardMaterial({ 
-          color: 0xe8e8e8, 
-          metalness: 0.98, 
-          roughness: 0.02,
-          envMapIntensity: 1.5
+          color: 0xe0e0e0, 
+          metalness: 0.95, 
+          roughness: 0.05,
+          clearcoat: 1.0,
+          clearcoatRoughness: 0.1
         })
       );
       sinkOuterRim.position.set(-5, 0.4, -25);
@@ -373,10 +368,9 @@ Return JSON with:
       const sinkBasin = new THREE.Mesh(
         new THREE.BoxGeometry(26, 6, 18),
         new THREE.MeshStandardMaterial({ 
-          color: 0xd0d0d0, 
-          metalness: 0.95, 
-          roughness: 0.05,
-          envMapIntensity: 1.2
+          color: 0xc0c0c0, 
+          metalness: 0.9, 
+          roughness: 0.1 
         })
       );
       sinkBasin.position.set(-5, -2.6, -25);
@@ -389,8 +383,8 @@ Return JSON with:
         color: activatedButtons.includes('button1') ? 0x10b981 : 0xef4444,
         emissive: activatedButtons.includes('button1') ? 0x10b981 : 0xef4444,
         emissiveIntensity: activatedButtons.includes('button1') ? 0.8 : 0.6,
-        roughness: 0.2,
-        metalness: 0.8
+        roughness: 0.3,
+        metalness: 0.7
       });
       const button1 = new THREE.Mesh(buttonGeometry, buttonMaterial);
       button1.position.set(-5, 1.1, -25);
@@ -409,28 +403,28 @@ Return JSON with:
         scene.add(ring);
       }
 
+      const knifeBladeGeometry = new THREE.BoxGeometry(2, 0.4, 20);
+      const knifeHandleGeometry = new THREE.CylinderGeometry(1, 1, 7, 16);
+      const knifeBladeMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xf0f0f0,
+        metalness: 0.98,
+        roughness: 0.02,
+        emissive: 0xffffff,
+        emissiveIntensity: 0.1,
+        clearcoat: 1.0
+      });
+      const knifeHandleMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x2a1810,
+        roughness: 0.8,
+        metalness: 0.1
+      });
+      
       const knife = new THREE.Group();
-      const blade = new THREE.Mesh(
-        new THREE.BoxGeometry(2, 0.4, 20),
-        new THREE.MeshStandardMaterial({ 
-          color: 0xf8f8f8,
-          metalness: 0.99,
-          roughness: 0.01,
-          emissive: 0xffffff,
-          emissiveIntensity: 0.15
-        })
-      );
+      const blade = new THREE.Mesh(knifeBladeGeometry, knifeBladeMaterial);
       blade.position.z = 10;
       blade.castShadow = true;
       
-      const handleMesh = new THREE.Mesh(
-        new THREE.CylinderGeometry(1, 1, 7, 16),
-        new THREE.MeshStandardMaterial({ 
-          color: 0x3a2820,
-          roughness: 0.9,
-          metalness: 0.05
-        })
-      );
+      const handleMesh = new THREE.Mesh(knifeHandleGeometry, knifeHandleMaterial);
       handleMesh.rotation.x = Math.PI / 2;
       handleMesh.position.z = -3.5;
       handleMesh.castShadow = true;
@@ -457,47 +451,43 @@ Return JSON with:
       scene.add(knifeGlow);
 
       const bowlRadius = 15;
-      const bowl = new THREE.Mesh(
-        new THREE.SphereGeometry(bowlRadius, 64, 32, 0, Math.PI * 2, 0, Math.PI / 2),
-        new THREE.MeshStandardMaterial({ 
-          color: 0xfefefe,
-          roughness: 0.1,
-          metalness: 0.05,
-          side: THREE.DoubleSide,
-          envMapIntensity: 1.3
-        })
-      );
+      const bowlGeometry = new THREE.SphereGeometry(bowlRadius, 64, 32, 0, Math.PI * 2, 0, Math.PI / 2);
+      const bowlMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xffffff,
+        roughness: 0.15,
+        metalness: 0.1,
+        side: THREE.DoubleSide,
+        clearcoat: 0.8
+      });
+      const bowl = new THREE.Mesh(bowlGeometry, bowlMaterial);
       bowl.position.set(30, 4, 20);
       bowl.castShadow = true;
       bowl.receiveShadow = true;
       scene.add(bowl);
       obstacles.push(bowl);
       
-      const rim = new THREE.Mesh(
-        new THREE.TorusGeometry(bowlRadius, 0.5, 16, 64),
-        bowl.material
-      );
+      const rimGeometry = new THREE.TorusGeometry(bowlRadius, 0.5, 16, 64);
+      const rim = new THREE.Mesh(rimGeometry, bowlMaterial);
       rim.position.set(30, 8, 20);
       rim.rotation.x = Math.PI / 2;
       scene.add(rim);
       obstacles.push(rim);
 
       const spoonGroup = new THREE.Group();
-      const spoonHandle = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.4, 0.5, 18, 16),
-        new THREE.MeshStandardMaterial({ 
-          color: 0xf0f0f0,
-          metalness: 0.98,
-          roughness: 0.02
-        })
-      );
+      const spoonHandleGeometry = new THREE.CylinderGeometry(0.4, 0.5, 18, 16);
+      const spoonHeadGeometry = new THREE.SphereGeometry(2.5, 32, 32);
+      const spoonMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xe8e8e8,
+        metalness: 0.95,
+        roughness: 0.05,
+        clearcoat: 1.0
+      });
+      
+      const spoonHandle = new THREE.Mesh(spoonHandleGeometry, spoonMaterial);
       spoonHandle.rotation.z = Math.PI / 2;
       spoonHandle.castShadow = true;
       
-      const spoonHead = new THREE.Mesh(
-        new THREE.SphereGeometry(2.5, 32, 32),
-        spoonHandle.material
-      );
+      const spoonHead = new THREE.Mesh(spoonHeadGeometry, spoonMaterial);
       spoonHead.position.x = 10;
       spoonHead.scale.set(1, 0.4, 1);
       spoonHead.castShadow = true;
@@ -509,23 +499,20 @@ Return JSON with:
       scene.add(spoonGroup);
       obstacles.push(spoonGroup);
 
-      const mug = new THREE.Mesh(
-        new THREE.CylinderGeometry(5, 4.2, 10, 32),
-        new THREE.MeshStandardMaterial({ 
-          color: 0x8b4513, 
-          roughness: 0.7,
-          metalness: 0.1
-        })
-      );
+      const mugGeometry = new THREE.CylinderGeometry(5, 4.2, 10, 32);
+      const mugMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x8b4513, 
+        roughness: 0.6,
+        clearcoat: 0.5
+      });
+      const mug = new THREE.Mesh(mugGeometry, mugMaterial);
       mug.position.set(50, 5, -20);
       mug.castShadow = true;
       scene.add(mug);
       obstacles.push(mug);
       
-      const mugHandle = new THREE.Mesh(
-        new THREE.TorusGeometry(3, 0.6, 16, 32, Math.PI),
-        mug.material
-      );
+      const mugHandleGeometry = new THREE.TorusGeometry(3, 0.6, 16, 32, Math.PI);
+      const mugHandle = new THREE.Mesh(mugHandleGeometry, mugMaterial);
       mugHandle.position.set(50, 5, -20);
       mugHandle.rotation.y = -Math.PI / 2;
       mugHandle.rotation.x = Math.PI / 2;
@@ -535,11 +522,7 @@ Return JSON with:
       
       const coffee = new THREE.Mesh(
         new THREE.CylinderGeometry(4.8, 4, 0.5, 32),
-        new THREE.MeshStandardMaterial({ 
-          color: 0x3e2723,
-          roughness: 0.3,
-          metalness: 0.1
-        })
+        new THREE.MeshStandardMaterial({ color: 0x3e2723 })
       );
       coffee.position.set(50, 9.5, -20);
       scene.add(coffee);
@@ -568,8 +551,8 @@ Return JSON with:
         new THREE.BoxGeometry(8, 2, 4),
         new THREE.MeshStandardMaterial({ 
           color: 0xffd700, 
-          roughness: 0.15,
-          metalness: 0.05
+          roughness: 0.2,
+          clearcoat: 0.8
         })
       );
       butter.position.set(-25, 1, 15);
@@ -581,10 +564,10 @@ Return JSON with:
 
       if (activatedButtons.includes('button1')) {
         const forkMaterial = new THREE.MeshStandardMaterial({ 
-          color: 0xe0e0e0, 
-          metalness: 0.95, 
-          roughness: 0.05,
-          envMapIntensity: 1.5
+          color: 0xd3d3d3, 
+          metalness: 0.9, 
+          roughness: 0.1,
+          clearcoat: 1.0
         });
         const forkHandle = new THREE.Mesh(new THREE.BoxGeometry(2, 0.6, 25), forkMaterial);
         forkHandle.position.set(15, 1.3, -15);
@@ -607,7 +590,7 @@ Return JSON with:
         new THREE.BoxGeometry(12, 0.3, 12),
         new THREE.MeshStandardMaterial({ 
           color: 0xfafafa,
-          roughness: 0.95,
+          roughness: 0.9,
           metalness: 0
         })
       );
@@ -623,8 +606,7 @@ Return JSON with:
           color: puzzleStates.plate1 ? 0x10b981 : 0x6b7280,
           emissive: puzzleStates.plate1 ? 0x10b981 : 0x000000,
           emissiveIntensity: puzzleStates.plate1 ? 0.6 : 0,
-          metalness: 0.9,
-          roughness: 0.1
+          metalness: 0.8
         })
       );
       plateDisc.position.set(35, 0.35, -5);
@@ -638,8 +620,9 @@ Return JSON with:
         new THREE.CylinderGeometry(8, 7, 1.2, 64),
         new THREE.MeshStandardMaterial({ 
           color: 0xffffff,
-          roughness: 0.2,
-          metalness: 0.05
+          roughness: 0.25,
+          metalness: 0.1,
+          clearcoat: 0.8
         })
       );
       dinnerPlate.position.set(55, 0.6, 0);
@@ -658,8 +641,9 @@ Return JSON with:
           new THREE.BoxGeometry(2, 2, 2),
           new THREE.MeshStandardMaterial({ 
             color: 0xffffff,
-            roughness: 0.8,
-            metalness: 0.05
+            roughness: 0.7,
+            metalness: 0.1,
+            transmission: 0.3
           })
         );
         cube.position.set(pos.x, pos.y, pos.z);
@@ -681,16 +665,15 @@ Return JSON with:
       ];
 
       resourcePositions.forEach((res, i) => {
-        const resourceMesh = new THREE.Mesh(
-          new THREE.OctahedronGeometry(0.8, 0),
-          new THREE.MeshStandardMaterial({
-            color: res.color,
-            emissive: res.color,
-            emissiveIntensity: 0.5,
-            metalness: 0.8,
-            roughness: 0.2
-          })
-        );
+        const resourceGeometry = new THREE.OctahedronGeometry(0.8, 0);
+        const resourceMaterial = new THREE.MeshStandardMaterial({
+          color: res.color,
+          emissive: res.color,
+          emissiveIntensity: 0.5,
+          metalness: 0.8,
+          roughness: 0.2
+        });
+        const resourceMesh = new THREE.Mesh(resourceGeometry, resourceMaterial);
         resourceMesh.position.set(res.x, res.y, res.z);
         resourceMesh.userData = { type: 'resource', resourceName: res.name, id: `resource_${i}` };
         resourceMesh.castShadow = true;
@@ -698,7 +681,6 @@ Return JSON with:
         resourceObjects.push(resourceMesh);
       });
 
-      const canReachWater = activatedButtons.includes('button1') && puzzleStates.plate1 && leverStates.lever1;
       const waterDrop = new THREE.Mesh(
         new THREE.SphereGeometry(3, 64, 64),
         new THREE.MeshPhysicalMaterial({ 
@@ -709,11 +691,10 @@ Return JSON with:
           roughness: 0,
           metalness: 0,
           thickness: 2,
-          envMapIntensity: 1.5,
-          clearcoat: 1,
-          clearcoatRoughness: 0
+          envMapIntensity: 1.5
         })
       );
+      const canReachWater = activatedButtons.includes('button1') && puzzleStates.plate1 && leverStates.lever1;
       waterDrop.position.set(70, canReachWater ? 3 : 25, 5);
       waterDrop.userData = { type: 'water_source', accessible: canReachWater };
       waterDrop.castShadow = true;
@@ -749,30 +730,29 @@ Return JSON with:
       }
 
     } else if (activeMission.mission_number === 2) {
-      addLog("Mission 2: Lab Infiltration", 'warning');
+      addLog("Mission 2: Lab - AVOID LASERS! They damage you!", 'warning');
       
       player.position.set(-80, 1, 80);
       obstacles = [];
       
-      scene.background = new THREE.Color(0x12141f);
-      scene.fog = new THREE.Fog(0x12141f, 30, 150);
+      scene.background = new THREE.Color(0x1a1a2e);
+      scene.fog = new THREE.Fog(0x1a1a2e, 30, 150);
 
-      const labFloor = new THREE.Mesh(
-        new THREE.PlaneGeometry(200, 200),
-        new THREE.MeshStandardMaterial({ 
-          color: 0x1a1d2e,
-          roughness: 0.95,
-          metalness: 0.05
-        })
-      );
+      const labFloorGeometry = new THREE.PlaneGeometry(200, 200);
+      const labFloorMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x2a2a4a,
+        roughness: 0.9,
+        metalness: 0.3
+      });
+      const labFloor = new THREE.Mesh(labFloorGeometry, labFloorMaterial);
       labFloor.rotation.x = -Math.PI / 2;
       labFloor.receiveShadow = true;
       scene.add(labFloor);
 
       const wallMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x2a2d3a, 
-        roughness: 0.9,
-        metalness: 0.05
+        color: 0x3a3a5a, 
+        roughness: 0.8,
+        metalness: 0.2
       });
       const wallHeight = 40;
       
@@ -791,19 +771,14 @@ Return JSON with:
       rightWall.receiveShadow = true;
       scene.add(rightWall);
 
-      const frontWall = new THREE.Mesh(new THREE.BoxGeometry(200, wallHeight, 2), wallMaterial);
-      frontWall.position.set(0, wallHeight/2, 100);
-      frontWall.receiveShadow = true;
-      scene.add(frontWall);
-
       for (let i = 0; i < 6; i++) {
         const serverRack = new THREE.Mesh(
           new THREE.BoxGeometry(15, 25, 8),
           new THREE.MeshStandardMaterial({ 
-            color: 0x0a0a1a, 
-            roughness: 0.8, 
-            metalness: 0.4,
-            emissive: 0x000033,
+            color: 0x1a1a2a, 
+            roughness: 0.7, 
+            metalness: 0.5,
+            emissive: 0x0a0a1a,
             emissiveIntensity: 0.2
           })
         );
@@ -838,8 +813,8 @@ Return JSON with:
         const table = new THREE.Mesh(
           new THREE.BoxGeometry(20, 1, 15),
           new THREE.MeshStandardMaterial({ 
-            color: 0x3a3d4a, 
-            roughness: 0.7,
+            color: 0x4a4a6a, 
+            roughness: 0.6,
             metalness: 0.3
           })
         );
@@ -852,8 +827,7 @@ Return JSON with:
           const leg = new THREE.Mesh(
             new THREE.CylinderGeometry(0.5, 0.5, 6, 16),
             new THREE.MeshStandardMaterial({ 
-              color: 0x2a2d3a,
-              roughness: 0.8,
+              color: 0x3a3a5a,
               metalness: 0.4
             })
           );
@@ -870,11 +844,11 @@ Return JSON with:
         const equipment = new THREE.Mesh(
           new THREE.BoxGeometry(8, 5, 6),
           new THREE.MeshStandardMaterial({ 
-            color: 0x5a5d6a,
+            color: 0x6a6a8a,
             emissive: 0x0066cc,
-            emissiveIntensity: 0.4,
-            roughness: 0.6,
-            metalness: 0.5
+            emissiveIntensity: 0.3,
+            metalness: 0.6,
+            roughness: 0.4
           })
         );
         equipment.position.set(pos.x, 9, pos.z);
@@ -886,11 +860,11 @@ Return JSON with:
       const terminal = new THREE.Mesh(
         new THREE.BoxGeometry(12, 15, 8),
         new THREE.MeshStandardMaterial({ 
-          color: 0x1a1d2a,
+          color: 0x2a2a4a,
           emissive: 0x00ccff,
-          emissiveIntensity: 0.6,
-          metalness: 0.7,
-          roughness: 0.4
+          emissiveIntensity: 0.5,
+          metalness: 0.6,
+          roughness: 0.3
         })
       );
       terminal.position.set(0, 7.5, 0);
@@ -916,13 +890,12 @@ Return JSON with:
         new THREE.MeshPhysicalMaterial({ 
           color: 0x00ffff,
           emissive: 0x00ffff,
-          emissiveIntensity: 1.2,
+          emissiveIntensity: 1,
           transparent: true,
           opacity: 0.8,
-          transmission: 0.6,
-          roughness: 0,
-          metalness: 0,
-          clearcoat: 1
+          transmission: 0.5,
+          metalness: 0.9,
+          roughness: 0.1
         })
       );
       dataCore.position.set(0, 16, 0);
@@ -944,7 +917,7 @@ Return JSON with:
 
       for (let i = 0; i < 3; i++) {
         const laser = new THREE.Mesh(
-          new THREE.BoxGeometry(0.3, 10, 60),
+          new THREE.BoxGeometry(0.5, 10, 60),
           new THREE.MeshBasicMaterial({ 
             color: 0xff0000,
             transparent: true,
@@ -954,9 +927,20 @@ Return JSON with:
           })
         );
         laser.position.set(-60 + i * 30, 5, 20);
-        laser.userData = { type: 'laser', deadly: true, damage: 15 };
+        laser.userData = { type: 'laser', deadly: true, damage: 5 };
         scene.add(laser);
         interactiveObjects.push(laser);
+        
+        const laserGlow = new THREE.Mesh(
+          new THREE.BoxGeometry(1, 11, 61),
+          new THREE.MeshBasicMaterial({ 
+            color: 0xff0000,
+            transparent: true,
+            opacity: 0.2
+          })
+        );
+        laserGlow.position.copy(laser.position);
+        scene.add(laserGlow);
       }
 
       const cratePositions = [
@@ -972,9 +956,9 @@ Return JSON with:
         const crate = new THREE.Mesh(
           new THREE.BoxGeometry(10, 10, 10),
           new THREE.MeshStandardMaterial({ 
-            color: 0x5a4a3a,
-            roughness: 0.95,
-            metalness: 0.05
+            color: 0x4a3a2a,
+            roughness: 0.9,
+            metalness: 0.1
           })
         );
         crate.position.set(pos.x, 5, pos.z);
@@ -991,16 +975,15 @@ Return JSON with:
       ];
 
       labResources.forEach((res, i) => {
-        const resourceMesh = new THREE.Mesh(
-          new THREE.OctahedronGeometry(0.8, 0),
-          new THREE.MeshStandardMaterial({
-            color: res.color,
-            emissive: res.color,
-            emissiveIntensity: 0.6,
-            metalness: 0.8,
-            roughness: 0.2
-          })
-        );
+        const resourceGeometry = new THREE.OctahedronGeometry(0.8, 0);
+        const resourceMaterial = new THREE.MeshStandardMaterial({
+          color: res.color,
+          emissive: res.color,
+          emissiveIntensity: 0.6,
+          metalness: 0.8,
+          roughness: 0.2
+        });
+        const resourceMesh = new THREE.Mesh(resourceGeometry, resourceMaterial);
         resourceMesh.position.set(res.x, res.y, res.z);
         resourceMesh.userData = { type: 'resource', resourceName: res.name, id: `lab_resource_${i}` };
         resourceMesh.castShadow = true;
@@ -1008,218 +991,238 @@ Return JSON with:
         resourceObjects.push(resourceMesh);
       });
 
-      addLog("Advanced security active - avoid lasers!", 'warning');
-
+      addLog("Advanced security active!", 'warning');
     } else if (activeMission.mission_number === 3) {
-      addLog("Mission 3: Underground Facility", 'error');
+      addLog("Mission 3: Warehouse - Navigate complex hazards!", 'warning');
       
-      player.position.set(0, 1, 90);
+      player.position.set(-85, 1, -85);
       obstacles = [];
       
-      scene.background = new THREE.Color(0x0a0a0a);
-      scene.fog = new THREE.Fog(0x0a0a0a, 20, 120);
+      scene.background = new THREE.Color(0x2a2a3a);
+      scene.fog = new THREE.Fog(0x2a2a3a, 40, 180);
 
-      ambientLight.intensity = 0.2;
-
-      const undergroundFloor = new THREE.Mesh(
+      const warehouseFloor = new THREE.Mesh(
         new THREE.PlaneGeometry(200, 200),
         new THREE.MeshStandardMaterial({ 
-          color: 0x1a1a1a,
-          roughness: 0.98,
-          metalness: 0.02
+          color: 0x3a3a4a,
+          roughness: 0.95,
+          metalness: 0.2
         })
       );
-      undergroundFloor.rotation.x = -Math.PI / 2;
-      undergroundFloor.receiveShadow = true;
-      scene.add(undergroundFloor);
+      warehouseFloor.rotation.x = -Math.PI / 2;
+      warehouseFloor.receiveShadow = true;
+      scene.add(warehouseFloor);
 
-      const concreteWallMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x2a2a2a, 
-        roughness: 0.95,
-        metalness: 0
+      const wallMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x4a4a5a, 
+        roughness: 0.85,
+        metalness: 0.15
       });
-      const wallHeight = 35;
+      const wallHeight = 45;
       
-      const backWall = new THREE.Mesh(new THREE.BoxGeometry(200, wallHeight, 3), concreteWallMaterial);
-      backWall.position.set(0, wallHeight/2, -100);
-      backWall.receiveShadow = true;
-      scene.add(backWall);
-      
-      const leftWall = new THREE.Mesh(new THREE.BoxGeometry(3, wallHeight, 200), concreteWallMaterial);
-      leftWall.position.set(-100, wallHeight/2, 0);
-      leftWall.receiveShadow = true;
-      scene.add(leftWall);
-      
-      const rightWall = new THREE.Mesh(new THREE.BoxGeometry(3, wallHeight, 200), concreteWallMaterial);
-      rightWall.position.set(100, wallHeight/2, 0);
-      rightWall.receiveShadow = true;
-      scene.add(rightWall);
+      [
+        { pos: [0, wallHeight/2, -100], size: [200, wallHeight, 2] },
+        { pos: [-100, wallHeight/2, 0], size: [2, wallHeight, 200] },
+        { pos: [100, wallHeight/2, 0], size: [2, wallHeight, 200] },
+        { pos: [0, wallHeight/2, 100], size: [200, wallHeight, 2] }
+      ].forEach(wall => {
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(...wall.size), wallMaterial);
+        mesh.position.set(...wall.pos);
+        mesh.receiveShadow = true;
+        scene.add(mesh);
+      });
 
-      const frontWall = new THREE.Mesh(new THREE.BoxGeometry(200, wallHeight, 3), concreteWallMaterial);
-      frontWall.position.set(0, wallHeight/2, 100);
-      frontWall.receiveShadow = true;
-      scene.add(frontWall);
+      const shelfPositions = [
+        { x: -70, z: -50, height: 20 },
+        { x: -40, z: -50, height: 25 },
+        { x: -10, z: -50, height: 18 },
+        { x: 20, z: -50, height: 22 },
+        { x: 50, z: -50, height: 20 },
+        { x: -70, z: 0, height: 24 },
+        { x: -40, z: 0, height: 19 },
+        { x: 20, z: 0, height: 26 },
+        { x: 50, z: 0, height: 21 },
+        { x: -70, z: 50, height: 23 },
+        { x: -40, z: 50, height: 20 },
+        { x: 20, z: 50, height: 19 },
+      ];
 
-      for (let i = 0; i < 4; i++) {
-        const pillar = new THREE.Mesh(
-          new THREE.CylinderGeometry(3, 3.5, 30, 32),
+      shelfPositions.forEach((shelf, idx) => {
+        const shelfUnit = new THREE.Group();
+        
+        const frame = new THREE.Mesh(
+          new THREE.BoxGeometry(15, shelf.height, 8),
           new THREE.MeshStandardMaterial({ 
-            color: 0x3a3a3a,
-            roughness: 0.9,
-            metalness: 0.1
+            color: 0x6a5a4a,
+            roughness: 0.8,
+            metalness: 0.2
           })
         );
-        const positions = [
-          { x: -50, z: -50 },
-          { x: 50, z: -50 },
-          { x: -50, z: 50 },
-          { x: 50, z: 50 }
-        ];
-        pillar.position.set(positions[i].x, 15, positions[i].z);
-        pillar.castShadow = true;
-        scene.add(pillar);
-        obstacles.push(pillar);
-      }
-
-      const pipeMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x4a4a4a,
-        roughness: 0.7,
-        metalness: 0.8
+        frame.position.y = shelf.height / 2;
+        frame.castShadow = true;
+        shelfUnit.add(frame);
+        
+        for (let i = 0; i < 3; i++) {
+          const box = new THREE.Mesh(
+            new THREE.BoxGeometry(6, 4, 5),
+            new THREE.MeshStandardMaterial({ 
+              color: 0x8a7a6a,
+              roughness: 0.9
+            })
+          );
+          box.position.set(-4 + Math.random() * 2, 2 + i * 6, 0);
+          box.castShadow = true;
+          shelfUnit.add(box);
+        }
+        
+        shelfUnit.position.set(shelf.x, 0, shelf.z);
+        scene.add(shelfUnit);
+        obstacles.push(frame);
       });
-      for (let i = 0; i < 8; i++) {
-        const pipe = new THREE.Mesh(
-          new THREE.CylinderGeometry(1, 1, 80, 16),
-          pipeMaterial
-        );
-        pipe.rotation.z = Math.PI / 2;
-        pipe.position.set(i * 12 - 42, 25, -95);
-        pipe.castShadow = true;
-        scene.add(pipe);
-      }
 
       for (let i = 0; i < 5; i++) {
-        const container = new THREE.Mesh(
-          new THREE.CylinderGeometry(6, 6, 20, 32),
-          new THREE.MeshStandardMaterial({ 
-            color: 0x2a4a2a,
-            roughness: 0.6,
-            metalness: 0.5,
-            emissive: 0x00ff00,
-            emissiveIntensity: 0.1,
-            transparent: true,
-            opacity: 0.8
-          })
-        );
-        container.position.set(-70 + i * 35, 10, 60);
-        container.castShadow = true;
-        scene.add(container);
-        obstacles.push(container);
-      }
-
-      for (let i = 0; i < 6; i++) {
-        const laserBarrier = new THREE.Mesh(
-          new THREE.BoxGeometry(0.4, 15, 40),
+        const laser = new THREE.Mesh(
+          new THREE.BoxGeometry(0.6, 12, 0.6),
           new THREE.MeshBasicMaterial({ 
             color: 0xff0000,
             transparent: true,
             opacity: 0.8,
             emissive: 0xff0000,
-            emissiveIntensity: 1.5
+            emissiveIntensity: 1.2
           })
         );
-        laserBarrier.position.set(-75 + i * 25, 7.5, -20);
-        laserBarrier.userData = { type: 'laser', deadly: true, damage: 20 };
-        scene.add(laserBarrier);
-        interactiveObjects.push(laserBarrier);
-
-        const laserGlow = new THREE.PointLight(0xff0000, 1, 10);
-        laserGlow.position.copy(laserBarrier.position);
+        laser.position.set(-30 + i * 15, 6, -20 + Math.sin(i) * 10);
+        laser.userData = { type: 'laser', deadly: true, damage: 8 };
+        scene.add(laser);
+        interactiveObjects.push(laser);
+        
+        const laserGlow = new THREE.Mesh(
+          new THREE.CylinderGeometry(1.5, 1.5, 13, 16),
+          new THREE.MeshBasicMaterial({ 
+            color: 0xff0000,
+            transparent: true,
+            opacity: 0.15
+          })
+        );
+        laserGlow.position.copy(laser.position);
         scene.add(laserGlow);
       }
 
-      const reactor = new THREE.Mesh(
-        new THREE.SphereGeometry(8, 64, 64),
-        new THREE.MeshPhysicalMaterial({ 
-          color: 0xff00ff,
-          emissive: 0xff00ff,
-          emissiveIntensity: 1.5,
-          transparent: true,
-          opacity: 0.9,
-          transmission: 0.4,
-          roughness: 0,
-          metalness: 0,
-          clearcoat: 1
+      const forkLift = new THREE.Group();
+      const liftBody = new THREE.Mesh(
+        new THREE.BoxGeometry(8, 4, 12),
+        new THREE.MeshStandardMaterial({ 
+          color: 0xffaa00,
+          roughness: 0.5,
+          metalness: 0.6
         })
       );
-      reactor.position.set(0, 8, -60);
-      reactor.userData = { type: 'reactor', accessible: true };
-      reactor.castShadow = true;
-      scene.add(reactor);
-      objectives.push(reactor);
-
-      const reactorGlow = new THREE.Mesh(
-        new THREE.SphereGeometry(10, 32, 32),
-        new THREE.MeshBasicMaterial({ 
-          color: 0xff00ff,
-          transparent: true,
-          opacity: 0.3
-        })
-      );
-      reactorGlow.position.copy(reactor.position);
-      scene.add(reactorGlow);
-
-      const reactorLight = new THREE.PointLight(0xff00ff, 2, 50);
-      reactorLight.position.copy(reactor.position);
-      scene.add(reactorLight);
-
-      const platformPositions = [
-        { x: -60, z: 0 },
-        { x: -30, z: -30 },
-        { x: 30, z: -30 },
-        { x: 60, z: 0 }
-      ];
-
-      platformPositions.forEach(pos => {
-        const platform = new THREE.Mesh(
-          new THREE.BoxGeometry(15, 1.5, 15),
+      liftBody.position.y = 2;
+      liftBody.castShadow = true;
+      forkLift.add(liftBody);
+      
+      for (let i = 0; i < 4; i++) {
+        const wheel = new THREE.Mesh(
+          new THREE.CylinderGeometry(1, 1, 1.5, 16),
           new THREE.MeshStandardMaterial({ 
-            color: 0x3a3a4a,
-            roughness: 0.8,
-            metalness: 0.3
+            color: 0x222222,
+            roughness: 0.8
           })
         );
-        platform.position.set(pos.x, 3, pos.z);
-        platform.castShadow = true;
-        scene.add(platform);
-        obstacles.push(platform);
-      });
+        wheel.rotation.z = Math.PI / 2;
+        wheel.position.set(
+          i % 2 === 0 ? -3 : 3,
+          1,
+          i < 2 ? -4 : 4
+        );
+        wheel.castShadow = true;
+        forkLift.add(wheel);
+      }
+      
+      forkLift.position.set(60, 0, -70);
+      scene.add(forkLift);
+      obstacles.push(liftBody);
 
-      const undergroundResources = [
-        { name: 'Reactor Core', x: -80, y: 1, z: -80, color: 0xff00ff },
-        { name: 'Plasma Cell', x: 80, y: 1, z: -80, color: 0xff6600 },
-        { name: 'Quantum Data', x: -80, y: 1, z: 80, color: 0x00ffff },
-        { name: 'Dark Matter', x: 80, y: 1, z: 80, color: 0x9900ff }
+      const controlRoom = new THREE.Mesh(
+        new THREE.BoxGeometry(20, 12, 15),
+        new THREE.MeshStandardMaterial({ 
+          color: 0x5a6a7a,
+          roughness: 0.6,
+          metalness: 0.4,
+          emissive: 0x1a2a3a,
+          emissiveIntensity: 0.2
+        })
+      );
+      controlRoom.position.set(80, 6, 80);
+      controlRoom.castShadow = true;
+      controlRoom.userData = { type: 'terminal', id: 'warehouse_control' };
+      scene.add(controlRoom);
+      puzzleElements.push(controlRoom);
+      obstacles.push(controlRoom);
+
+      const controlPanel = new THREE.Mesh(
+        new THREE.PlaneGeometry(12, 8),
+        new THREE.MeshBasicMaterial({ 
+          color: 0x00ffaa,
+          emissive: 0x00ffaa,
+          emissiveIntensity: 0.6
+        })
+      );
+      controlPanel.position.set(80, 10, 87.6);
+      scene.add(controlPanel);
+
+      const exitDoor = new THREE.Mesh(
+        new THREE.BoxGeometry(12, 15, 1),
+        new THREE.MeshStandardMaterial({ 
+          color: 0x00ff00,
+          emissive: 0x00ff00,
+          emissiveIntensity: 0.8,
+          metalness: 0.7,
+          roughness: 0.3
+        })
+      );
+      exitDoor.position.set(85, 7.5, 95);
+      exitDoor.userData = { type: 'exit_door', accessible: true };
+      exitDoor.castShadow = true;
+      scene.add(exitDoor);
+      objectives.push(exitDoor);
+
+      const exitGlow = new THREE.Mesh(
+        new THREE.SphereGeometry(8, 32, 32),
+        new THREE.MeshBasicMaterial({ 
+          color: 0x00ff00,
+          transparent: true,
+          opacity: 0.15
+        })
+      );
+      exitGlow.position.copy(exitDoor.position);
+      scene.add(exitGlow);
+
+      const warehouseResources = [
+        { name: 'Supply Crate', x: -80, y: 2, z: 80, color: 0xff8800 },
+        { name: 'Power Core', x: 30, y: 2, z: 80, color: 0xffff00 },
+        { name: 'Tech Module', x: -50, y: 2, z: -80, color: 0x00aaff },
+        { name: 'Nano Fuel', x: 50, y: 2, z: -80, color: 0xff00ff }
       ];
 
-      undergroundResources.forEach((res, i) => {
-        const resourceMesh = new THREE.Mesh(
-          new THREE.OctahedronGeometry(0.8, 0),
-          new THREE.MeshStandardMaterial({
-            color: res.color,
-            emissive: res.color,
-            emissiveIntensity: 0.8,
-            metalness: 0.9,
-            roughness: 0.1
-          })
-        );
+      warehouseResources.forEach((res, i) => {
+        const resourceGeometry = new THREE.BoxGeometry(2, 2, 2);
+        const resourceMaterial = new THREE.MeshStandardMaterial({
+          color: res.color,
+          emissive: res.color,
+          emissiveIntensity: 0.6,
+          metalness: 0.7,
+          roughness: 0.3
+        });
+        const resourceMesh = new THREE.Mesh(resourceGeometry, resourceMaterial);
         resourceMesh.position.set(res.x, res.y, res.z);
-        resourceMesh.userData = { type: 'resource', resourceName: res.name, id: `underground_resource_${i}` };
+        resourceMesh.userData = { type: 'resource', resourceName: res.name, id: `warehouse_resource_${i}` };
         resourceMesh.castShadow = true;
         scene.add(resourceMesh);
         resourceObjects.push(resourceMesh);
       });
 
-      addLog("Deep facility - radiation hazard present!", 'error');
+      addLog("Warehouse hazards detected!", 'warning');
     }
 
     const keys = {};
@@ -1256,7 +1259,7 @@ Return JSON with:
 
         puzzleElements.forEach(elem => {
           const distance = player.position.distanceTo(elem.position);
-          if (distance < 3) {
+          if (distance < 5) {
             if (elem.userData.type === 'button') {
               if (!activatedButtons.includes(elem.userData.id)) {
                 setActivatedButtons(prev => [...prev, elem.userData.id]);
@@ -1311,6 +1314,7 @@ Return JSON with:
     
     const animate = () => {
       const delta = clock.getDelta();
+      const currentTime = clock.elapsedTime;
 
       const isSpaceOrMobileJumpPressed = keys[' '] || mobileControlsRef.current.jump;
 
@@ -1478,18 +1482,36 @@ Return JSON with:
             onSlippery = true;
           }
         } else if (obj.userData.type === 'laser' && obj.userData.deadly) {
-          const objBox = new THREE.Box3().setFromObject(obj);
+          const laserBox = new THREE.Box3().setFromObject(obj);
           const playerBox = new THREE.Box3().setFromCenterAndSize(
-            new THREE.Vector3(player.position.x, player.position.y, player.position.z),
+            player.position,
             new THREE.Vector3(playerRadius * 2, playerHalfHeight * 2, playerRadius * 2)
           );
           
-          if (playerBox.intersectsBox(objBox)) {
-            const currentTime = clock.elapsedTime;
-            if (currentTime - lastDamageTime > 0.5) {
-              takeDamage(obj.userData.damage || 10);
-              addLog(`Laser hit! -${obj.userData.damage || 10} HP`, 'error');
-              lastDamageTime = currentTime;
+          if (playerBox.intersectsBox(laserBox)) {
+            if (currentTime - lastDamageTimeRef.current > 0.5) {
+              const damage = obj.userData.damage || 5;
+              setHealth(prev => {
+                const newHealth = Math.max(0, prev - damage);
+                if (newHealth === 0) {
+                  addLog("CRITICAL! Health depleted!", 'error');
+                  setTimeout(() => {
+                    setHealth(100);
+                    player.position.set(0, 1, 0);
+                    addLog("Mission reset - health restored", 'warning');
+                  }, 2000);
+                }
+                return newHealth;
+              });
+              addLog(`LASER HIT! -${damage} health`, 'error');
+              lastDamageTimeRef.current = currentTime;
+              
+              body.material.emissive.setHex(0xff0000);
+              body.material.emissiveIntensity = 1;
+              setTimeout(() => {
+                body.material.emissive.setHex(0x1e3a8a);
+                body.material.emissiveIntensity = 0.2;
+              }, 200);
             }
           }
         }
@@ -1513,11 +1535,11 @@ Return JSON with:
           }
         }
 
-        if (obj.userData.type === 'reactor' && obj.userData.accessible) {
+        if (obj.userData.type === 'exit_door' && obj.userData.accessible) {
           const distance = player.position.distanceTo(obj.position);
           if (!missionComplete && distance < 8) {
             missionComplete = true;
-            addLog('REACTOR SECURED!', 'success');
+            addLog('EXIT REACHED!', 'success');
             completeMission();
           }
         }
@@ -1582,12 +1604,6 @@ Return JSON with:
     window.dispatchEvent(keyEvent);
   };
 
-  const getHealthColor = () => {
-    if (health > 60) return 'bg-green-500';
-    if (health > 30) return 'bg-yellow-500';
-    return 'bg-red-500';
-  };
-
   return (
     <div className="grid lg:grid-cols-4 gap-4 p-6">
       {showBriefing && activeMission && (
@@ -1618,6 +1634,24 @@ Return JSON with:
           <div className="relative">
             <div ref={mountRef} className="w-full h-[600px]" />
             
+            {/* Health Bar */}
+            <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20">
+              <div className="bg-black/80 backdrop-blur-sm border border-red-500/50 rounded-lg p-2 min-w-[200px]">
+                <div className="flex items-center gap-2 mb-1">
+                  <Heart className={`w-4 h-4 ${health > 50 ? 'text-green-400' : health > 25 ? 'text-yellow-400' : 'text-red-400'}`} />
+                  <span className="text-white font-mono text-sm font-bold">HEALTH: {health}%</span>
+                </div>
+                <div className="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
+                  <div 
+                    className={`h-3 rounded-full transition-all duration-300 ${
+                      health > 50 ? 'bg-green-500' : health > 25 ? 'bg-yellow-500' : 'bg-red-500'
+                    }`}
+                    style={{ width: `${health}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+            
             <div className="absolute top-4 left-4 bg-black/80 backdrop-blur-sm border border-blue-500/50 rounded p-3 z-10">
               <p className="text-blue-400 font-mono text-sm font-bold mb-1">
                 {activeMission ? `MISSION ${activeMission.mission_number}` : 'AWAITING MISSION'}
@@ -1625,23 +1659,6 @@ Return JSON with:
               <p className="text-gray-300 font-mono text-xs">
                 {activeMission?.title || 'No active mission'}
               </p>
-              
-              <div className="mt-3 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-400 font-mono text-xs flex items-center gap-1">
-                    <Heart className="w-3 h-3 text-red-400" />
-                    Health
-                  </span>
-                  <span className="text-white font-mono text-xs font-bold">{health}%</span>
-                </div>
-                <div className="w-full bg-gray-700 rounded-full h-2">
-                  <div 
-                    className={`h-2 rounded-full transition-all ${getHealthColor()}`}
-                    style={{ width: `${health}%` }}
-                  />
-                </div>
-              </div>
-
               {activeMission && !missionStarted && (
                 <Button
                   onClick={() => setShowBriefing(true)}
@@ -1662,7 +1679,7 @@ Return JSON with:
                 className="bg-purple-600/80 hover:bg-purple-700/80 backdrop-blur-sm font-mono text-xs"
                 size="sm"
               >
-                {isGeneratingVariant ? 'Generating...' : 'AI Remix'}
+                {isGeneratingVariant ? 'Gen...' : 'AI Remix'}
               </Button>
               <Button
                 onClick={() => setShowAIAssistant(true)}
@@ -1684,9 +1701,11 @@ Return JSON with:
             
             <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm border border-gray-600 rounded p-2 font-mono text-xs text-gray-300 hidden md:block z-10">
               <p>W/A/S/D: Move | SPACE: Rope | E: Interact | Shift: Sprint</p>
-              <p className="text-cyan-400 mt-1 font-bold">
-                Hold SPACE to deploy rope - W/S up/down, A/D left/right!
-              </p>
+              {activeMission?.mission_number >= 2 && (
+                <p className="text-red-400 mt-1 font-bold animate-pulse">
+                  ⚠️ AVOID LASERS - They damage your health!
+                </p>
+              )}
             </div>
 
             <div className="absolute bottom-4 left-4 right-4 md:hidden flex justify-between items-end gap-4 z-10">
@@ -1750,12 +1769,12 @@ Return JSON with:
                   Mission 1 Hints:
                 </h4>
                 <ol className="text-yellow-100 font-mono text-xs space-y-1 list-decimal list-inside">
-                  <li>Deploy rope to reach sink button</li>
-                  <li>Activate button (turns green)</li>
+                  <li>Use ROPE (hold SPACE) to reach button on sink</li>
+                  <li>Press USE on button</li>
                   <li>Cross fork bridge</li>
-                  <li>Step on pressure plate</li>
-                  <li>Activate knife lever</li>
-                  <li>Reach water droplet</li>
+                  <li>Step on PRESSURE PLATE</li>
+                  <li>Activate KNIFE lever</li>
+                  <li>Reach WATER DROPLET</li>
                 </ol>
               </div>
             )}
@@ -1765,28 +1784,7 @@ Return JSON with:
                 <div className="text-center">
                   <AlertTriangle className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
                   <p className="text-white font-mono text-xl mb-2">ALL MISSIONS COMPLETE</p>
-                  <p className="text-gray-400 font-mono text-sm">Check File Browser and Comms</p>
-                </div>
-              </div>
-            )}
-
-            {health <= 0 && (
-              <div className="absolute inset-0 flex items-center justify-center bg-red-900/80 z-30">
-                <div className="text-center">
-                  <AlertTriangle className="w-20 h-20 text-red-400 mx-auto mb-4" />
-                  <p className="text-white font-mono text-2xl mb-2">MISSION FAILED</p>
-                  <p className="text-gray-300 font-mono text-sm mb-4">Health depleted</p>
-                  <Button
-                    onClick={() => {
-                      setHealth(100);
-                      setMissionStarted(false);
-                      setShowBriefing(true);
-                      addLog('Mission restarted', 'warning');
-                    }}
-                    className="bg-red-600 hover:bg-red-700"
-                  >
-                    Restart Mission
-                  </Button>
+                  <p className="text-gray-400 font-mono text-sm">Check File Browser</p>
                 </div>
               </div>
             )}
@@ -1819,7 +1817,7 @@ Return JSON with:
                 </div>
               </>
             )}
-            {activeMission?.mission_number === 2 && (
+             {activeMission?.mission_number === 2 && (
               <>
                 <div className={`flex items-center gap-2 p-2 rounded ${inventory.some(item => item.name === 'Security Key') ? 'bg-green-900/20' : 'bg-gray-800/20'}`}>
                   <CheckCircle className={`w-4 h-4 ${inventory.some(item => item.name === 'Security Key') ? 'text-green-400' : 'text-gray-600'}`} />
@@ -1829,9 +1827,9 @@ Return JSON with:
             )}
             {activeMission?.mission_number === 3 && (
               <>
-                <div className={`flex items-center gap-2 p-2 rounded ${inventory.some(item => item.name === 'Reactor Core') ? 'bg-green-900/20' : 'bg-gray-800/20'}`}>
-                  <CheckCircle className={`w-4 h-4 ${inventory.some(item => item.name === 'Reactor Core') ? 'text-green-400' : 'text-gray-600'}`} />
-                  <span className="text-sm font-mono text-white">Reactor Core</span>
+                <div className={`flex items-center gap-2 p-2 rounded ${inventory.some(item => item.name === 'Power Core') ? 'bg-green-900/20' : 'bg-gray-800/20'}`}>
+                  <CheckCircle className={`w-4 h-4 ${inventory.some(item => item.name === 'Power Core') ? 'text-green-400' : 'text-gray-600'}`} />
+                  <span className="text-sm font-mono text-white">Power Core</span>
                 </div>
               </>
             )}
