@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -91,7 +92,7 @@ export default function Shop() {
           </div>
         </div>
 
-        {/* Buy Credits */}
+        {/* Buy Credits - UPDATED PRICING */}
         <Card className="mb-8 bg-gradient-to-r from-purple-900/20 to-blue-900/20 border-purple-500/30">
           <CardHeader>
             <CardTitle className="text-white">Purchase Credits</CardTitle>
@@ -99,28 +100,32 @@ export default function Shop() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Button
-                onClick={() => addCredits(100)}
-                className="bg-blue-600 hover:bg-blue-700"
+                onClick={() => addCredits(50)}
+                className="bg-blue-600 hover:bg-blue-700 flex flex-col h-auto py-3"
               >
-                100 Credits<br/>$0.99
+                <span className="text-lg font-bold">50 Credits</span>
+                <span className="text-xs opacity-75">$0.99</span>
               </Button>
               <Button
-                onClick={() => addCredits(500)}
-                className="bg-blue-600 hover:bg-blue-700"
+                onClick={() => addCredits(250)}
+                className="bg-blue-600 hover:bg-blue-700 flex flex-col h-auto py-3"
               >
-                500 Credits<br/>$4.99
+                <span className="text-lg font-bold">250 Credits</span>
+                <span className="text-xs opacity-75">$2.99</span>
               </Button>
               <Button
-                onClick={() => addCredits(1000)}
-                className="bg-purple-600 hover:bg-purple-700"
+                onClick={() => addCredits(600)}
+                className="bg-purple-600 hover:bg-purple-700 flex flex-col h-auto py-3"
               >
-                1000 Credits<br/>$8.99
+                <span className="text-lg font-bold">600 Credits</span>
+                <span className="text-xs opacity-75">$4.99</span>
               </Button>
               <Button
-                onClick={() => addCredits(5000)}
-                className="bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500"
+                onClick={() => addCredits(1500)}
+                className="bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 flex flex-col h-auto py-3"
               >
-                5000 Credits<br/>$29.99
+                <span className="text-lg font-bold">1500 Credits</span>
+                <span className="text-xs opacity-75">$9.99</span>
               </Button>
             </div>
           </CardContent>

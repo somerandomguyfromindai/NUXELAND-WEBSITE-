@@ -25,6 +25,7 @@ export default function Mission3DView({ gameState, setGameState }) {
   const [showHackingPuzzle, setShowHackingPuzzle] = useState(false);
   const [collectedResources, setCollectedResources] = useState([]);
   const [mobileControls, setMobileControls] = useState({ w: false, a: false, s: false, d: false, space: false, c: false });
+  const [objectiveCompletion, setObjectiveCompletion] = useState({});
   const queryClient = useQueryClient();
 
   const { data: missions } = useQuery({
@@ -63,8 +64,22 @@ export default function Mission3DView({ gameState, setGameState }) {
     setMissionLog(prev => [...prev, { message, type, time: new Date().toLocaleTimeString() }]);
   };
 
+  // Check if all objectives for current mission are complete
+  const checkMissionCompletion = () => {
+    if (!activeMission || !missionStarted) return false;
+    
+    if (activeMission.mission_number === 1) {
+      return objectiveCompletion.button1 && objectiveCompletion.plate1 && objectiveCompletion.lever1 && objectiveCompletion.water;
+    } else if (activeMission.mission_number === 2) {
+      return objectiveCompletion.keycard && objectiveCompletion.terminal && objectiveCompletion.dataCore;
+    } else if (activeMission.mission_number === 3) {
+      return objectiveCompletion.wirePuzzle && objectiveCompletion.specimen;
+    }
+    return false;
+  };
+
   const completeMission = () => {
-    if (activeMission) {
+    if (activeMission && checkMissionCompletion()) {
       addLog(`Mission ${activeMission.mission_number} COMPLETE`, 'success');
       
       updateMissionMutation.mutate({
@@ -92,9 +107,44 @@ export default function Mission3DView({ gameState, setGameState }) {
           setLeverStates({});
           setActivatedButtons([]);
           setPlayerHealth(100);
+          setObjectiveCompletion({});
+          setCollectedResources([]);
         }, 2000);
       }
     }
+  };
+
+  // Check for mission completion whenever objectives change
+  useEffect(() => {
+    if (activeMission && checkMissionCompletion() && !gameState.completedMissions.includes(activeMission?.id)) {
+      completeMission();
+    }
+  }, [objectiveCompletion, activeMission, gameState.completedMissions]);
+
+  // Create text sprite for labels
+  const createTextLabel = (text, color = '#ffffff', size = 2) => {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    canvas.width = 512;
+    canvas.height = 128;
+    
+    context.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    
+    context.font = 'bold 48px monospace';
+    context.fillStyle = color;
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(text, 256, 64);
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.LinearFilter;
+    texture.needsUpdate = true;
+    const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+    const sprite = new THREE.Sprite(spriteMaterial);
+    sprite.scale.set(size * 8, size * 2, 1);
+    
+    return sprite;
   };
 
   useEffect(() => {
@@ -195,6 +245,11 @@ export default function Mission3DView({ gameState, setGameState }) {
     rightLeg.position.x = 0.2;
     playerGroup.add(rightLeg);
 
+    // Player name label
+    const playerLabel = createTextLabel('AGENT PIP', '#3b82f6', 1.5);
+    playerLabel.position.y = 3;
+    playerGroup.add(playerLabel);
+
     playerGroup.position.set(0, 1.3, 0);
     scene.add(playerGroup);
     const player = playerGroup;
@@ -244,7 +299,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       fillLight.position.set(-80, 40, -80);
       scene.add(fillLight);
 
-      addLog("Mission 1: Navigate kitchen. SPACE=rope, E=interact", 'info');
+      addLog("Mission 1: Complete ALL objectives to finish", 'info');
       
       const counterGeometry = new THREE.PlaneGeometry(300, 300, 150, 150);
       const counterMaterial = new THREE.MeshStandardMaterial({ 
@@ -324,6 +379,10 @@ export default function Mission3DView({ gameState, setGameState }) {
         handle.castShadow = true;
         cabinetGroup.add(handle);
         
+        const cabinetLabel = createTextLabel('CABINET', '#6b4423', 1);
+        cabinetLabel.position.y = 12;
+        cabinetGroup.add(cabinetLabel);
+        
         cabinetGroup.position.set(-80 + i * 40, 40, -142);
         scene.add(cabinetGroup);
         obstacles.push(cabinet);
@@ -368,11 +427,16 @@ export default function Mission3DView({ gameState, setGameState }) {
       faucetHead.rotation.x = Math.PI / 3;
       faucetHead.castShadow = true;
       sinkGroup.add(faucetHead);
+
+      const sinkLabel = createTextLabel('SINK', '#ffffff', 1.5);
+      sinkLabel.position.y = 15;
+      sinkGroup.add(sinkLabel);
       
       sinkGroup.position.set(-10, 0, -30);
       scene.add(sinkGroup);
       obstacles.push(sinkRim);
       
+      const buttonGroup = new THREE.Group();
       const buttonGeometry = new THREE.CylinderGeometry(1.8, 1.8, 1, 32);
       const buttonMaterial = new THREE.MeshStandardMaterial({ 
         color: activatedButtons.includes('button1') ? 0x10b981 : 0xef4444,
@@ -382,10 +446,20 @@ export default function Mission3DView({ gameState, setGameState }) {
         roughness: 0.25
       });
       const button1 = new THREE.Mesh(buttonGeometry, buttonMaterial);
-      button1.position.set(-10, 1.5, -30);
       button1.userData = { type: 'button', id: 'button1' };
       button1.castShadow = true;
-      scene.add(button1);
+      buttonGroup.add(button1);
+      
+      const buttonLabel = createTextLabel(
+        objectiveCompletion.button1 ? 'BUTTON [ON]' : 'BUTTON [PRESS E]',
+        objectiveCompletion.button1 ? '#10b981' : '#ef4444',
+        1.2
+      );
+      buttonLabel.position.y = 4;
+      buttonGroup.add(buttonLabel);
+
+      buttonGroup.position.set(-10, 1.5, -30);
+      scene.add(buttonGroup);
       puzzleElements.push(button1);
       
       const buttonGlow = new THREE.PointLight(
@@ -393,7 +467,7 @@ export default function Mission3DView({ gameState, setGameState }) {
         activatedButtons.includes('button1') ? 3 : 1, 
         15
       );
-      buttonGlow.position.copy(button1.position);
+      buttonGlow.position.set(-10, 1.5, -30);
       scene.add(buttonGlow);
 
       const knifeGroup = new THREE.Group();
@@ -420,6 +494,14 @@ export default function Mission3DView({ gameState, setGameState }) {
       handle.position.z = -2;
       handle.castShadow = true;
       knifeGroup.add(handle);
+
+      const knifeLabel = createTextLabel(
+        leverStates.lever1 ? 'KNIFE [MOVED]' : 'KNIFE [PRESS E]',
+        leverStates.lever1 ? '#10b981' : '#fbbf24',
+        1.5
+      );
+      knifeLabel.position.y = 6;
+      knifeGroup.add(knifeLabel);
       
       knifeGroup.position.set(100, 1.5, 50);
       knifeGroup.rotation.y = leverStates.lever1 ? Math.PI / 3 : 0;
@@ -427,6 +509,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       scene.add(knifeGroup);
       puzzleElements.push(knifeGroup);
 
+      const mugGroup = new THREE.Group();
       const mugGeometry = new THREE.CylinderGeometry(5, 4.5, 14, 32);
       const mugMaterial = new THREE.MeshStandardMaterial({ 
         color: 0xffffff, 
@@ -434,19 +517,26 @@ export default function Mission3DView({ gameState, setGameState }) {
         metalness: 0.05
       });
       const mug = new THREE.Mesh(mugGeometry, mugMaterial);
-      mug.position.set(60, 7, -25);
       mug.castShadow = true;
       mug.receiveShadow = true;
-      scene.add(mug);
-      obstacles.push(mug);
+      mugGroup.add(mug);
       
       const mugHandleGeometry = new THREE.TorusGeometry(2.5, 0.6, 16, 24, Math.PI);
       const mugHandle = new THREE.Mesh(mugHandleGeometry, mugMaterial);
       mugHandle.rotation.y = Math.PI / 2;
-      mugHandle.position.set(65, 7, -25);
+      mugHandle.position.x = 5;
       mugHandle.castShadow = true;
-      scene.add(mugHandle);
+      mugGroup.add(mugHandle);
 
+      const mugLabel = createTextLabel('COFFEE MUG', '#ffffff', 1.5);
+      mugLabel.position.y = 10;
+      mugGroup.add(mugLabel);
+
+      mugGroup.position.set(60, 7, -25);
+      scene.add(mugGroup);
+      obstacles.push(mug);
+      
+      const plateGroup = new THREE.Group();
       const plateGeometry = new THREE.CylinderGeometry(3, 3, 0.6, 64);
       const plateMaterial = new THREE.MeshStandardMaterial({ 
         color: puzzleStates.plate1 ? 0x10b981 : 0x6b7280,
@@ -456,13 +546,24 @@ export default function Mission3DView({ gameState, setGameState }) {
         roughness: 0.15
       });
       const plate = new THREE.Mesh(plateGeometry, plateMaterial);
-      plate.position.set(45, 0.3, -10);
       plate.userData = { type: 'pressure_plate', id: 'plate1' };
       plate.castShadow = true;
       plate.receiveShadow = true;
-      scene.add(plate);
+      plateGroup.add(plate);
+
+      const plateLabel = createTextLabel(
+        objectiveCompletion.plate1 ? 'PLATE [ACTIVE]' : 'PLATE [STEP ON]',
+        objectiveCompletion.plate1 ? '#10b981' : '#6b7280',
+        1.2
+      );
+      plateLabel.position.y = 3;
+      plateGroup.add(plateLabel);
+
+      plateGroup.position.set(45, 0.3, -10);
+      scene.add(plateGroup);
       puzzleElements.push(plate);
 
+      const waterGroup = new THREE.Group();
       const canReachWater = activatedButtons.includes('button1') && puzzleStates.plate1 && leverStates.lever1;
       const waterDrop = new THREE.Mesh(
         new THREE.SphereGeometry(4, 64, 64),
@@ -480,14 +581,24 @@ export default function Mission3DView({ gameState, setGameState }) {
           clearcoatRoughness: 0
         })
       );
-      waterDrop.position.set(80, canReachWater ? 2 : 35, 10);
       waterDrop.userData = { type: 'water_source', accessible: canReachWater };
       waterDrop.castShadow = true;
-      scene.add(waterDrop);
+      waterGroup.add(waterDrop);
+      
+      const waterLabel = createTextLabel(
+        canReachWater ? 'WATER [REACH ME]' : 'WATER [LOCKED]',
+        canReachWater ? '#4dd0e1' : '#ef4444',
+        2
+      );
+      waterLabel.position.y = 8;
+      waterGroup.add(waterLabel);
+
+      waterGroup.position.set(80, canReachWater ? 2 : 35, 10);
+      scene.add(waterGroup);
       objectives.push(waterDrop);
       
       const waterLight = new THREE.PointLight(0x4dd0e1, canReachWater ? 3 : 0.8, 25);
-      waterLight.position.copy(waterDrop.position);
+      waterLight.position.copy(waterGroup.position);
       scene.add(waterLight);
 
       const resourcePositions = [
@@ -498,6 +609,7 @@ export default function Mission3DView({ gameState, setGameState }) {
 
       resourcePositions.forEach(res => {
         if (!collectedResources.includes(res.name)) {
+          const resourceGroup = new THREE.Group();
           const resourceMesh = new THREE.Mesh(
             new THREE.OctahedronGeometry(0.8, 0),
             new THREE.MeshStandardMaterial({ 
@@ -508,10 +620,16 @@ export default function Mission3DView({ gameState, setGameState }) {
               roughness: 0.2
             })
           );
-          resourceMesh.position.set(...res.pos);
           resourceMesh.userData = { type: 'resource', name: res.name };
           resourceMesh.castShadow = true;
-          scene.add(resourceMesh);
+          resourceGroup.add(resourceMesh);
+
+          const resourceLabel = createTextLabel(res.name, '#ffffff', 0.8);
+          resourceLabel.position.y = 2;
+          resourceGroup.add(resourceLabel);
+
+          resourceGroup.position.set(...res.pos);
+          scene.add(resourceGroup);
           collectibles.push(resourceMesh);
         }
       });
@@ -541,7 +659,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       redLight.position.set(0, 30, 0);
       scene.add(redLight);
 
-      addLog("Mission 2: Navigate lab, avoid spider, collect keycard", 'warning');
+      addLog("Mission 2: Complete ALL objectives. Avoid hazards!", 'warning');
       player.position.set(-100, 1.3, 100);
 
       const labFloor = new THREE.Mesh(
@@ -585,14 +703,14 @@ export default function Mission3DView({ gameState, setGameState }) {
 
       // Lab equipment - microscopes
       for (let i = 0; i < 3; i++) {
-        const microscope = new THREE.Group();
+        const microscopeGroup = new THREE.Group();
         
         const base = new THREE.Mesh(
           new THREE.CylinderGeometry(3, 4, 1.5, 32),
           new THREE.MeshStandardMaterial({ color: 0x6b7280, metalness: 0.7, roughness: 0.4 })
         );
         base.castShadow = true;
-        microscope.add(base);
+        microscopeGroup.add(base);
         
         const arm = new THREE.Mesh(
           new THREE.CylinderGeometry(0.5, 0.5, 12, 16),
@@ -600,7 +718,7 @@ export default function Mission3DView({ gameState, setGameState }) {
         );
         arm.position.y = 6.75;
         arm.castShadow = true;
-        microscope.add(arm);
+        microscopeGroup.add(arm);
         
         const lens = new THREE.Mesh(
           new THREE.CylinderGeometry(1.5, 1, 3, 32),
@@ -608,33 +726,36 @@ export default function Mission3DView({ gameState, setGameState }) {
         );
         lens.position.y = 13;
         lens.castShadow = true;
-        microscope.add(lens);
+        microscopeGroup.add(lens);
+
+        const microscopeLabel = createTextLabel('MICROSCOPE', '#9ca3af', 1);
+        microscopeLabel.position.y = 16;
+        microscopeGroup.add(microscopeLabel);
         
-        microscope.position.set(-80 + i * 50, 0.75, -100);
-        scene.add(microscope);
+        microscopeGroup.position.set(-80 + i * 50, 0.75, -100);
+        scene.add(microscopeGroup);
         obstacles.push(base);
       }
 
       // Lab tables with computers
       for (let i = 0; i < 4; i++) {
+        const tableGroup = new THREE.Group();
         const table = new THREE.Mesh(
           new THREE.BoxGeometry(30, 1.5, 20),
           new THREE.MeshStandardMaterial({ color: 0x4b5563, roughness: 0.7, metalness: 0.3 })
         );
-        table.position.set(-60 + i * 40, 0.75, 50);
         table.castShadow = true;
         table.receiveShadow = true;
-        scene.add(table);
-        obstacles.push(table);
+        tableGroup.add(table);
         
         // Computer monitor
         const monitor = new THREE.Mesh(
           new THREE.BoxGeometry(8, 10, 1),
           new THREE.MeshStandardMaterial({ color: 0x1f2937, metalness: 0.6, roughness: 0.4 })
         );
-        monitor.position.set(table.position.x, 6.5, table.position.z);
+        monitor.position.y = 6.5;
         monitor.castShadow = true;
-        scene.add(monitor);
+        tableGroup.add(monitor);
         
         // Screen glow
         const screenGlow = new THREE.Mesh(
@@ -645,8 +766,16 @@ export default function Mission3DView({ gameState, setGameState }) {
             emissiveIntensity: 1.5 
           })
         );
-        screenGlow.position.set(table.position.x, 6.5, table.position.z + 0.6);
-        scene.add(screenGlow);
+        screenGlow.position.set(0, 6.5, 0.6);
+        tableGroup.add(screenGlow);
+
+        const computerLabel = createTextLabel('COMPUTER', '#00ff88', 1);
+        computerLabel.position.y = 12;
+        tableGroup.add(computerLabel);
+        
+        tableGroup.position.set(-60 + i * 40, 0.75, 50);
+        scene.add(tableGroup);
+        obstacles.push(table);
       }
 
       // Storage cabinets
@@ -687,11 +816,17 @@ export default function Mission3DView({ gameState, setGameState }) {
           laserGlow.position.copy(laser.position);
           scene.add(laserGlow);
         }
+        
+        const laserLabel = createTextLabel('LASER GRID [DEADLY]', '#ff0000', 2);
+        laserLabel.position.set(20, 28, 0);
+        scene.add(laserLabel);
+
         addLog("⚠️ LETHAL LASER GRID DETECTED", 'error');
       }
 
       // KEYCARD (needed to disable lasers)
       if (!inventory.includes('keycard')) {
+        const keycardGroup = new THREE.Group();
         const keycard = new THREE.Mesh(
           new THREE.BoxGeometry(2, 0.2, 3),
           new THREE.MeshStandardMaterial({ 
@@ -702,25 +837,31 @@ export default function Mission3DView({ gameState, setGameState }) {
             roughness: 0.1
           })
         );
-        keycard.position.set(50, 1, -20);
         keycard.userData = { type: 'keycard' };
         keycard.castShadow = true;
-        scene.add(keycard);
+        keycardGroup.add(keycard);
+
+        const keycardLabel = createTextLabel('KEYCARD [PRESS E]', '#fbbf24', 1.2);
+        keycardLabel.position.y = 3;
+        keycardGroup.add(keycardLabel);
+        
+        keycardGroup.position.set(50, 1, -20);
+        scene.add(keycardGroup);
         collectibles.push(keycard);
         
         const keycardGlow = new THREE.PointLight(0xfbbf24, 2, 15);
-        keycardGlow.position.copy(keycard.position);
+        keycardGlow.position.copy(keycardGroup.position);
         scene.add(keycardGlow);
       }
 
       // TERMINAL to disable lasers
-      const terminal = new THREE.Group();
+      const terminalGroup = new THREE.Group();
       const terminalBase = new THREE.Mesh(
         new THREE.BoxGeometry(8, 12, 3),
         new THREE.MeshStandardMaterial({ color: 0x1f2937, metalness: 0.7, roughness: 0.3 })
       );
       terminalBase.castShadow = true;
-      terminal.add(terminalBase);
+      terminalGroup.add(terminalBase);
       
       const terminalScreen = new THREE.Mesh(
         new THREE.BoxGeometry(7, 10, 0.5),
@@ -731,12 +872,20 @@ export default function Mission3DView({ gameState, setGameState }) {
         })
       );
       terminalScreen.position.z = 1.8;
-      terminal.add(terminalScreen);
+      terminalGroup.add(terminalScreen);
+
+      const terminalLabel = createTextLabel(
+        puzzleStates.terminal_active ? 'TERMINAL [ACTIVE]' : 'TERMINAL [PRESS E]',
+        puzzleStates.terminal_active ? '#10b981' : '#3b82f6',
+        1.5
+      );
+      terminalLabel.position.y = 10;
+      terminalGroup.add(terminalLabel);
       
-      terminal.position.set(-30, 6, 30);
-      terminal.userData = { type: 'terminal', id: 'terminal1' };
-      scene.add(terminal);
-      puzzleElements.push(terminal);
+      terminalGroup.position.set(-30, 6, 30);
+      terminalGroup.userData = { type: 'terminal', id: 'terminal1' };
+      scene.add(terminalGroup);
+      puzzleElements.push(terminalGroup);
 
       // GIANT SPIDER (hostile entity)
       const spider = new THREE.Group();
@@ -755,6 +904,21 @@ export default function Mission3DView({ gameState, setGameState }) {
       spiderHead.castShadow = true;
       spider.add(spiderHead);
       
+      // Spider eyes (red glowing)
+      const eyeGeometry = new THREE.SphereGeometry(0.8, 16, 16);
+      const eyeMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xff0000, 
+        emissive: 0xff0000, 
+        emissiveIntensity: 2 
+      });
+      const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+      leftEye.position.set(-1.5, 1, 10);
+      spider.add(leftEye);
+      
+      const rightEye = leftEye.clone();
+      rightEye.position.x = 1.5;
+      spider.add(rightEye);
+
       // Spider legs
       for (let i = 0; i < 8; i++) {
         const leg = new THREE.Group();
@@ -772,11 +936,16 @@ export default function Mission3DView({ gameState, setGameState }) {
         spider.add(leg);
       }
       
+      const spiderLabel = createTextLabel('GIANT SPIDER [AVOID!]', '#ff0000', 2);
+      spiderLabel.position.y = 12;
+      spider.add(spiderLabel);
+
       spider.position.set(0, 6, -50);
       spider.userData = { type: 'spider', hostile: true };
       scene.add(spider);
 
       // DATA CORE objective
+      const dataCoreGroup = new THREE.Group();
       const dataCore = new THREE.Mesh(
         new THREE.OctahedronGeometry(6, 2),
         new THREE.MeshPhysicalMaterial({ 
@@ -789,14 +958,24 @@ export default function Mission3DView({ gameState, setGameState }) {
           roughness: 0.08
         })
       );
-      dataCore.position.set(80, 8, -80);
       dataCore.userData = { type: 'data_core', accessible: puzzleStates.terminal_active };
       dataCore.castShadow = true;
-      scene.add(dataCore);
+      dataCoreGroup.add(dataCore);
+
+      const coreLabel = createTextLabel(
+        puzzleStates.terminal_active ? 'DATA CORE [REACH ME]' : 'DATA CORE [LOCKED]',
+        puzzleStates.terminal_active ? '#00ffff' : '#ff0000',
+        2
+      );
+      coreLabel.position.y = 10;
+      dataCoreGroup.add(coreLabel);
+
+      dataCoreGroup.position.set(80, 8, -80);
+      scene.add(dataCoreGroup);
       objectives.push(dataCore);
       
       const coreLight = new THREE.PointLight(0x00ffff, 4, 50);
-      coreLight.position.copy(dataCore.position);
+      coreLight.position.copy(dataCoreGroup.position);
       scene.add(coreLight);
 
       // Resources
@@ -807,6 +986,7 @@ export default function Mission3DView({ gameState, setGameState }) {
 
       mission2Resources.forEach(res => {
         if (!collectedResources.includes(res.name)) {
+          const resourceGroup = new THREE.Group();
           const resourceMesh = new THREE.Mesh(
             new THREE.OctahedronGeometry(0.8, 0),
             new THREE.MeshStandardMaterial({ 
@@ -817,10 +997,16 @@ export default function Mission3DView({ gameState, setGameState }) {
               roughness: 0.1
             })
           );
-          resourceMesh.position.set(...res.pos);
           resourceMesh.userData = { type: 'resource', name: res.name };
           resourceMesh.castShadow = true;
-          scene.add(resourceMesh);
+          resourceGroup.add(resourceMesh);
+
+          const resourceLabel = createTextLabel(res.name, '#ffffff', 0.8);
+          resourceLabel.position.y = 2;
+          resourceGroup.add(resourceLabel);
+
+          resourceGroup.position.set(...res.pos);
+          scene.add(resourceGroup);
           collectibles.push(resourceMesh);
         }
       });
@@ -844,7 +1030,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       redLight.position.set(0, 25, 0);
       scene.add(redLight);
 
-      addLog("Mission 3: Specimen retrieval. CROUCH (C) under lasers!", 'warning');
+      addLog("Mission 3: Complete objectives. CROUCH (C) under barriers!", 'warning');
       player.position.set(-90, 1.3, 90);
 
       const floor = new THREE.Mesh(
@@ -990,10 +1176,16 @@ export default function Mission3DView({ gameState, setGameState }) {
           barrierGlow.position.copy(barrier.position);
           scene.add(barrierGlow);
         }
+
+        const barrierLabel = createTextLabel('ELECTRIC BARRIER [CROUCH!]', '#00ffff', 2);
+        barrierLabel.position.set(-10, 18, 0);
+        scene.add(barrierLabel);
+        
         addLog("⚠️ ELECTRIC BARRIER - CROUCH to pass", 'error');
       }
 
       // Wire puzzle button
+      const wirePuzzleGroup = new THREE.Group();
       const wirePuzzle = new THREE.Mesh(
         new THREE.BoxGeometry(8, 10, 3),
         new THREE.MeshStandardMaterial({ 
@@ -1004,13 +1196,24 @@ export default function Mission3DView({ gameState, setGameState }) {
           roughness: 0.3
         })
       );
-      wirePuzzle.position.set(-50, 5, -50);
       wirePuzzle.userData = { type: 'wire_puzzle', id: 'wire1' };
       wirePuzzle.castShadow = true;
-      scene.add(wirePuzzle);
-      puzzleElements.push(wirePuzzle);
+      wirePuzzleGroup.add(wirePuzzle);
+
+      const wirePuzzleLabel = createTextLabel(
+        puzzleStates.wire_solved ? 'PUZZLE [SOLVED]' : 'WIRE PUZZLE [PRESS E]',
+        puzzleStates.wire_solved ? '#10b981' : '#ef4444',
+        1.5
+      );
+      wirePuzzleLabel.position.y = 8;
+      wirePuzzleGroup.add(wirePuzzleLabel);
+
+      wirePuzzleGroup.position.set(-50, 5, -50);
+      scene.add(wirePuzzleGroup);
+      puzzleElements.push(wirePuzzleGroup);
 
       // Specimen in containment
+      const specimenGroup = new THREE.Group();
       const specimen = new THREE.Mesh(
         new THREE.IcosahedronGeometry(4, 1),
         new THREE.MeshPhysicalMaterial({ 
@@ -1023,14 +1226,24 @@ export default function Mission3DView({ gameState, setGameState }) {
           roughness: 0.05
         })
       );
-      specimen.position.set(0, 5, -120);
       specimen.userData = { type: 'specimen', accessible: puzzleStates.wire_solved };
       specimen.castShadow = true;
-      scene.add(specimen);
+      specimenGroup.add(specimen);
+
+      const specimenLabel = createTextLabel(
+        puzzleStates.wire_solved ? 'SPECIMEN [REACH ME]' : 'SPECIMEN [LOCKED]',
+        puzzleStates.wire_solved ? '#ff00ff' : '#ff0000',
+        2
+      );
+      specimenLabel.position.y = 8;
+      specimenGroup.add(specimenLabel);
+
+      specimenGroup.position.set(0, 5, -120);
+      scene.add(specimenGroup);
       objectives.push(specimen);
       
       const specimenLight = new THREE.PointLight(0xff00ff, 5, 60);
-      specimenLight.position.copy(specimen.position);
+      specimenLight.position.copy(specimenGroup.position);
       scene.add(specimenLight);
 
       // Resources
@@ -1041,6 +1254,7 @@ export default function Mission3DView({ gameState, setGameState }) {
 
       mission3Resources.forEach(res => {
         if (!collectedResources.includes(res.name)) {
+          const resourceGroup = new THREE.Group();
           const resourceMesh = new THREE.Mesh(
             new THREE.OctahedronGeometry(0.8, 0),
             new THREE.MeshStandardMaterial({ 
@@ -1051,10 +1265,16 @@ export default function Mission3DView({ gameState, setGameState }) {
               roughness: 0.05
             })
           );
-          resourceMesh.position.set(...res.pos);
           resourceMesh.userData = { type: 'resource', name: res.name };
           resourceMesh.castShadow = true;
-          scene.add(resourceMesh);
+          resourceGroup.add(resourceMesh);
+
+          const resourceLabel = createTextLabel(res.name, '#ffffff', 0.8);
+          resourceLabel.position.y = 2;
+          resourceGroup.add(resourceLabel);
+
+          resourceGroup.position.set(...res.pos);
+          scene.add(resourceGroup);
           collectibles.push(resourceMesh);
         }
       });
@@ -1068,43 +1288,58 @@ export default function Mission3DView({ gameState, setGameState }) {
       
       if (e.key.toLowerCase() === 'e') {
         puzzleElements.forEach(elem => {
-          const distance = player.position.distanceTo(elem.position);
+          const elemPos = elem.parent && elem.parent.type === 'Group' ? elem.parent.position : elem.position;
+          const distance = player.position.distanceTo(elemPos);
           if (distance < 8) {
             if (elem.userData.type === 'button') {
               if (!activatedButtons.includes(elem.userData.id)) {
                 setActivatedButtons(prev => [...prev, elem.userData.id]);
+                setObjectiveCompletion(prev => ({ ...prev, button1: true }));
                 addLog(`✓ Button activated!`, 'success');
               }
             } else if (elem.userData.type === 'lever') {
               setLeverStates(prev => ({ ...prev, [elem.userData.id]: !prev[elem.userData.id] }));
+              setObjectiveCompletion(prev => ({ ...prev, lever1: true }));
               addLog(`✓ Knife lever toggled!`, 'info');
             } else if (elem.userData.type === 'terminal') {
               if (inventory.includes('keycard')) {
                 setPuzzleStates(prev => ({ ...prev, terminal_active: true, laser_disabled: true }));
+                setObjectiveCompletion(prev => ({ ...prev, terminal: true }));
                 addLog(`✓ Terminal activated! Lasers disabled`, 'success');
               } else {
                 addLog(`⚠️ Keycard required!`, 'error');
               }
             } else if (elem.userData.type === 'wire_puzzle') {
               setPuzzleStates(prev => ({ ...prev, wire_solved: true, barrier_disabled: true }));
+              setObjectiveCompletion(prev => ({ ...prev, wirePuzzle: true }));
               addLog(`✓ Wire puzzle solved! Barrier disabled`, 'success');
             }
           }
         });
 
         collectibles.forEach((obj, idx) => {
-          const distance = player.position.distanceTo(obj.position);
+          const objPos = obj.parent && obj.parent.type === 'Group' ? obj.parent.position : obj.position;
+          const distance = player.position.distanceTo(objPos);
           if (distance < 5) {
             if (obj.userData.type === 'resource') {
               setCollectedResources(prev => [...prev, obj.userData.name]);
               collectResourceMutation.mutate(obj.userData.name);
               addLog(`✓ Collected: ${obj.userData.name}`, 'success');
-              scene.remove(obj);
+              if (obj.parent && obj.parent.type === 'Group') {
+                scene.remove(obj.parent);
+              } else {
+                scene.remove(obj);
+              }
               collectibles.splice(idx, 1);
             } else if (obj.userData.type === 'keycard') {
               setInventory(prev => [...prev, 'keycard']);
+              setObjectiveCompletion(prev => ({ ...prev, keycard: true }));
               addLog(`✓ Keycard acquired!`, 'success');
-              scene.remove(obj);
+              if (obj.parent && obj.parent.type === 'Group') {
+                scene.remove(obj.parent);
+              } else {
+                scene.remove(obj);
+              }
               collectibles.splice(idx, 1);
             }
           }
@@ -1233,6 +1468,7 @@ export default function Mission3DView({ gameState, setGameState }) {
                   setShowBriefing(true);
                   setMissionStarted(false);
                   setPlayerHealth(100);
+                  setObjectiveCompletion({});
                 }, 1000);
               }
               return newHealth;
@@ -1243,28 +1479,44 @@ export default function Mission3DView({ gameState, setGameState }) {
 
       puzzleElements.forEach(elem => {
         if (elem.userData.type === 'pressure_plate') {
+          const elemPos = elem.parent && elem.parent.type === 'Group' ? elem.parent.position : elem.position;
           const distance = new THREE.Vector2(player.position.x, player.position.z)
-            .distanceTo(new THREE.Vector2(elem.position.x, elem.position.z));
+            .distanceTo(new THREE.Vector2(elemPos.x, elemPos.z));
           if (distance < 3 && !puzzleStates[elem.userData.id]) {
             setPuzzleStates(prev => ({ ...prev, [elem.userData.id]: true }));
+            setObjectiveCompletion(prev => ({ ...prev, plate1: true }));
             addLog(`✓ Pressure plate activated!`, 'info');
           }
         }
       });
 
       objectives.forEach(obj => {
-        const distance = player.position.distanceTo(obj.position);
+        const objPos = obj.parent && obj.parent.type === 'Group' ? obj.parent.position : obj.position;
+        const distance = player.position.distanceTo(objPos);
         if (!missionComplete && distance < 8) {
           if (obj.userData.type === 'water_source' && obj.userData.accessible) {
-            missionComplete = true;
-            completeMission();
+            if (!objectiveCompletion.water) {
+              setObjectiveCompletion(prev => ({ ...prev, water: true }));
+              addLog(`✓ Water reached!`, 'success');
+            }
           } else if (obj.userData.type === 'data_core' && obj.userData.accessible) {
-            missionComplete = true;
-            completeMission();
+            if (!objectiveCompletion.dataCore) {
+              setObjectiveCompletion(prev => ({ ...prev, dataCore: true }));
+              addLog(`✓ Data core acquired!`, 'success');
+            }
           } else if (obj.userData.type === 'specimen' && obj.userData.accessible) {
-            missionComplete = true;
-            completeMission();
+            if (!objectiveCompletion.specimen) {
+              setObjectiveCompletion(prev => ({ ...prev, specimen: true }));
+              addLog(`✓ Specimen retrieved!`, 'success');
+            }
+          } else if (!obj.userData.accessible) {
+            if (distance < 6 && !obj.userData.loggedLocked) {
+              addLog(`⚠️ Objective locked - complete puzzles first!`, 'error');
+              obj.userData.loggedLocked = true;
+            }
           }
+        } else if (distance >= 8) {
+          obj.userData.loggedLocked = false;
         }
         obj.position.y += Math.sin(time * 2 + obj.position.x) * 0.02;
         obj.rotation.y += delta;
@@ -1272,10 +1524,11 @@ export default function Mission3DView({ gameState, setGameState }) {
       });
 
       collectibles.forEach(obj => {
-        obj.position.y = obj.userData.originalY || obj.position.y;
-        obj.userData.originalY = obj.position.y;
-        obj.position.y += Math.sin(time * 3 + obj.position.x) * 0.015;
-        obj.rotation.y += delta * 2;
+        const animatedObject = obj.parent && obj.parent.type === 'Group' ? obj.parent : obj;
+        animatedObject.position.y = animatedObject.userData.originalY || animatedObject.position.y;
+        animatedObject.userData.originalY = animatedObject.position.y;
+        animatedObject.position.y += Math.sin(time * 3 + animatedObject.position.x) * 0.015;
+        animatedObject.rotation.y += delta * 2;
       });
 
       const cameraOffset = new THREE.Vector3(
@@ -1306,7 +1559,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       if (ropeLine) scene.remove(ropeLine);
       renderer.dispose();
     };
-  }, [activeMission, puzzleStates, missionStarted, leverStates, activatedButtons, collectedResources, inventory, mobileControls]);
+  }, [activeMission, puzzleStates, missionStarted, leverStates, activatedButtons, collectedResources, inventory, mobileControls, objectiveCompletion, gameState.completedMissions]);
 
   if (!activeMission) {
     return (
@@ -1317,7 +1570,6 @@ export default function Mission3DView({ gameState, setGameState }) {
   }
 
   const handleMobileInteract = () => {
-    // Simulate a keydown event for 'e'
     const event = new KeyboardEvent('keydown', { key: 'e', bubbles: true, cancelable: true });
     window.dispatchEvent(event);
   };
@@ -1460,37 +1712,51 @@ export default function Mission3DView({ gameState, setGameState }) {
           <div className="p-4 space-y-2">
             {activeMission.mission_number === 1 && (
               <>
-                <div className={`flex items-center gap-2 p-2 rounded ${activatedButtons.includes('button1') ? 'bg-green-900/40 border border-green-500/40' : 'bg-gray-800/40'}`}>
-                  <CheckCircle className={`w-4 h-4 ${activatedButtons.includes('button1') ? 'text-green-400' : 'text-gray-600'}`} />
-                  <span className="text-sm font-mono text-white">Sink Button</span>
+                <div className={`flex items-center gap-2 p-2 rounded ${objectiveCompletion.button1 ? 'bg-green-900/40 border border-green-500/40' : 'bg-gray-800/40'}`}>
+                  <CheckCircle className={`w-4 h-4 ${objectiveCompletion.button1 ? 'text-green-400' : 'text-gray-600'}`} />
+                  <span className="text-sm font-mono text-white">Activate sink button</span>
                 </div>
-                <div className={`flex items-center gap-2 p-2 rounded ${puzzleStates.plate1 ? 'bg-green-900/40 border border-green-500/40' : 'bg-gray-800/40'}`}>
-                  <CheckCircle className={`w-4 h-4 ${puzzleStates.plate1 ? 'text-green-400' : 'text-gray-600'}`} />
-                  <span className="text-sm font-mono text-white">Pressure Plate</span>
+                <div className={`flex items-center gap-2 p-2 rounded ${objectiveCompletion.plate1 ? 'bg-green-900/40 border border-green-500/40' : 'bg-gray-800/40'}`}>
+                  <CheckCircle className={`w-4 h-4 ${objectiveCompletion.plate1 ? 'text-green-400' : 'text-gray-600'}`} />
+                  <span className="text-sm font-mono text-white">Step on pressure plate</span>
                 </div>
-                <div className={`flex items-center gap-2 p-2 rounded ${leverStates.lever1 ? 'bg-green-900/40 border border-green-500/40' : 'bg-gray-800/40'}`}>
-                  <CheckCircle className={`w-4 h-4 ${leverStates.lever1 ? 'text-green-400' : 'text-gray-600'}`} />
-                  <span className="text-sm font-mono text-white">Knife Lever</span>
+                <div className={`flex items-center gap-2 p-2 rounded ${objectiveCompletion.lever1 ? 'bg-green-900/40 border border-green-500/40' : 'bg-gray-800/40'}`}>
+                  <CheckCircle className={`w-4 h-4 ${objectiveCompletion.lever1 ? 'text-green-400' : 'text-gray-600'}`} />
+                  <span className="text-sm font-mono text-white">Toggle knife lever</span>
+                </div>
+                <div className={`flex items-center gap-2 p-2 rounded ${objectiveCompletion.water ? 'bg-green-900/40 border border-green-500/40' : 'bg-gray-800/40'}`}>
+                  <CheckCircle className={`w-4 h-4 ${objectiveCompletion.water ? 'text-green-400' : 'text-gray-600'}`} />
+                  <span className="text-sm font-mono text-white">Reach water droplet</span>
                 </div>
               </>
             )}
             {activeMission.mission_number === 2 && (
               <>
-                <div className={`flex items-center gap-2 p-2 rounded ${inventory.includes('keycard') ? 'bg-green-900/40 border border-green-500/40' : 'bg-gray-800/40'}`}>
-                  <CheckCircle className={`w-4 h-4 ${inventory.includes('keycard') ? 'text-green-400' : 'text-gray-600'}`} />
-                  <span className="text-sm font-mono text-white">Collect Keycard</span>
+                <div className={`flex items-center gap-2 p-2 rounded ${objectiveCompletion.keycard ? 'bg-green-900/40 border border-green-500/40' : 'bg-gray-800/40'}`}>
+                  <CheckCircle className={`w-4 h-4 ${objectiveCompletion.keycard ? 'text-green-400' : 'text-gray-600'}`} />
+                  <span className="text-sm font-mono text-white">Collect keycard</span>
                 </div>
-                <div className={`flex items-center gap-2 p-2 rounded ${puzzleStates.terminal_active ? 'bg-green-900/40 border border-green-500/40' : 'bg-gray-800/40'}`}>
-                  <CheckCircle className={`w-4 h-4 ${puzzleStates.terminal_active ? 'text-green-400' : 'text-gray-600'}`} />
-                  <span className="text-sm font-mono text-white">Activate Terminal</span>
+                <div className={`flex items-center gap-2 p-2 rounded ${objectiveCompletion.terminal ? 'bg-green-900/40 border border-green-500/40' : 'bg-gray-800/40'}`}>
+                  <CheckCircle className={`w-4 h-4 ${objectiveCompletion.terminal ? 'text-green-400' : 'text-gray-600'}`} />
+                  <span className="text-sm font-mono text-white">Activate terminal</span>
+                </div>
+                <div className={`flex items-center gap-2 p-2 rounded ${objectiveCompletion.dataCore ? 'bg-green-900/40 border border-green-500/40' : 'bg-gray-800/40'}`}>
+                  <CheckCircle className={`w-4 h-4 ${objectiveCompletion.dataCore ? 'text-green-400' : 'text-gray-600'}`} />
+                  <span className="text-sm font-mono text-white">Reach data core</span>
                 </div>
               </>
             )}
             {activeMission.mission_number === 3 && (
-              <div className={`flex items-center gap-2 p-2 rounded ${puzzleStates.wire_solved ? 'bg-green-900/40 border border-green-500/40' : 'bg-gray-800/40'}`}>
-                <CheckCircle className={`w-4 h-4 ${puzzleStates.wire_solved ? 'text-green-400' : 'text-gray-600'}`} />
-                <span className="text-sm font-mono text-white">Solve Wire Puzzle</span>
-              </div>
+              <>
+                <div className={`flex items-center gap-2 p-2 rounded ${objectiveCompletion.wirePuzzle ? 'bg-green-900/40 border border-green-500/40' : 'bg-gray-800/40'}`}>
+                  <CheckCircle className={`w-4 h-4 ${objectiveCompletion.wirePuzzle ? 'text-green-400' : 'text-gray-600'}`} />
+                  <span className="text-sm font-mono text-white">Solve wire puzzle</span>
+                </div>
+                <div className={`flex items-center gap-2 p-2 rounded ${objectiveCompletion.specimen ? 'bg-green-900/40 border border-green-500/40' : 'bg-gray-800/40'}`}>
+                  <CheckCircle className={`w-4 h-4 ${objectiveCompletion.specimen ? 'text-green-400' : 'text-gray-600'}`} />
+                  <span className="text-sm font-mono text-white">Retrieve specimen</span>
+                </div>
+              </>
             )}
           </div>
         </Card>
