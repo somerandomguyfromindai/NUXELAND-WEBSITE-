@@ -1,19 +1,31 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Atom, Home, FlaskConical, Clock, MapPin, Package, ShoppingCart, BarChart3, Users, Menu, X, Bot } from "lucide-react";
+import { Atom, Home, FlaskConical, Clock, MapPin, Package, ShoppingCart, BarChart3, Users, Menu, X, Bot, ChevronDown, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import NuxelandAgent from "@/components/ai/NuxelandAgent";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const navigationItems = [
   { title: "Home", url: createPageUrl("Home"), icon: Home },
-  { title: "A.N.T. Console", url: createPageUrl("Simulator"), icon: FlaskConical },
+  { title: "Shop", url: createPageUrl("Shop"), icon: ShoppingCart },
+];
+
+const antConsoleItems = [
   { title: "Timeline", url: createPageUrl("MissionTimeline"), icon: Clock },
   { title: "Map", url: createPageUrl("Map"), icon: MapPin },
   { title: "Resources", url: createPageUrl("Resources"), icon: Package },
-  { title: "Shop", url: createPageUrl("Shop"), icon: ShoppingCart },
   { title: "Experiment Lab", url: createPageUrl("Dashboard"), icon: BarChart3 },
+];
+
+const livingTheGameItems = [
+  { title: "Merch Shop", url: createPageUrl("MerchShop"), icon: Sparkles },
   { title: "Community", url: createPageUrl("Community"), icon: Users },
 ];
 
@@ -148,6 +160,48 @@ export default function Layout({ children, currentPageName }) {
                   {item.title}
                 </Link>
               ))}
+
+              <DropdownMenu>
+                <DropdownMenuTrigger className="nav-link flex items-center gap-2 text-sm font-medium text-gray-300 hover:text-white transition-colors cursor-pointer">
+                  <FlaskConical className="w-4 h-4" />
+                  A.N.T. Console
+                  <ChevronDown className="w-3 h-3" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="bg-[#0F1729] border-gray-700">
+                  <DropdownMenuItem asChild>
+                    <Link to={createPageUrl("Simulator")} className="flex items-center gap-2 cursor-pointer">
+                      <FlaskConical className="w-4 h-4" />
+                      Simulator
+                    </Link>
+                  </DropdownMenuItem>
+                  {antConsoleItems.map((item) => (
+                    <DropdownMenuItem key={item.title} asChild>
+                      <Link to={item.url} className="flex items-center gap-2 cursor-pointer">
+                        <item.icon className="w-4 h-4" />
+                        {item.title}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger className="nav-link flex items-center gap-2 text-sm font-medium text-gray-300 hover:text-white transition-colors cursor-pointer">
+                  <Sparkles className="w-4 h-4" />
+                  Living the Game
+                  <ChevronDown className="w-3 h-3" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="bg-[#0F1729] border-gray-700">
+                  {livingTheGameItems.map((item) => (
+                    <DropdownMenuItem key={item.title} asChild>
+                      <Link to={item.url} className="flex items-center gap-2 cursor-pointer">
+                        <item.icon className="w-4 h-4" />
+                        {item.title}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </nav>
 
             <div className="hidden md:flex items-center gap-4">
@@ -193,6 +247,44 @@ export default function Layout({ children, currentPageName }) {
                   <span className="font-medium">{item.title}</span>
                 </Link>
               ))}
+
+              <div className="border-t border-white/10 pt-3">
+                <p className="text-gray-400 text-xs px-4 mb-2 font-medium">A.N.T. CONSOLE</p>
+                <Link
+                  to={createPageUrl("Simulator")}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-white/5"
+                >
+                  <FlaskConical className="w-5 h-5" />
+                  <span className="font-medium">Simulator</span>
+                </Link>
+                {antConsoleItems.map((item) => (
+                  <Link
+                    key={item.title}
+                    to={item.url}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-white/5"
+                  >
+                    <item.icon className="w-5 h-5" />
+                    <span className="font-medium">{item.title}</span>
+                  </Link>
+                ))}
+              </div>
+
+              <div className="border-t border-white/10 pt-3">
+                <p className="text-gray-400 text-xs px-4 mb-2 font-medium">LIVING THE GAME</p>
+                {livingTheGameItems.map((item) => (
+                  <Link
+                    key={item.title}
+                    to={item.url}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-white/5"
+                  >
+                    <item.icon className="w-5 h-5" />
+                    <span className="font-medium">{item.title}</span>
+                  </Link>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -202,7 +294,6 @@ export default function Layout({ children, currentPageName }) {
         {children}
       </main>
 
-      {/* AI Agent Button */}
       <button
         onClick={() => setAgentOpen(!agentOpen)}
         className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shadow-2xl hover:scale-110 transition-transform animate-pulse-glow"

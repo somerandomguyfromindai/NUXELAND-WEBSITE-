@@ -8,6 +8,7 @@ import Platformer from './pages/Platformer';
 import Map from './pages/Map';
 import MissionTimeline from './pages/MissionTimeline';
 import Resources from './pages/Resources';
+import MerchShop from './pages/MerchShop';
 import Layout from './Layout.jsx';
 
 
@@ -22,6 +23,7 @@ export const PAGES = {
     "Map": Map,
     "MissionTimeline": MissionTimeline,
     "Resources": Resources,
+    "MerchShop": MerchShop,
 }
 
 export const pagesConfig = {
