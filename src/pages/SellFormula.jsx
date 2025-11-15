@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, DollarSign, Globe, AlertCircle, CheckCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { MapPin, DollarSign, Globe, AlertCircle, Target } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 
@@ -212,11 +213,25 @@ export default function SellFormula() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <h3 className="text-white font-mono font-bold text-xl mb-1">{selectedBuyer.name}</h3>
-                    <p className="text-gray-400 text-sm flex items-center gap-2">
-                      <MapPin className="w-3 h-3" />
-                      {selectedBuyer.location}
-                    </p>
+                    <h3 className="text-white font-mono font-bold text-xl mb-3">{selectedBuyer.name}</h3>
+                    
+                    {/* Location - Prominent */}
+                    <div className="bg-blue-900/30 border border-blue-500/50 rounded-lg p-3 mb-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <MapPin className="w-4 h-4 text-blue-400" />
+                        <span className="text-blue-400 text-xs font-mono font-bold">LOCATION</span>
+                      </div>
+                      <p className="text-white font-mono text-sm">{selectedBuyer.location}</p>
+                    </div>
+
+                    {/* What They Want - Prominent */}
+                    <div className="bg-purple-900/30 border border-purple-500/50 rounded-lg p-3 mb-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Target className="w-4 h-4 text-purple-400" />
+                        <span className="text-purple-400 text-xs font-mono font-bold">WHAT THEY WANT</span>
+                      </div>
+                      <p className="text-white font-mono text-sm">{selectedBuyer.interest}</p>
+                    </div>
                   </div>
 
                   <div className="bg-black/50 rounded p-3 space-y-2">
@@ -227,16 +242,12 @@ export default function SellFormula() {
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-400 text-xs">Interest:</span>
-                      <span className="text-blue-400 text-xs">{selectedBuyer.interest}</span>
-                    </div>
-                    <div className="flex justify-between">
                       <span className="text-gray-400 text-xs">Reputation:</span>
-                      <span className={`text-xs ${
-                        selectedBuyer.reputation === 'Controversial' ? 'text-red-400' :
-                        selectedBuyer.reputation === 'Trusted' ? 'text-green-400' :
-                        'text-blue-400'
-                      }`}>{selectedBuyer.reputation}</span>
+                      <Badge className={`text-xs ${
+                        selectedBuyer.reputation === 'Controversial' ? 'bg-red-500/20 text-red-400' :
+                        selectedBuyer.reputation === 'Trusted' || selectedBuyer.reputation === 'Highly Ethical' ? 'bg-green-500/20 text-green-400' :
+                        'bg-blue-500/20 text-blue-400'
+                      }`}>{selectedBuyer.reputation}</Badge>
                     </div>
                   </div>
 
