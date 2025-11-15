@@ -79,7 +79,7 @@ export default function Mission3DView({ gameState, setGameState }) {
   };
 
   const completeMission = () => {
-    if (activeMission && checkMissionCompletion()) {
+    if (activeMission && checkMissionCompletion() && !gameState.completedMissions.includes(activeMission?.id)) {
       addLog(`Mission ${activeMission.mission_number} COMPLETE`, 'success');
       
       updateMissionMutation.mutate({
@@ -1209,6 +1209,7 @@ export default function Mission3DView({ gameState, setGameState }) {
       wirePuzzleGroup.add(wirePuzzleLabel);
 
       wirePuzzleGroup.position.set(-50, 5, -50);
+      wirePuzzleGroup.userData = { type: 'wire_puzzle', id: 'wire1' }; // Added userData to the group
       scene.add(wirePuzzleGroup);
       puzzleElements.push(wirePuzzleGroup);
 
