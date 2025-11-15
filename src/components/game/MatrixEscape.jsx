@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import * as THREE from "three";
@@ -24,13 +23,6 @@ export default function MatrixEscape({ onComplete }) {
     "WELCOME TO THE REAL WORLD"
   ];
 
-  // Change the existing onComplete call to use the prop
-  const handleComplete = () => {
-    if (onComplete) {
-      onComplete();
-    }
-  };
-
   useEffect(() => {
     let currentIndex = 0;
     let currentText = "";
@@ -50,16 +42,17 @@ export default function MatrixEscape({ onComplete }) {
         }
       } else {
         clearInterval(typeWriter);
-        // Update the final success section to call handleComplete
         setTimeout(() => {
           setShowFinal(true);
-          handleComplete();
+          if (onComplete) {
+            onComplete();
+          }
         }, 2000);
       }
-    }, 50);
+    }, 80);
 
     return () => clearInterval(typeWriter);
-  }, [handleComplete]); // Add handleComplete to dependency array to ensure latest version is used
+  }, [onComplete]);
 
   useEffect(() => {
     if (!mountRef.current) return;
@@ -79,7 +72,6 @@ export default function MatrixEscape({ onComplete }) {
     renderer.setSize(window.innerWidth, window.innerHeight);
     mountRef.current.appendChild(renderer.domElement);
 
-    // Matrix rain effect
     const geometry = new THREE.BufferGeometry();
     const vertices = [];
     const speeds = [];
@@ -105,7 +97,6 @@ export default function MatrixEscape({ onComplete }) {
     const particles = new THREE.Points(geometry, material);
     scene.add(particles);
 
-    // Tunnel effect
     const tunnelGeometry = new THREE.TorusGeometry(20, 1, 16, 100);
     const tunnelMaterial = new THREE.MeshBasicMaterial({
       color: 0x00ff00,
@@ -123,7 +114,6 @@ export default function MatrixEscape({ onComplete }) {
     const animate = () => {
       requestAnimationFrame(animate);
 
-      // Animate particles
       const positions = particles.geometry.attributes.position.array;
       for (let i = 1; i < positions.length; i += 3) {
         positions[i] -= speeds[i / 3];
@@ -133,8 +123,7 @@ export default function MatrixEscape({ onComplete }) {
       }
       particles.geometry.attributes.position.needsUpdate = true;
 
-      // Animate tunnels
-      tunnels.forEach((tunnel, index) => {
+      tunnels.forEach((tunnel) => {
         tunnel.rotation.x += 0.01;
         tunnel.rotation.y += 0.01;
         tunnel.position.z += 0.5;
@@ -159,12 +148,12 @@ export default function MatrixEscape({ onComplete }) {
   }, []);
 
   return (
-    <div className="fixed inset-0 bg-black">
+    <div className="fixed inset-0 bg-black z-50">
       <div ref={mountRef} className="absolute inset-0" />
       
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div className="max-w-4xl w-full p-8">
-          <div className="bg-black/80 backdrop-blur-sm border-2 border-green-400 rounded-lg p-8">
+          <div className="bg-black/90 backdrop-blur-sm border-2 border-green-400 rounded-lg p-8">
             <pre className="text-green-400 font-mono text-sm md:text-base whitespace-pre-wrap leading-relaxed">
               {text}
             </pre>
@@ -176,9 +165,6 @@ export default function MatrixEscape({ onComplete }) {
                 </p>
                 <p className="text-green-400 font-mono text-sm">
                   The simulation ends here.
-                </p>
-                <p className="text-gray-500 font-mono text-xs mt-8">
-                  Press F5 to restart
                 </p>
               </div>
             )}
