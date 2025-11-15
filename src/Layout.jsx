@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -23,8 +22,8 @@ const deepIntoGameItems = [
   { title: "Map", url: createPageUrl("Map"), icon: MapPin },
   { title: "Resources", url: createPageUrl("Resources"), icon: Package },
   { title: "Experiment Lab", url: createPageUrl("Dashboard"), icon: BarChart3 },
-  { title: "Sell the Formula", url: createPageUrl("SellFormula"), icon: DollarSign, requiresMissions: true },
-  { title: "Formula R&D", url: createPageUrl("FormulaRD"), icon: Atom, requiresMissions: true },
+  { title: "Sell the Formula", url: createPageUrl("SellFormula"), icon: DollarSign },
+  { title: "Formula R&D", url: createPageUrl("FormulaRD"), icon: Atom },
 ];
 
 const livingTheGameItems = [
@@ -40,7 +39,6 @@ export default function Layout({ children, currentPageName }) {
   const [scrolled, setScrolled] = useState(false);
   const [user, setUser] = useState(null);
   const [agentOpen, setAgentOpen] = useState(false);
-  const [missions, setMissions] = useState([]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -52,10 +50,7 @@ export default function Layout({ children, currentPageName }) {
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
-    base44.entities.Mission.list().then(setMissions).catch(() => {});
   }, []);
-
-  const allMissionsCompleted = missions.filter(m => m.status === 'completed').length >= 3;
 
   return (
     <div className="min-h-screen bg-[#0A0E1A]">
@@ -177,25 +172,17 @@ export default function Layout({ children, currentPageName }) {
                   <ChevronDown className="w-3 h-3" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="bg-[#0F1729] border-blue-500/50 shadow-2xl min-w-[220px]">
-                  {deepIntoGameItems.map((item) => {
-                    const isLocked = item.requiresMissions && !allMissionsCompleted;
-                    return (
-                      <DropdownMenuItem key={item.title} asChild disabled={isLocked}>
-                        <Link 
-                          to={isLocked ? "#" : item.url} 
-                          className={`flex items-center gap-3 cursor-pointer px-4 py-3 text-base ${
-                            isLocked 
-                              ? 'text-gray-600 cursor-not-allowed' 
-                              : 'text-white hover:bg-blue-500/20 hover:text-blue-400'
-                          } transition-colors`}
-                        >
-                          <item.icon className="w-5 h-5" />
-                          <span className="font-medium">{item.title}</span>
-                          {isLocked && <span className="ml-auto text-xs text-red-400">🔒</span>}
-                        </Link>
-                      </DropdownMenuItem>
-                    );
-                  })}
+                  {deepIntoGameItems.map((item) => (
+                    <DropdownMenuItem key={item.title} asChild>
+                      <Link 
+                        to={item.url} 
+                        className="flex items-center gap-3 cursor-pointer px-4 py-3 text-base text-white hover:bg-blue-500/20 hover:text-blue-400 transition-colors"
+                      >
+                        <item.icon className="w-5 h-5" />
+                        <span className="font-medium">{item.title}</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
                 </DropdownMenuContent>
               </DropdownMenu>
 
@@ -275,25 +262,17 @@ export default function Layout({ children, currentPageName }) {
 
               <div className="border-t border-white/10 pt-3">
                 <p className="text-blue-400 text-xs px-4 mb-2 font-bold">DEEP INTO THE GAME</p>
-                {deepIntoGameItems.map((item) => {
-                  const isLocked = item.requiresMissions && !allMissionsCompleted;
-                  return (
-                    <Link
-                      key={item.title}
-                      to={isLocked ? "#" : item.url}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-lg ${
-                        isLocked 
-                          ? 'text-gray-600 cursor-not-allowed' 
-                          : 'text-gray-300 hover:bg-white/5'
-                      }`}
-                    >
-                      <item.icon className="w-5 h-5" />
-                      <span className="font-medium">{item.title}</span>
-                      {isLocked && <span className="ml-auto text-xs text-red-400">🔒</span>}
-                    </Link>
-                  );
-                })}
+                {deepIntoGameItems.map((item) => (
+                  <Link
+                    key={item.title}
+                    to={item.url}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-white/5"
+                  >
+                    <item.icon className="w-5 h-5" />
+                    <span className="font-medium">{item.title}</span>
+                  </Link>
+                ))}
               </div>
 
               <div className="border-t border-white/10 pt-3">
