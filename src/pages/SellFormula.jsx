@@ -225,7 +225,7 @@ export default function SellFormula() {
                   <button
                     onClick={handleNuxelandClick}
                     className="absolute transform -translate-x-1/2 -translate-y-1/2 group z-10"
-                    style={{ left: '42%', top: '15%' }}
+                    style={{ left: '48%', top: '12%' }}
                   >
                     <div className={`w-5 h-5 rounded-full bg-red-500 shadow-lg ring-4 ${
                       showNuxelandMap ? 'ring-red-400 scale-150' : 'ring-red-900'
