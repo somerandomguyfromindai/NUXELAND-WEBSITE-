@@ -167,7 +167,6 @@ Return JSON with this structure:
     );
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(mountRef.current.clientWidth / 2, mountRef.current.clientHeight / 2); // Set smaller for testing
     renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -263,18 +262,19 @@ Return JSON with this structure:
     
     let playerVelocityY = 0;
     let isOnGround = true;
-    let isClimbing = false;
-    let touchingObstacle = null;
+    let isOnRope = false;
+    let ropeLine = null;
     const gravity = -25;
     const jumpForce = 10;
-    const climbSpeed = 5;
+    const ropeSpeed = 8;
     const playerHalfHeight = 0.8;
     const playerRadius = 0.4;
     let jumpCount = 0;
-    const maxJumps = 2; // Double jump
+    const maxJumps = 2;
+    const ceilingHeight = 50;
 
     if (activeMission.mission_number === 1) {
-      addLog("Mission 1: Hold SPACE near objects to climb them!", 'info');
+      addLog("Mission 1: Hold SPACE anywhere to deploy ROPE!", 'info');
       
       // Initialize obstacles array first
       obstacles = [];
@@ -534,7 +534,7 @@ Return JSON with this structure:
           destructibleObjects.push(crumb);
           obstacles.push(crumb);
         }
-      }
+      });
 
       // BUTTER STICK
       const butter = new THREE.Mesh(
@@ -963,14 +963,8 @@ Return JSON with this structure:
     const handleKeyDown = (e) => { 
       keys[e.key.toLowerCase()] = true;
       
-      if (e.key === ' ') {
-        // Double jump logic
-        if (jumpCount < maxJumps) {
-          playerVelocityY = jumpForce;
-          jumpCount++;
-          isOnGround = false;
-        }
-      }
+      // Removed direct 'space' key jump logic from here,
+      // as 'space' now controls the rope deployment/movement in the animate loop.
       
       if (e.key.toLowerCase() === 'e') {
         // Resource collection
@@ -1008,12 +1002,12 @@ Return JSON with this structure:
             if (elem.userData.type === 'button') {
               if (!activatedButtons.includes(elem.userData.id)) {
                 setActivatedButtons(prev => [...prev, elem.userData.id]);
-                addLog(`✓ Button activated! Fork bridge appeared.`, 'success');
+                addLog(`✓ Button activated!`, 'success');
               }
             } else if (elem.userData.type === 'lever') {
               const leverId = elem.userData.id;
               setLeverStates(prev => ({ ...prev, [leverId]: !prev[leverId] }));
-              addLog(`✓ Lever ${!leverStates[leverId] ? 'activated' : 'deactivated'}! Plate moved.`, 'info');
+              addLog(`✓ Lever toggled!`, 'info');
             } else if (elem.userData.type === 'terminal') {
                 addLog(`Interacted with terminal ${elem.userData.id}`, 'info');
                 // Potentially update puzzleStates based on terminal interaction
@@ -1060,112 +1054,143 @@ Return JSON with this structure:
     const animate = () => {
       const delta = clock.getDelta();
 
-      touchingObstacle = null;
-      const climbCheckDistance = 2;
-      
-      obstacles.forEach(obs => {
-        const distance = player.position.distanceTo(obs.position);
-        if (distance < climbCheckDistance) {
-          touchingObstacle = obs;
-        }
-      });
+      // --- ROPE DEPLOYMENT / RETRACTION LOGIC ---
+      const isSpaceOrMobileJumpPressed = keys[' '] || mobileControlsRef.current.jump;
 
-      if ((keys[' '] || mobileControlsRef.current.jump) && touchingObstacle) { // Allow mobile jump button to trigger climb
-        isClimbing = true;
-        playerVelocityY = 0;
-        player.position.y += climbSpeed * delta;
-        isOnGround = false;
-        
-        const touchedBox = new THREE.Box3().setFromObject(touchingObstacle);
-        // Simple collision response for climbing - prevent moving through object
-        // Pushes player out if their center is inside the XZ bounds of the obstacle
-        if (player.position.x < touchedBox.min.x) player.position.x = touchedBox.min.x - playerRadius;
-        if (player.position.x > touchedBox.max.x) player.position.x = touchedBox.max.x + playerRadius;
-        if (player.position.z < touchedBox.min.z) player.position.z = touchedBox.min.z - playerRadius;
-        if (player.position.z > touchedBox.max.z) player.position.z = touchedBox.max.z + playerRadius;
+      if (isSpaceOrMobileJumpPressed) {
+        if (!isOnRope) {
+          // Deploy rope
+          const ropeMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
+          const ropeGeometry = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(player.position.x, player.position.y, player.position.z),
+            new THREE.Vector3(player.position.x, ceilingHeight, player.position.z)
+          ]);
+          ropeLine = new THREE.Line(ropeGeometry, ropeMaterial);
+          scene.add(ropeLine);
+          isOnRope = true; // Set rope active
+          playerVelocityY = 0; // Stop vertical movement
+          isOnGround = false; // Not on ground anymore
+          jumpCount = 0; // Reset jumps
+          addLog('Rope deployed!', 'info');
+        }
       } else {
-        isClimbing = false;
+        // SPACE/mobile jump is NOT pressed, so retract rope if active
+        if (ropeLine) {
+          scene.remove(ropeLine);
+          ropeLine.geometry.dispose(); // Dispose resources
+          ropeLine.material.dispose(); // Dispose resources
+          ropeLine = null;
+          isOnRope = false;
+          addLog('Rope retracted', 'info');
+        }
+      }
+      // Reset mobile jump flag immediately after check to prevent continuous deployment
+      if (mobileControlsRef.current.jump) {
+        setMobileControls(prev => ({ ...prev, jump: false }));
+      }
+
+      // --- PLAYER MOVEMENT LOGIC ---
+      if (isOnRope) {
+        // Movement while on rope
+        playerVelocityY = 0; // No gravity while on rope
+
+        // Vertical movement on rope
+        if (keys['w'] || mobileControlsRef.current.up) {
+          player.position.y += ropeSpeed * delta;
+          if (player.position.y > ceilingHeight - playerHalfHeight - 0.5) player.position.y = ceilingHeight - playerHalfHeight - 0.5; // Prevent clipping through ceiling
+        }
+        if (keys['s'] || mobileControlsRef.current.down) {
+          player.position.y -= ropeSpeed * delta;
+          if (player.position.y < playerHalfHeight) player.position.y = playerHalfHeight; // Prevent clipping through floor
+        }
+
+        // Horizontal movement on rope (slower)
+        const ropeHorizontalSpeed = (keys['shift'] ? 20 : 10) * 0.5; // Slower when on rope
+        if (keys['a'] || mobileControlsRef.current.left) player.position.x -= ropeHorizontalSpeed * delta;
+        if (keys['d'] || mobileControlsRef.current.right) player.position.x += ropeHorizontalSpeed * delta;
+
+        // Update rope line geometry to follow player
+        const ropePoints = [
+          new THREE.Vector3(player.position.x, player.position.y, player.position.z),
+          new THREE.Vector3(player.position.x, ceilingHeight, player.position.z) // Anchor point
+        ];
+        ropeLine.geometry.setFromPoints(ropePoints);
+
+        isOnGround = false; // Definitely not on ground
+        jumpCount = 0; // Can't jump while on rope
+      } else {
+        // Normal movement (not on rope) - existing gravity, jump, collision logic
         if (!isOnGround) {
           playerVelocityY += gravity * delta;
         }
-      }
-      
-      // Handle mobile jump separately (one-shot trigger)
-      if (mobileControlsRef.current.jump && jumpCount < maxJumps && !keys[' ']) {
-        playerVelocityY = jumpForce;
-        jumpCount++;
+
+        const baseSpeed = keys['shift'] ? 20 : 10;
+        const speed = onSlippery ? baseSpeed * 1.5 : baseSpeed;
+        const direction = new THREE.Vector3();
+
+        if (keys['w'] || mobileControlsRef.current.up) direction.z -= 1;
+        if (keys['s'] || mobileControlsRef.current.down) direction.z += 1;
+        if (keys['a'] || mobileControlsRef.current.left) direction.x -= 1;
+        if (keys['d'] || mobileControlsRef.current.right) direction.x += 1;
+
+        const targetHorizontalPosition = new THREE.Vector3(player.position.x, 0, player.position.z);
+
+        if (direction.length() > 0) {
+          direction.normalize();
+          targetHorizontalPosition.x += direction.x * speed * delta;
+          targetHorizontalPosition.z += direction.z * speed * delta;
+        }
+        
+        let newPlayerPositionY = player.position.y + playerVelocityY * delta;
+
+        onSlippery = false;
         isOnGround = false;
-        setMobileControls(prev => ({ ...prev, jump: false })); // Reset jump flag after triggering
-      }
 
-      const baseSpeed = keys['shift'] ? 20 : 10;
-      const speed = onSlippery ? baseSpeed * 1.5 : baseSpeed;
-      const direction = new THREE.Vector3();
-
-      if (keys['w'] || mobileControlsRef.current.up) direction.z -= 1;
-      if (keys['s'] || mobileControlsRef.current.down) direction.z += 1;
-      if (keys['a'] || mobileControlsRef.current.left) direction.x -= 1;
-      if (keys['d'] || mobileControlsRef.current.right) direction.x += 1;
-
-      const targetHorizontalPosition = new THREE.Vector3(player.position.x, 0, player.position.z);
-
-      if (direction.length() > 0 && !isClimbing) {
-        direction.normalize();
-        targetHorizontalPosition.x += direction.x * speed * delta;
-        targetHorizontalPosition.z += direction.z * speed * delta;
-      }
-      
-      let newPlayerPositionY = player.position.y + playerVelocityY * delta;
-
-      onSlippery = false;
-      isOnGround = false;
-
-      if (newPlayerPositionY - playerHalfHeight <= 0) {
-        newPlayerPositionY = playerHalfHeight;
-        playerVelocityY = 0;
-        isOnGround = true;
-        jumpCount = 0; // Reset jump count when on ground
-      }
-
-      let actualHorizontalPosition = new THREE.Vector3(targetHorizontalPosition.x, player.position.y, targetHorizontalPosition.z);
-      
-      obstacles.forEach(obs => {
-        const obsBox = new THREE.Box3().setFromObject(obs);
-
-        const playerBoxAtTargetPos = new THREE.Box3().setFromCenterAndSize(
-          new THREE.Vector3(targetHorizontalPosition.x, newPlayerPositionY, targetHorizontalPosition.z),
-          new THREE.Vector3(playerRadius * 2, playerHalfHeight * 2, playerRadius * 2)
-        );
-
-        if (playerVelocityY < 0 && 
-          (player.position.y - playerHalfHeight) >= (obsBox.max.y - 0.1) &&
-          (newPlayerPositionY - playerHalfHeight) < (obsBox.max.y + 0.1) &&
-          playerBoxAtTargetPos.intersectsBox(obsBox)
-        ) {
-          newPlayerPositionY = obsBox.max.y + playerHalfHeight;
+        if (newPlayerPositionY - playerHalfHeight <= 0) {
+          newPlayerPositionY = playerHalfHeight;
           playerVelocityY = 0;
           isOnGround = true;
-          jumpCount = 0; // Reset jump count when landing on obstacle
+          jumpCount = 0; // Reset jump count when on ground
         }
-        else if (playerVelocityY > 0 && 
-          (player.position.y + playerHalfHeight) <= (obsBox.min.y + 0.1) &&
-          (newPlayerPositionY + playerHalfHeight) > (obsBox.min.y - 0.1) &&
-          playerBoxAtTargetPos.intersectsBox(obsBox)
-        ) {
-          playerVelocityY = 0;
-          newPlayerPositionY = obsBox.min.y - playerHalfHeight;
-        }
-        if (playerBoxAtTargetPos.intersectsBox(obsBox) && !isClimbing) {
-          actualHorizontalPosition.x = player.position.x;
-          actualHorizontalPosition.z = player.position.z;
-        }
-      });
 
-      if (!isClimbing) {
+        let actualHorizontalPosition = new THREE.Vector3(targetHorizontalPosition.x, player.position.y, targetHorizontalPosition.z);
+        
+        obstacles.forEach(obs => {
+          const obsBox = new THREE.Box3().setFromObject(obs);
+
+          const playerBoxAtTargetPos = new THREE.Box3().setFromCenterAndSize(
+            new THREE.Vector3(targetHorizontalPosition.x, newPlayerPositionY, targetHorizontalPosition.z),
+            new THREE.Vector3(playerRadius * 2, playerHalfHeight * 2, playerRadius * 2)
+          );
+
+          if (playerVelocityY < 0 && 
+            (player.position.y - playerHalfHeight) >= (obsBox.max.y - 0.1) &&
+            (newPlayerPositionY - playerHalfHeight) < (obsBox.max.y + 0.1) &&
+            playerBoxAtTargetPos.intersectsBox(obsBox)
+          ) {
+            newPlayerPositionY = obsBox.max.y + playerHalfHeight;
+            playerVelocityY = 0;
+            isOnGround = true;
+            jumpCount = 0; // Reset jump count when landing on obstacle
+          }
+          else if (playerVelocityY > 0 && 
+            (player.position.y + playerHalfHeight) <= (obsBox.min.y + 0.1) &&
+            (newPlayerPositionY + playerHalfHeight) > (obsBox.min.y - 0.1) &&
+            playerBoxAtTargetPos.intersectsBox(obsBox)
+          ) {
+            playerVelocityY = 0;
+            newPlayerPositionY = obsBox.min.y - playerHalfHeight;
+          }
+          if (playerBoxAtTargetPos.intersectsBox(obsBox)) {
+            actualHorizontalPosition.x = player.position.x;
+            actualHorizontalPosition.z = player.position.z;
+          }
+        });
+
         player.position.x = actualHorizontalPosition.x;
         player.position.z = actualHorizontalPosition.z;
         player.position.y = newPlayerPositionY;
-      }
+      } // End of `else (!isOnRope)` block
 
       setPlayerPosition({ x: player.position.x, y: player.position.y, z: player.position.z });
 
@@ -1199,9 +1224,8 @@ Return JSON with this structure:
           }
         } else if (obj.userData.type === 'laser' && obj.userData.deadly) {
           const distance = player.position.distanceTo(obj.position);
-          // Simplified laser collision check (could be more precise with bounding boxes)
           if (distance < 5 && player.position.y < obj.position.y + 4 && player.position.y > obj.position.y - 4) {
-            addLog("Laser detected! Avoiding...", 'error');
+            addLog("Laser detected!", 'error');
             // Implement player damage or mission failure logic here
           }
         }
@@ -1274,6 +1298,13 @@ Return JSON with this structure:
         mountRef.current.removeChild(renderer.domElement);
       }
       
+      // Cleanup ropeLine if it exists when component unmounts
+      if (ropeLine) {
+        scene.remove(ropeLine);
+        ropeLine.geometry.dispose();
+        ropeLine.material.dispose();
+      }
+
       renderer.dispose();
     };
   }, [activeMission, puzzleStates, inventory, missionStarted, destroyedObjects, leverStates, activatedButtons, environmentVariant]);
@@ -1364,9 +1395,9 @@ Return JSON with this structure:
             </div>
             
             <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm border border-gray-600 rounded p-2 font-mono text-xs text-gray-300 hidden md:block z-10">
-              <p>W/A/S/D: Move | SPACE: Jump (2x) | E: Interact | Shift: Sprint</p>
-              <p className="text-green-400 mt-1 font-bold">
-                Hold SPACE while touching objects to CLIMB them!
+              <p>W/A/S/D: Move | SPACE: Deploy Rope | E: Interact | Shift: Sprint</p>
+              <p className="text-cyan-400 mt-1 font-bold">
+                Hold SPACE anywhere to deploy ROPE - Use W/S to move up/down, A/D to swing left/right while on rope!
               </p>
             </div>
 
@@ -1413,7 +1444,7 @@ Return JSON with this structure:
                   className="w-16 h-16 bg-green-500/80 rounded-full flex items-center justify-center active:bg-green-600 flex-col"
                 >
                   <MoveUp className="w-8 h-8 text-white" />
-                  <span className="text-[10px] text-white font-bold">JUMP</span>
+                  <span className="text-[10px] text-white font-bold">ROPE</span>
                 </button>
                 <button
                   onTouchStart={handleMobileInteract}
@@ -1432,16 +1463,15 @@ Return JSON with this structure:
                   Mission 1 Solution:
                 </h4>
                 <ol className="text-yellow-100 font-mono text-xs space-y-1 list-decimal list-inside">
-                  <li>Walk to SINK RIM, hold JUMP to climb</li>
-                  <li>Press USE on button on top (turns green)</li>
-                  <li>Climb down and cross fork bridge</li>
-                  <li>Walk onto PRESSURE PLATE on napkin</li>
-                  <li>Go to KNIFE, press USE to activate lever</li>
-                  <li>Water droplet drops to ground - walk to it!</li>
-                  <li>Reach WATER DROPLET to complete mission</li>
+                  <li>Use ROPE (hold SPACE) to navigate to the button on the sink rim.</li>
+                  <li>Press USE on the button (it turns green).</li>
+                  <li>Cross the fork bridge that appears.</li>
+                  <li>Walk onto the PRESSURE PLATE on the napkin.</li>
+                  <li>Go to the KNIFE, press USE to activate the lever.</li>
+                  <li>Reach the WATER DROPLET to complete the mission.</li>
                 </ol>
                 <p className="text-yellow-200 text-xs mt-2 italic font-bold">
-                  Hold JUMP while touching objects to climb up!
+                  Hold SPACE for rope - W/S to move up/down!
                 </p>
               </div>
             )}
