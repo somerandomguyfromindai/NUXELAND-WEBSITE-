@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Atom, Home, FlaskConical, Clock, MapPin, Package, ShoppingCart, BarChart3, Users, Menu, X, Bot, ChevronDown, Sparkles, DollarSign } from "lucide-react";
+import { Atom, Home, FlaskConical, Clock, MapPin, Package, ShoppingCart, BarChart3, Users, Menu, X, Bot, ChevronDown, Sparkles, DollarSign, FileText, MessageSquare, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import NuxelandAgent from "@/components/ai/NuxelandAgent";
@@ -15,21 +15,23 @@ import {
 
 const navigationItems = [
   { title: "Home", url: createPageUrl("Home"), icon: Home },
-  { title: "Shop", url: createPageUrl("Shop"), icon: ShoppingCart },
 ];
 
-const antConsoleItems = [
+const deepIntoGameItems = [
   { title: "Simulator", url: createPageUrl("Simulator"), icon: FlaskConical },
   { title: "Timeline", url: createPageUrl("MissionTimeline"), icon: Clock },
   { title: "Map", url: createPageUrl("Map"), icon: MapPin },
   { title: "Resources", url: createPageUrl("Resources"), icon: Package },
   { title: "Experiment Lab", url: createPageUrl("Dashboard"), icon: BarChart3 },
-  { title: "Formula R&D", url: createPageUrl("FormulaRD"), icon: Atom },
+  { title: "Sell the Formula", url: createPageUrl("SellFormula"), icon: DollarSign, requiresMissions: true },
+  { title: "Formula R&D", url: createPageUrl("FormulaRD"), icon: Atom, requiresMissions: true },
 ];
 
 const livingTheGameItems = [
   { title: "Merch Shop", url: createPageUrl("MerchShop"), icon: Sparkles },
-  { title: "Community", url: createPageUrl("Community"), icon: Users },
+  { title: "Community Groups", url: createPageUrl("Groups"), icon: MessageSquare },
+  { title: "Blog Posts", url: createPageUrl("Blog"), icon: FileText },
+  { title: "Leaderboards", url: createPageUrl("Leaderboards"), icon: Trophy },
 ];
 
 export default function Layout({ children, currentPageName }) {
@@ -38,6 +40,7 @@ export default function Layout({ children, currentPageName }) {
   const [scrolled, setScrolled] = useState(false);
   const [user, setUser] = useState(null);
   const [agentOpen, setAgentOpen] = useState(false);
+  const [missions, setMissions] = useState([]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -49,7 +52,10 @@ export default function Layout({ children, currentPageName }) {
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
+    base44.entities.Mission.list().then(setMissions).catch(() => {});
   }, []);
+
+  const allMissionsCompleted = missions.filter(m => m.status === 'completed').length >= 3;
 
   return (
     <div className="min-h-screen bg-[#0A0E1A]">
@@ -131,7 +137,7 @@ export default function Layout({ children, currentPageName }) {
       <header 
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           scrolled 
-            ? 'bg-[#0A0E1A]/98 backdrop-blur-xl border-b border-white/10 shadow-2xl' 
+            ? 'bg-[#1a1f3a]/98 backdrop-blur-xl border-b border-white/10 shadow-2xl' 
             : 'bg-transparent'
         }`}
       >
@@ -167,31 +173,31 @@ export default function Layout({ children, currentPageName }) {
               <DropdownMenu>
                 <DropdownMenuTrigger className="nav-link flex items-center gap-2 text-sm font-medium text-gray-300 hover:text-white transition-colors cursor-pointer">
                   <FlaskConical className="w-4 h-4" />
-                  A.N.T. Console
+                  Deep into the Game
                   <ChevronDown className="w-3 h-3" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="bg-[#0F1729] border-blue-500/50 shadow-2xl min-w-[220px]">
-                  {antConsoleItems.map((item) => (
-                    <DropdownMenuItem key={item.title} asChild>
-                      <Link 
-                        to={item.url} 
-                        className="flex items-center gap-3 cursor-pointer px-4 py-3 text-base text-white hover:bg-blue-500/20 hover:text-blue-400 transition-colors"
-                      >
-                        <item.icon className="w-5 h-5" />
-                        <span className="font-medium">{item.title}</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
+                  {deepIntoGameItems.map((item) => {
+                    const isLocked = item.requiresMissions && !allMissionsCompleted;
+                    return (
+                      <DropdownMenuItem key={item.title} asChild disabled={isLocked}>
+                        <Link 
+                          to={isLocked ? "#" : item.url} 
+                          className={`flex items-center gap-3 cursor-pointer px-4 py-3 text-base ${
+                            isLocked 
+                              ? 'text-gray-600 cursor-not-allowed' 
+                              : 'text-white hover:bg-blue-500/20 hover:text-blue-400'
+                          } transition-colors`}
+                        >
+                          <item.icon className="w-5 h-5" />
+                          <span className="font-medium">{item.title}</span>
+                          {isLocked && <span className="ml-auto text-xs text-red-400">🔒</span>}
+                        </Link>
+                      </DropdownMenuItem>
+                    );
+                  })}
                 </DropdownMenuContent>
               </DropdownMenu>
-
-              <Link
-                to={createPageUrl("SellFormula")}
-                className="nav-link flex items-center gap-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
-              >
-                <DollarSign className="w-4 h-4" />
-                Sell the Formula
-              </Link>
 
               <DropdownMenu>
                 <DropdownMenuTrigger className="nav-link flex items-center gap-2 text-sm font-medium text-gray-300 hover:text-white transition-colors cursor-pointer">
@@ -213,6 +219,14 @@ export default function Layout({ children, currentPageName }) {
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
+
+              <Link
+                to={createPageUrl("Shop")}
+                className="nav-link flex items-center gap-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
+              >
+                <ShoppingCart className="w-4 h-4" />
+                Shop
+              </Link>
             </nav>
 
             <div className="hidden md:flex items-center gap-4">
@@ -241,7 +255,7 @@ export default function Layout({ children, currentPageName }) {
         </div>
 
         {mobileMenuOpen && (
-          <div className="md:hidden bg-[#0A0E1A]/98 backdrop-blur-xl border-t border-white/10">
+          <div className="md:hidden bg-[#1a1f3a]/98 backdrop-blur-xl border-t border-white/10">
             <div className="px-4 py-4 space-y-3">
               {navigationItems.map((item) => (
                 <Link
@@ -260,28 +274,27 @@ export default function Layout({ children, currentPageName }) {
               ))}
 
               <div className="border-t border-white/10 pt-3">
-                <p className="text-blue-400 text-xs px-4 mb-2 font-bold">A.N.T. CONSOLE</p>
-                {antConsoleItems.map((item) => (
-                  <Link
-                    key={item.title}
-                    to={item.url}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-white/5"
-                  >
-                    <item.icon className="w-5 h-5" />
-                    <span className="font-medium">{item.title}</span>
-                  </Link>
-                ))}
+                <p className="text-blue-400 text-xs px-4 mb-2 font-bold">DEEP INTO THE GAME</p>
+                {deepIntoGameItems.map((item) => {
+                  const isLocked = item.requiresMissions && !allMissionsCompleted;
+                  return (
+                    <Link
+                      key={item.title}
+                      to={isLocked ? "#" : item.url}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-lg ${
+                        isLocked 
+                          ? 'text-gray-600 cursor-not-allowed' 
+                          : 'text-gray-300 hover:bg-white/5'
+                      }`}
+                    >
+                      <item.icon className="w-5 h-5" />
+                      <span className="font-medium">{item.title}</span>
+                      {isLocked && <span className="ml-auto text-xs text-red-400">🔒</span>}
+                    </Link>
+                  );
+                })}
               </div>
-
-              <Link
-                to={createPageUrl("SellFormula")}
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-white/5"
-              >
-                <DollarSign className="w-5 h-5" />
-                <span className="font-medium">Sell the Formula</span>
-              </Link>
 
               <div className="border-t border-white/10 pt-3">
                 <p className="text-purple-400 text-xs px-4 mb-2 font-bold">LIVING THE GAME</p>
@@ -297,6 +310,15 @@ export default function Layout({ children, currentPageName }) {
                   </Link>
                 ))}
               </div>
+
+              <Link
+                to={createPageUrl("Shop")}
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-white/5"
+              >
+                <ShoppingCart className="w-5 h-5" />
+                <span className="font-medium">Shop</span>
+              </Link>
             </div>
           </div>
         )}
