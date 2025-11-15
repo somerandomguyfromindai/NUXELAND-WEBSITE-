@@ -112,19 +112,19 @@ export default function Simulator() {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="monitor" className="p-0">
+            <TabsContent value="monitor" className="p-0 min-h-[600px]">
               <Mission3DView gameState={gameState} setGameState={setGameState} />
             </TabsContent>
 
-            <TabsContent value="files" className="p-0">
+            <TabsContent value="files" className="p-4 min-h-[600px]">
               <FileBrowser gameState={gameState} setGameState={setGameState} />
             </TabsContent>
 
-            <TabsContent value="comms" className="p-0">
+            <TabsContent value="comms" className="p-4 min-h-[600px]">
               <CommsPanel gameState={gameState} />
             </TabsContent>
 
-            <TabsContent value="gamepasses" className="p-6">
+            <TabsContent value="gamepasses" className="p-6 min-h-[600px]">
               <GamepassMenu />
             </TabsContent>
           </Tabs>
