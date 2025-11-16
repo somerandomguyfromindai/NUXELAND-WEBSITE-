@@ -105,6 +105,18 @@ export default function Home() {
 
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 opacity-20"
+          style={{
+            backgroundImage: 'url(https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=1920&q=80)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            filter: 'blur(2px)',
+            transform: `scale(${1 + scrollY * 0.0003}) translateY(${scrollY * 0.4}px)`
+          }}
+        />
+
         {/* Animated Background */}
         <div 
           className="absolute inset-0 opacity-20"
@@ -115,7 +127,7 @@ export default function Home() {
         />
 
         <div 
-          className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0A0E1A]/50 to-[#0A0E1A]"
+          className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0A0E1A]/70 to-[#0A0E1A]"
           style={{ transform: `translateY(${scrollY * 0.3}px)` }}
         />
 
@@ -205,31 +217,42 @@ export default function Home() {
                 title: "Technology",
                 color: "blue",
                 delay: 0,
-                description: "Pushing the boundaries of what's possible through cutting-edge miniaturization research."
+                description: "Pushing the boundaries of what's possible through cutting-edge miniaturization research.",
+                image: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&q=80"
               },
               {
                 icon: Sparkles,
                 title: "Nature",
                 color: "green",
                 delay: 80,
-                description: "Harmonizing technology with the natural world through sustainable innovation."
+                description: "Harmonizing technology with the natural world through sustainable innovation.",
+                image: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=600&q=80"
               },
               {
                 icon: Lock,
                 title: "Ethics",
                 color: "gray",
                 delay: 160,
-                description: "Navigating the moral implications of miniaturization for humanity's future."
+                description: "Navigating the moral implications of miniaturization for humanity's future.",
+                image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&q=80"
               }
             ].map((pillar, index) => (
               <Card 
                 key={pillar.title}
-                className={`bg-gradient-to-br from-${pillar.color}-900/30 to-${pillar.color}-800/20 border-${pillar.color}-500/50 hover:border-${pillar.color}-500 transition-all hover:scale-105`}
+                className={`bg-gradient-to-br from-${pillar.color}-900/30 to-${pillar.color}-800/20 border-${pillar.color}-500/50 hover:border-${pillar.color}-500 transition-all hover:scale-105 overflow-hidden`}
                 style={{
                   opacity: Math.min(1, Math.max(0, (scrollY - 280 - pillar.delay) / 150)),
                   transform: `translateY(${Math.max(0, 80 - (scrollY - 280 - pillar.delay) * 0.4)}px)`
                 }}
               >
+                <div className="relative h-48 overflow-hidden">
+                  <img 
+                    src={pillar.image} 
+                    alt={pillar.title}
+                    className="w-full h-full object-cover opacity-40"
+                  />
+                  <div className={`absolute inset-0 bg-gradient-to-t from-${pillar.color}-900/80 to-transparent`} />
+                </div>
                 <CardContent className="p-8">
                   <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mb-6">
                     <pillar.icon className={`w-8 h-8 text-${pillar.color}-400`} />
@@ -250,40 +273,55 @@ export default function Home() {
           opacity: Math.min(1, Math.max(0, (scrollY - 800) / 300)),
         }}
       >
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 
-            className="text-3xl md:text-4xl font-bold text-white mb-8"
-            style={{
-              transform: `translateY(${Math.max(0, 60 - (scrollY - 900) * 0.2)}px)`
-            }}
-          >
-            The etinuxE Initiative
-          </h2>
-          <p className="text-xl text-gray-300 mb-6">
-            Dr. Ni's groundbreaking research opens doors to a world where size is no longer a limitation.
-          </p>
-          <p className="text-lg text-gray-400 mb-8">
-            Through advanced experiments and field operations, we're exploring how miniaturization
-            can solve global challenges while raising profound questions about our future.
-          </p>
-          <div className="grid md:grid-cols-2 gap-6">
-            {[
-              { title: "Research Labs", description: "Access cutting-edge facilities to conduct miniaturization experiments and unlock new possibilities." },
-              { title: "Field Operations", description: "Deploy agents on critical missions to test miniaturization technology in real-world scenarios." }
-            ].map((item, index) => (
-              <Card 
-                key={item.title}
-                className="bg-white/5 border-white/10"
+        <div className="max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div className="relative">
+              <div className="absolute inset-0 bg-blue-500/20 rounded-2xl blur-3xl" />
+              <img 
+                src="https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=800&q=80"
+                alt="Laboratory Research"
+                className="relative rounded-2xl shadow-2xl border border-blue-500/30"
                 style={{
-                  transform: `translateX(${Math.sin((scrollY + index * 100) * 0.003) * 10}px) translateY(${Math.cos((scrollY + index * 100) * 0.002) * 10}px)`
+                  transform: `translateY(${Math.sin(scrollY * 0.002) * 10}px)`
+                }}
+              />
+            </div>
+            <div className="text-center md:text-left">
+              <h2 
+                className="text-3xl md:text-4xl font-bold text-white mb-8"
+                style={{
+                  transform: `translateY(${Math.max(0, 60 - (scrollY - 900) * 0.2)}px)`
                 }}
               >
-                <CardContent className="p-6">
-                  <h3 className="text-xl font-bold text-cyan-400 mb-3">{item.title}</h3>
-                  <p className="text-gray-300 text-sm">{item.description}</p>
-                </CardContent>
-              </Card>
-            ))}
+                The etinuxE Initiative
+              </h2>
+              <p className="text-xl text-gray-300 mb-6">
+                Dr. Ni's groundbreaking research opens doors to a world where size is no longer a limitation.
+              </p>
+              <p className="text-lg text-gray-400 mb-8">
+                Through advanced experiments and field operations, we're exploring how miniaturization
+                can solve global challenges while raising profound questions about our future.
+              </p>
+              <div className="grid md:grid-cols-2 gap-4">
+                {[
+                  { title: "Research Labs", description: "Access cutting-edge facilities to conduct miniaturization experiments and unlock new possibilities." },
+                  { title: "Field Operations", description: "Deploy agents on critical missions to test miniaturization technology in real-world scenarios." }
+                ].map((item, index) => (
+                  <Card 
+                    key={item.title}
+                    className="bg-white/5 border-white/10"
+                    style={{
+                      transform: `translateX(${Math.sin((scrollY + index * 100) * 0.003) * 10}px) translateY(${Math.cos((scrollY + index * 100) * 0.002) * 10}px)`
+                    }}
+                  >
+                    <CardContent className="p-6">
+                      <h3 className="text-xl font-bold text-cyan-400 mb-3">{item.title}</h3>
+                      <p className="text-gray-300 text-sm">{item.description}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -297,8 +335,16 @@ export default function Home() {
         }}
       >
         <div className="max-w-4xl mx-auto">
-          <Card className="bg-gradient-to-r from-yellow-900/20 to-orange-900/20 border-yellow-500/50">
-            <CardContent className="p-8 text-center">
+          <Card className="bg-gradient-to-r from-yellow-900/20 to-orange-900/20 border-yellow-500/50 overflow-hidden">
+            <div className="relative h-64 md:h-80">
+              <img 
+                src="https://images.unsplash.com/photo-1614732414444-096e5f1122d5?w=1200&q=80"
+                alt="Future Technology"
+                className="w-full h-full object-cover opacity-30"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0A0E1A] via-[#0A0E1A]/50 to-transparent" />
+            </div>
+            <CardContent className="p-8 text-center -mt-32 relative z-10">
               <Lock className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
               <h3 className="text-2xl font-bold text-yellow-400 mb-4">Mission 4: Coming in 1 Month</h3>
               <p className="text-gray-300 mb-6">
