@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -31,11 +32,12 @@ export default function Home() {
           x: Math.random() * canvas.width,
           y: Math.random() * canvas.height,
           size: Math.random() * 2 + 0.5,
-          speedX: (Math.random() - 0.5) * 0.2,
-          speedY: (Math.random() - 0.5) * 0.2,
+          speedX: (Math.random() - 0.5) * 0.1, // Changed from 0.2
+          speedY: (Math.random() - 0.5) * 0.1, // Changed from 0.2
           opacity: Math.random() * 0.5 + 0.3,
-          twinkleSpeed: Math.random() * 0.01 + 0.005,
+          twinkleSpeed: Math.random() * 0.015 + 0.008, // Changed from 0.01 + 0.005
           phase: Math.random() * Math.PI * 2,
+          direction: Math.random() > 0.5 ? 1 : -1, // Added
         });
       }
     }
@@ -44,19 +46,19 @@ export default function Home() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       starsRef.current.forEach((star) => {
-        // Update star position based on scroll
-        const scrollFactor = scrollY * 0.15;
-        const offsetX = Math.sin(scrollY * 0.0005 + star.phase) * 30;
-        const offsetY = Math.cos(scrollY * 0.0005 + star.phase) * 30;
+        // Update star position based on scroll - side to side motion
+        const scrollFactor = scrollY * 0.1; // Changed from 0.15
+        const offsetX = Math.sin(scrollY * 0.0003 + star.phase) * 40 * star.direction; // Changed from 0.0005, 30, and added star.direction
+        // Removed: const offsetY = Math.cos(scrollY * 0.0005 + star.phase) * 30;
 
         star.phase += star.twinkleSpeed;
-        const twinkle = Math.sin(star.phase) * 0.3 + 0.7;
+        const twinkle = Math.sin(star.phase) * 0.5 + 0.5; // Changed from 0.3 + 0.7
 
         // Draw star
         ctx.beginPath();
         ctx.arc(
           star.x + offsetX,
-          star.y - scrollFactor + offsetY,
+          star.y - scrollFactor, // Changed from star.y - scrollFactor + offsetY
           star.size,
           0,
           Math.PI * 2
@@ -67,19 +69,19 @@ export default function Home() {
         // Draw glow
         const gradient = ctx.createRadialGradient(
           star.x + offsetX,
-          star.y - scrollFactor + offsetY,
+          star.y - scrollFactor, // Changed from star.y - scrollFactor + offsetY
           0,
           star.x + offsetX,
-          star.y - scrollFactor + offsetY,
+          star.y - scrollFactor, // Changed from star.y - scrollFactor + offsetY
           star.size * 3
         );
-        gradient.addColorStop(0, `rgba(147, 197, 253, ${star.opacity * twinkle * 0.5})`);
+        gradient.addColorStop(0, `rgba(147, 197, 253, ${star.opacity * twinkle * 0.6})`); // Changed from 0.5
         gradient.addColorStop(1, 'rgba(147, 197, 253, 0)');
         ctx.fillStyle = gradient;
         ctx.beginPath();
         ctx.arc(
           star.x + offsetX,
-          star.y - scrollFactor + offsetY,
+          star.y - scrollFactor, // Changed from star.y - scrollFactor + offsetY
           star.size * 3,
           0,
           Math.PI * 2
@@ -197,8 +199,8 @@ export default function Home() {
           <h2 
             className="text-3xl md:text-4xl font-bold text-center text-white mb-16"
             style={{
-              opacity: Math.min(1, Math.max(0, (scrollY - 300) / 200)),
-              transform: `translateY(${Math.max(0, 50 - (scrollY - 300) * 0.2)}px)`
+              opacity: Math.min(1, Math.max(0, (scrollY - 200) / 200)), // Changed from 300
+              transform: `translateY(${Math.max(0, 50 - (scrollY - 200) * 0.2)}px)` // Changed from 300
             }}
           >
             Three Pillars of <span className="text-blue-400">Innovation</span>
@@ -210,21 +212,21 @@ export default function Home() {
                 icon: Atom,
                 title: "Technology",
                 color: "blue",
-                delay: 0,
+                delay: 0, // No change
                 description: "Pushing the boundaries of what's possible through cutting-edge miniaturization research."
               },
               {
                 icon: Sparkles,
                 title: "Nature",
                 color: "green",
-                delay: 100,
+                delay: 80, // Changed from 100
                 description: "Harmonizing technology with the natural world through sustainable innovation."
               },
               {
                 icon: Lock,
                 title: "Ethics",
                 color: "gray",
-                delay: 200,
+                delay: 160, // Changed from 200
                 description: "Navigating the moral implications of miniaturization for humanity's future."
               }
             ].map((pillar, index) => (
@@ -232,8 +234,8 @@ export default function Home() {
                 key={pillar.title}
                 className={`bg-gradient-to-br from-${pillar.color}-900/30 to-${pillar.color}-800/20 border-${pillar.color}-500/50 hover:border-${pillar.color}-500 transition-all hover:scale-105`}
                 style={{
-                  opacity: Math.min(1, Math.max(0, (scrollY - 400 - pillar.delay) / 200)),
-                  transform: `translateY(${Math.max(0, 80 - (scrollY - 400 - pillar.delay) * 0.3)}px)`
+                  opacity: Math.min(1, Math.max(0, (scrollY - 250 - pillar.delay) / 200)), // Changed from 400
+                  transform: `translateY(${Math.max(0, 80 - (scrollY - 250 - pillar.delay) * 0.3)}px)` // Changed from 400
                 }}
               >
                 <CardContent className="p-8">
