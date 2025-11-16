@@ -31,10 +31,10 @@ export default function Home() {
           x: Math.random() * canvas.width,
           y: Math.random() * canvas.height,
           size: Math.random() * 2 + 0.5,
-          speedX: (Math.random() - 0.5) * 0.5,
-          speedY: (Math.random() - 0.5) * 0.5,
+          speedX: (Math.random() - 0.5) * 0.2,
+          speedY: (Math.random() - 0.5) * 0.2,
           opacity: Math.random() * 0.5 + 0.3,
-          twinkleSpeed: Math.random() * 0.02 + 0.01,
+          twinkleSpeed: Math.random() * 0.01 + 0.005,
           phase: Math.random() * Math.PI * 2,
         });
       }
@@ -45,9 +45,9 @@ export default function Home() {
 
       starsRef.current.forEach((star) => {
         // Update star position based on scroll
-        const scrollFactor = scrollY * 0.3;
-        const offsetX = Math.sin(scrollY * 0.001 + star.phase) * 50;
-        const offsetY = Math.cos(scrollY * 0.001 + star.phase) * 50;
+        const scrollFactor = scrollY * 0.15;
+        const offsetX = Math.sin(scrollY * 0.0005 + star.phase) * 30;
+        const offsetY = Math.cos(scrollY * 0.0005 + star.phase) * 30;
 
         star.phase += star.twinkleSpeed;
         const twinkle = Math.sin(star.phase) * 0.3 + 0.7;
@@ -233,7 +233,7 @@ export default function Home() {
                 className={`bg-gradient-to-br from-${pillar.color}-900/30 to-${pillar.color}-800/20 border-${pillar.color}-500/50 hover:border-${pillar.color}-500 transition-all hover:scale-105`}
                 style={{
                   opacity: Math.min(1, Math.max(0, (scrollY - 400 - pillar.delay) / 200)),
-                  transform: `translateY(${Math.max(0, 80 - (scrollY - 400 - pillar.delay) * 0.3)}px) rotate(${Math.sin((scrollY + pillar.delay) * 0.002) * 2}deg)`
+                  transform: `translateY(${Math.max(0, 80 - (scrollY - 400 - pillar.delay) * 0.3)}px)`
                 }}
               >
                 <CardContent className="p-8">
