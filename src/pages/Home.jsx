@@ -9,6 +9,7 @@ export default function Home() {
   const [scrollY, setScrollY] = useState(0);
   const canvasRef = useRef(null);
   const starsRef = useRef([]);
+  const lastFrameTime = useRef(0);
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
@@ -24,6 +25,9 @@ export default function Home() {
     canvas.width = window.innerWidth;
     canvas.height = document.documentElement.scrollHeight;
 
+    const targetFPS = 24;
+    const frameInterval = 1000 / targetFPS;
+
     // Initialize stars
     if (starsRef.current.length === 0) {
       for (let i = 0; i < 150; i++) {
@@ -31,66 +35,56 @@ export default function Home() {
           x: Math.random() * canvas.width,
           y: Math.random() * canvas.height,
           size: Math.random() * 2 + 0.5,
-          speedX: (Math.random() - 0.5) * 0.2,
-          speedY: (Math.random() - 0.5) * 0.2,
+          baseX: Math.random() * canvas.width,
+          sideSpeed: Math.random() * 0.0003 + 0.0001,
+          sideRange: Math.random() * 40 + 20,
           opacity: Math.random() * 0.5 + 0.3,
-          twinkleSpeed: Math.random() * 0.01 + 0.005,
+          twinkleSpeed: Math.random() * 0.03 + 0.015,
           phase: Math.random() * Math.PI * 2,
         });
       }
     }
 
-    const animate = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const animate = (currentTime) => {
+      const elapsed = currentTime - lastFrameTime.current;
 
-      starsRef.current.forEach((star) => {
-        // Update star position based on scroll
-        const scrollFactor = scrollY * 0.15;
-        const offsetX = Math.sin(scrollY * 0.0005 + star.phase) * 30;
-        const offsetY = Math.cos(scrollY * 0.0005 + star.phase) * 30;
+      if (elapsed > frameInterval) {
+        lastFrameTime.current = currentTime - (elapsed % frameInterval);
 
-        star.phase += star.twinkleSpeed;
-        const twinkle = Math.sin(star.phase) * 0.3 + 0.7;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Draw star
-        ctx.beginPath();
-        ctx.arc(
-          star.x + offsetX,
-          star.y - scrollFactor + offsetY,
-          star.size,
-          0,
-          Math.PI * 2
-        );
-        ctx.fillStyle = `rgba(147, 197, 253, ${star.opacity * twinkle})`;
-        ctx.fill();
+        starsRef.current.forEach((star) => {
+          // Update star position based on scroll - only side to side movement
+          const scrollFactor = scrollY * 0.08;
+          const offsetX = Math.sin(scrollY * star.sideSpeed + star.phase) * star.sideRange;
 
-        // Draw glow
-        const gradient = ctx.createRadialGradient(
-          star.x + offsetX,
-          star.y - scrollFactor + offsetY,
-          0,
-          star.x + offsetX,
-          star.y - scrollFactor + offsetY,
-          star.size * 3
-        );
-        gradient.addColorStop(0, `rgba(147, 197, 253, ${star.opacity * twinkle * 0.5})`);
-        gradient.addColorStop(1, 'rgba(147, 197, 253, 0)');
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.arc(
-          star.x + offsetX,
-          star.y - scrollFactor + offsetY,
-          star.size * 3,
-          0,
-          Math.PI * 2
-        );
-        ctx.fill();
-      });
+          star.phase += star.twinkleSpeed;
+          const twinkle = Math.sin(star.phase) * 0.5 + 0.5;
+
+          const x = star.baseX + offsetX;
+          const y = star.y - scrollFactor;
+
+          // Draw star
+          ctx.beginPath();
+          ctx.arc(x, y, star.size, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(147, 197, 253, ${star.opacity * twinkle})`;
+          ctx.fill();
+
+          // Draw glow
+          const gradient = ctx.createRadialGradient(x, y, 0, x, y, star.size * 3);
+          gradient.addColorStop(0, `rgba(147, 197, 253, ${star.opacity * twinkle * 0.6})`);
+          gradient.addColorStop(1, 'rgba(147, 197, 253, 0)');
+          ctx.fillStyle = gradient;
+          ctx.beginPath();
+          ctx.arc(x, y, star.size * 3, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
 
       requestAnimationFrame(animate);
     };
 
-    animate();
+    animate(0);
 
     const handleResize = () => {
       canvas.width = window.innerWidth;
@@ -197,8 +191,8 @@ export default function Home() {
           <h2 
             className="text-3xl md:text-4xl font-bold text-center text-white mb-16"
             style={{
-              opacity: Math.min(1, Math.max(0, (scrollY - 300) / 200)),
-              transform: `translateY(${Math.max(0, 50 - (scrollY - 300) * 0.2)}px)`
+              opacity: Math.min(1, Math.max(0, (scrollY - 200) / 150)),
+              transform: `translateY(${Math.max(0, 50 - (scrollY - 200) * 0.25)}px)`
             }}
           >
             Three Pillars of <span className="text-blue-400">Innovation</span>
@@ -217,14 +211,14 @@ export default function Home() {
                 icon: Sparkles,
                 title: "Nature",
                 color: "green",
-                delay: 100,
+                delay: 80,
                 description: "Harmonizing technology with the natural world through sustainable innovation."
               },
               {
                 icon: Lock,
                 title: "Ethics",
                 color: "gray",
-                delay: 200,
+                delay: 160,
                 description: "Navigating the moral implications of miniaturization for humanity's future."
               }
             ].map((pillar, index) => (
@@ -232,8 +226,8 @@ export default function Home() {
                 key={pillar.title}
                 className={`bg-gradient-to-br from-${pillar.color}-900/30 to-${pillar.color}-800/20 border-${pillar.color}-500/50 hover:border-${pillar.color}-500 transition-all hover:scale-105`}
                 style={{
-                  opacity: Math.min(1, Math.max(0, (scrollY - 400 - pillar.delay) / 200)),
-                  transform: `translateY(${Math.max(0, 80 - (scrollY - 400 - pillar.delay) * 0.3)}px)`
+                  opacity: Math.min(1, Math.max(0, (scrollY - 280 - pillar.delay) / 150)),
+                  transform: `translateY(${Math.max(0, 80 - (scrollY - 280 - pillar.delay) * 0.4)}px)`
                 }}
               >
                 <CardContent className="p-8">
