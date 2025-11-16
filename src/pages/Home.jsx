@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,8 @@ import { Atom, Zap, Sparkles, ArrowRight, Lock } from "lucide-react";
 
 export default function Home() {
   const [scrollY, setScrollY] = useState(0);
+  const canvasRef = useRef(null);
+  const starsRef = useRef([]);
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
@@ -15,8 +16,99 @@ export default function Home() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = document.documentElement.scrollHeight;
+
+    // Initialize stars
+    if (starsRef.current.length === 0) {
+      for (let i = 0; i < 150; i++) {
+        starsRef.current.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          size: Math.random() * 2 + 0.5,
+          speedX: (Math.random() - 0.5) * 0.5,
+          speedY: (Math.random() - 0.5) * 0.5,
+          opacity: Math.random() * 0.5 + 0.3,
+          twinkleSpeed: Math.random() * 0.02 + 0.01,
+          phase: Math.random() * Math.PI * 2,
+        });
+      }
+    }
+
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      starsRef.current.forEach((star) => {
+        // Update star position based on scroll
+        const scrollFactor = scrollY * 0.3;
+        const offsetX = Math.sin(scrollY * 0.001 + star.phase) * 50;
+        const offsetY = Math.cos(scrollY * 0.001 + star.phase) * 50;
+
+        star.phase += star.twinkleSpeed;
+        const twinkle = Math.sin(star.phase) * 0.3 + 0.7;
+
+        // Draw star
+        ctx.beginPath();
+        ctx.arc(
+          star.x + offsetX,
+          star.y - scrollFactor + offsetY,
+          star.size,
+          0,
+          Math.PI * 2
+        );
+        ctx.fillStyle = `rgba(147, 197, 253, ${star.opacity * twinkle})`;
+        ctx.fill();
+
+        // Draw glow
+        const gradient = ctx.createRadialGradient(
+          star.x + offsetX,
+          star.y - scrollFactor + offsetY,
+          0,
+          star.x + offsetX,
+          star.y - scrollFactor + offsetY,
+          star.size * 3
+        );
+        gradient.addColorStop(0, `rgba(147, 197, 253, ${star.opacity * twinkle * 0.5})`);
+        gradient.addColorStop(1, 'rgba(147, 197, 253, 0)');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(
+          star.x + offsetX,
+          star.y - scrollFactor + offsetY,
+          star.size * 3,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+      });
+
+      requestAnimationFrame(animate);
+    };
+
+    animate();
+
+    const handleResize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = document.documentElement.scrollHeight;
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [scrollY]);
+
   return (
-    <div className="min-h-screen bg-[#0A0E1A]">
+    <div className="min-h-screen bg-[#0A0E1A] relative overflow-hidden">
+      <canvas
+        ref={canvasRef}
+        className="fixed inset-0 pointer-events-none z-0"
+        style={{ mixBlendMode: 'screen' }}
+      />
+
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
         {/* Animated Background */}
@@ -33,8 +125,32 @@ export default function Home() {
           style={{ transform: `translateY(${scrollY * 0.3}px)` }}
         />
 
+        {/* Floating particles */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {[...Array(20)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-1 h-1 bg-blue-400 rounded-full animate-pulse"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                transform: `translateY(${-scrollY * (0.1 + Math.random() * 0.2)}px) translateX(${Math.sin(scrollY * 0.01 + i) * 20}px)`,
+                opacity: 0.3 + Math.random() * 0.4,
+                animationDelay: `${Math.random() * 2}s`,
+                animationDuration: `${2 + Math.random() * 3}s`,
+              }}
+            />
+          ))}
+        </div>
+
         {/* Hero Content */}
-        <div className="relative z-10 text-center px-4 max-w-5xl mx-auto">
+        <div 
+          className="relative z-10 text-center px-4 max-w-5xl mx-auto"
+          style={{
+            transform: `translateY(${scrollY * 0.15}px)`,
+            opacity: Math.max(0, 1 - scrollY / 600)
+          }}
+        >
           <div className="mb-8 flex justify-center">
             <div className="relative">
               <div className="absolute inset-0 bg-blue-500 rounded-full blur-3xl opacity-50 animate-pulse"></div>
@@ -42,7 +158,12 @@ export default function Home() {
             </div>
           </div>
 
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-blue-400 via-cyan-400 to-green-400 bg-clip-text text-transparent">
+          <h1 
+            className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-blue-400 via-cyan-400 to-green-400 bg-clip-text text-transparent"
+            style={{
+              transform: `scale(${1 + scrollY * 0.0002})`,
+            }}
+          >
             Welcome to <span className="text-blue-400">Nuxe</span><span className="text-green-400">land</span>
           </h1>
 
@@ -66,59 +187,82 @@ export default function Home() {
       </section>
 
       {/* Features Grid - Three Pillars */}
-      <section className="py-20 px-4">
+      <section 
+        className="py-20 px-4 relative z-10"
+        style={{
+          transform: `translateY(${-scrollY * 0.05}px)`,
+        }}
+      >
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-center text-white mb-16">
+          <h2 
+            className="text-3xl md:text-4xl font-bold text-center text-white mb-16"
+            style={{
+              opacity: Math.min(1, Math.max(0, (scrollY - 300) / 200)),
+              transform: `translateY(${Math.max(0, 50 - (scrollY - 300) * 0.2)}px)`
+            }}
+          >
             Three Pillars of <span className="text-blue-400">Innovation</span>
           </h2>
           
           <div className="grid md:grid-cols-3 gap-8">
-            {/* Technology */}
-            <Card className="bg-gradient-to-br from-blue-900/30 to-blue-800/20 border-blue-500/50 hover:border-blue-500 transition-all hover:scale-105">
-              <CardContent className="p-8">
-                <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mb-6">
-                  <Atom className="w-8 h-8 text-blue-400" />
-                </div>
-                <h3 className="text-2xl font-bold text-blue-400 mb-4">Technology</h3>
-                <p className="text-gray-300">
-                  Pushing the boundaries of what's possible through cutting-edge miniaturization research.
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Nature */}
-            <Card className="bg-gradient-to-br from-green-900/30 to-green-800/20 border-green-500/50 hover:border-green-500 transition-all hover:scale-105">
-              <CardContent className="p-8">
-                <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-6">
-                  <Sparkles className="w-8 h-8 text-green-400" />
-                </div>
-                <h3 className="text-2xl font-bold text-green-400 mb-4">Nature</h3>
-                <p className="text-gray-300">
-                  Harmonizing technology with the natural world through sustainable innovation.
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Ethics */}
-            <Card className="bg-gradient-to-br from-gray-900/30 to-gray-800/20 border-gray-500/50 hover:border-gray-500 transition-all hover:scale-105">
-              <CardContent className="p-8">
-                <div className="w-16 h-16 bg-gray-500/20 rounded-full flex items-center justify-center mb-6">
-                  <Lock className="w-8 h-8 text-gray-400" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-400 mb-4">Ethics</h3>
-                <p className="text-gray-300">
-                  Navigating the moral implications of miniaturization for humanity's future.
-                </p>
-              </CardContent>
-            </Card>
+            {[
+              {
+                icon: Atom,
+                title: "Technology",
+                color: "blue",
+                delay: 0,
+                description: "Pushing the boundaries of what's possible through cutting-edge miniaturization research."
+              },
+              {
+                icon: Sparkles,
+                title: "Nature",
+                color: "green",
+                delay: 100,
+                description: "Harmonizing technology with the natural world through sustainable innovation."
+              },
+              {
+                icon: Lock,
+                title: "Ethics",
+                color: "gray",
+                delay: 200,
+                description: "Navigating the moral implications of miniaturization for humanity's future."
+              }
+            ].map((pillar, index) => (
+              <Card 
+                key={pillar.title}
+                className={`bg-gradient-to-br from-${pillar.color}-900/30 to-${pillar.color}-800/20 border-${pillar.color}-500/50 hover:border-${pillar.color}-500 transition-all hover:scale-105`}
+                style={{
+                  opacity: Math.min(1, Math.max(0, (scrollY - 400 - pillar.delay) / 200)),
+                  transform: `translateY(${Math.max(0, 80 - (scrollY - 400 - pillar.delay) * 0.3)}px) rotate(${Math.sin((scrollY + pillar.delay) * 0.002) * 2}deg)`
+                }}
+              >
+                <CardContent className="p-8">
+                  <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mb-6">
+                    <pillar.icon className={`w-8 h-8 text-${pillar.color}-400`} />
+                  </div>
+                  <h3 className={`text-2xl font-bold text-${pillar.color}-400 mb-4`}>{pillar.title}</h3>
+                  <p className="text-gray-300">{pillar.description}</p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       </section>
 
       {/* The etinuxE Initiative */}
-      <section className="py-20 px-4 bg-gradient-to-b from-[#0A0E1A] to-[#0F1729]">
+      <section 
+        className="py-20 px-4 bg-gradient-to-b from-[#0A0E1A] to-[#0F1729] relative z-10"
+        style={{
+          opacity: Math.min(1, Math.max(0, (scrollY - 800) / 300)),
+        }}
+      >
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-8">
+          <h2 
+            className="text-3xl md:text-4xl font-bold text-white mb-8"
+            style={{
+              transform: `translateY(${Math.max(0, 60 - (scrollY - 900) * 0.2)}px)`
+            }}
+          >
             The etinuxE Initiative
           </h2>
           <p className="text-xl text-gray-300 mb-6">
@@ -129,28 +273,35 @@ export default function Home() {
             can solve global challenges while raising profound questions about our future.
           </p>
           <div className="grid md:grid-cols-2 gap-6">
-            <Card className="bg-white/5 border-white/10">
-              <CardContent className="p-6">
-                <h3 className="text-xl font-bold text-cyan-400 mb-3">Research Labs</h3>
-                <p className="text-gray-300 text-sm">
-                  Access cutting-edge facilities to conduct miniaturization experiments and unlock new possibilities.
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="bg-white/5 border-white/10">
-              <CardContent className="p-6">
-                <h3 className="text-xl font-bold text-cyan-400 mb-3">Field Operations</h3>
-                <p className="text-gray-300 text-sm">
-                  Deploy agents on critical missions to test miniaturization technology in real-world scenarios.
-                </p>
-              </CardContent>
-            </Card>
+            {[
+              { title: "Research Labs", description: "Access cutting-edge facilities to conduct miniaturization experiments and unlock new possibilities." },
+              { title: "Field Operations", description: "Deploy agents on critical missions to test miniaturization technology in real-world scenarios." }
+            ].map((item, index) => (
+              <Card 
+                key={item.title}
+                className="bg-white/5 border-white/10"
+                style={{
+                  transform: `translateX(${Math.sin((scrollY + index * 100) * 0.003) * 10}px) translateY(${Math.cos((scrollY + index * 100) * 0.002) * 10}px)`
+                }}
+              >
+                <CardContent className="p-6">
+                  <h3 className="text-xl font-bold text-cyan-400 mb-3">{item.title}</h3>
+                  <p className="text-gray-300 text-sm">{item.description}</p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Coming Soon Section */}
-      <section className="py-20 px-4">
+      <section 
+        className="py-20 px-4 relative z-10"
+        style={{
+          opacity: Math.min(1, Math.max(0, (scrollY - 1400) / 300)),
+          transform: `scale(${Math.min(1, 0.9 + (scrollY - 1400) * 0.0003)})`
+        }}
+      >
         <div className="max-w-4xl mx-auto">
           <Card className="bg-gradient-to-r from-yellow-900/20 to-orange-900/20 border-yellow-500/50">
             <CardContent className="p-8 text-center">
