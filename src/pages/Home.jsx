@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -18,17 +19,7 @@ export default function Home() {
     <div className="min-h-screen bg-[#0A0E1A]">
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        {/* Background Image */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage: 'url(https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=1920&q=80)',
-            transform: `translateY(${scrollY * 0.5}px)`,
-            filter: 'brightness(0.3)'
-          }}
-        />
-
-        {/* Animated Background Overlay */}
+        {/* Animated Background */}
         <div 
           className="absolute inset-0 opacity-20"
           style={{
@@ -83,14 +74,7 @@ export default function Home() {
           
           <div className="grid md:grid-cols-3 gap-8">
             {/* Technology */}
-            <Card className="bg-gradient-to-br from-blue-900/30 to-blue-800/20 border-blue-500/50 hover:border-blue-500 transition-all hover:scale-105 overflow-hidden">
-              <div className="h-48 overflow-hidden">
-                <img 
-                  src="https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=80" 
-                  alt="Technology" 
-                  className="w-full h-full object-cover opacity-60 hover:opacity-80 transition-opacity"
-                />
-              </div>
+            <Card className="bg-gradient-to-br from-blue-900/30 to-blue-800/20 border-blue-500/50 hover:border-blue-500 transition-all hover:scale-105">
               <CardContent className="p-8">
                 <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mb-6">
                   <Atom className="w-8 h-8 text-blue-400" />
@@ -103,14 +87,7 @@ export default function Home() {
             </Card>
 
             {/* Nature */}
-            <Card className="bg-gradient-to-br from-green-900/30 to-green-800/20 border-green-500/50 hover:border-green-500 transition-all hover:scale-105 overflow-hidden">
-              <div className="h-48 overflow-hidden">
-                <img 
-                  src="https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&q=80" 
-                  alt="Nature" 
-                  className="w-full h-full object-cover opacity-60 hover:opacity-80 transition-opacity"
-                />
-              </div>
+            <Card className="bg-gradient-to-br from-green-900/30 to-green-800/20 border-green-500/50 hover:border-green-500 transition-all hover:scale-105">
               <CardContent className="p-8">
                 <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-6">
                   <Sparkles className="w-8 h-8 text-green-400" />
@@ -123,14 +100,7 @@ export default function Home() {
             </Card>
 
             {/* Ethics */}
-            <Card className="bg-gradient-to-br from-gray-900/30 to-gray-800/20 border-gray-500/50 hover:border-gray-500 transition-all hover:scale-105 overflow-hidden">
-              <div className="h-48 overflow-hidden">
-                <img 
-                  src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&q=80" 
-                  alt="Ethics" 
-                  className="w-full h-full object-cover opacity-60 hover:opacity-80 transition-opacity"
-                />
-              </div>
+            <Card className="bg-gradient-to-br from-gray-900/30 to-gray-800/20 border-gray-500/50 hover:border-gray-500 transition-all hover:scale-105">
               <CardContent className="p-8">
                 <div className="w-16 h-16 bg-gray-500/20 rounded-full flex items-center justify-center mb-6">
                   <Lock className="w-8 h-8 text-gray-400" />
@@ -145,104 +115,36 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Visual Gallery Section */}
-      <section className="py-20 px-4 bg-gradient-to-b from-[#0A0E1A] to-[#0F1729]">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-center text-white mb-4">
-            Discover the <span className="text-cyan-400">Microscopic World</span>
-          </h2>
-          <p className="text-center text-gray-400 mb-12">Experience life from a completely new perspective</p>
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="relative group overflow-hidden rounded-lg h-64">
-              <img 
-                src="https://images.unsplash.com/photo-1530587191325-3db32d826c18?w=600&q=80" 
-                alt="Microscopic Lab" 
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                <p className="text-white font-semibold">Lab Research</p>
-              </div>
-            </div>
-            
-            <div className="relative group overflow-hidden rounded-lg h-64">
-              <img 
-                src="https://images.unsplash.com/photo-1507413245164-6160d8298b31?w=600&q=80" 
-                alt="Circuit Boards" 
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                <p className="text-white font-semibold">Nano Circuits</p>
-              </div>
-            </div>
-            
-            <div className="relative group overflow-hidden rounded-lg h-64">
-              <img 
-                src="https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=600&q=80" 
-                alt="Molecular Structure" 
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                <p className="text-white font-semibold">Molecular View</p>
-              </div>
-            </div>
-            
-            <div className="relative group overflow-hidden rounded-lg h-64">
-              <img 
-                src="https://images.unsplash.com/photo-1614935151651-0bea6508db6b?w=600&q=80" 
-                alt="Futuristic Lab" 
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                <p className="text-white font-semibold">Future Tech</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* The etinuxE Initiative */}
-      <section className="py-20 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-8 items-center">
-            <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-                The etinuxE Initiative
-              </h2>
-              <p className="text-xl text-gray-300 mb-6">
-                Dr. Ni's groundbreaking research opens doors to a world where size is no longer a limitation.
-              </p>
-              <p className="text-lg text-gray-400 mb-8">
-                Through advanced experiments and field operations, we're exploring how miniaturization
-                can solve global challenges while raising profound questions about our future.
-              </p>
-              <div className="space-y-4">
-                <Card className="bg-white/5 border-white/10">
-                  <CardContent className="p-6">
-                    <h3 className="text-xl font-bold text-cyan-400 mb-3">Research Labs</h3>
-                    <p className="text-gray-300 text-sm">
-                      Access cutting-edge facilities to conduct miniaturization experiments and unlock new possibilities.
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-white/5 border-white/10">
-                  <CardContent className="p-6">
-                    <h3 className="text-xl font-bold text-cyan-400 mb-3">Field Operations</h3>
-                    <p className="text-gray-300 text-sm">
-                      Deploy agents on critical missions to test miniaturization technology in real-world scenarios.
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-            <div className="relative">
-              <div className="absolute -inset-4 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 blur-3xl"></div>
-              <img 
-                src="https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=800&q=80" 
-                alt="Research Lab" 
-                className="relative rounded-lg shadow-2xl"
-              />
-            </div>
+      <section className="py-20 px-4 bg-gradient-to-b from-[#0A0E1A] to-[#0F1729]">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-8">
+            The etinuxE Initiative
+          </h2>
+          <p className="text-xl text-gray-300 mb-6">
+            Dr. Ni's groundbreaking research opens doors to a world where size is no longer a limitation.
+          </p>
+          <p className="text-lg text-gray-400 mb-8">
+            Through advanced experiments and field operations, we're exploring how miniaturization
+            can solve global challenges while raising profound questions about our future.
+          </p>
+          <div className="grid md:grid-cols-2 gap-6">
+            <Card className="bg-white/5 border-white/10">
+              <CardContent className="p-6">
+                <h3 className="text-xl font-bold text-cyan-400 mb-3">Research Labs</h3>
+                <p className="text-gray-300 text-sm">
+                  Access cutting-edge facilities to conduct miniaturization experiments and unlock new possibilities.
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="bg-white/5 border-white/10">
+              <CardContent className="p-6">
+                <h3 className="text-xl font-bold text-cyan-400 mb-3">Field Operations</h3>
+                <p className="text-gray-300 text-sm">
+                  Deploy agents on critical missions to test miniaturization technology in real-world scenarios.
+                </p>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
