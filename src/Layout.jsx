@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Atom, Home, FlaskConical, Clock, MapPin, Package, ShoppingCart, BarChart3, Users, Menu, X, Bot, ChevronDown, Sparkles, DollarSign, FileText, MessageSquare, Trophy } from "lucide-react";
+import { Atom, Home, FlaskConical, Clock, MapPin, Package, ShoppingCart, BarChart3, Users, Menu, X, Bot, ChevronDown, Sparkles, DollarSign, FileText, MessageSquare, Trophy, Beaker } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import NuxelandAgent from "@/components/ai/NuxelandAgent";
@@ -21,6 +21,9 @@ const deepIntoGameItems = [
   { title: "Timeline", url: createPageUrl("MissionTimeline"), icon: Clock },
   { title: "Map", url: createPageUrl("Map"), icon: MapPin },
   { title: "Resources", url: createPageUrl("Resources"), icon: Package },
+];
+
+const recreatingTheGameItems = [
   { title: "Experiment Lab", url: createPageUrl("Dashboard"), icon: BarChart3 },
   { title: "Sell the Formula", url: createPageUrl("SellFormula"), icon: DollarSign },
   { title: "Formula R&D", url: createPageUrl("FormulaRD"), icon: Atom },
@@ -188,6 +191,27 @@ export default function Layout({ children, currentPageName }) {
 
               <DropdownMenu>
                 <DropdownMenuTrigger className="nav-link flex items-center gap-2 text-sm font-medium text-gray-300 hover:text-white transition-colors cursor-pointer">
+                  <Beaker className="w-4 h-4" />
+                  Recreating the Game
+                  <ChevronDown className="w-3 h-3" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="bg-[#0F1729] border-green-500/50 shadow-2xl min-w-[220px]">
+                  {recreatingTheGameItems.map((item) => (
+                    <DropdownMenuItem key={item.title} asChild>
+                      <Link 
+                        to={item.url} 
+                        className="flex items-center gap-3 cursor-pointer px-4 py-3 text-base text-white hover:bg-green-500/20 hover:text-green-400 transition-colors"
+                      >
+                        <item.icon className="w-5 h-5" />
+                        <span className="font-medium">{item.title}</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger className="nav-link flex items-center gap-2 text-sm font-medium text-gray-300 hover:text-white transition-colors cursor-pointer">
                   <Sparkles className="w-4 h-4" />
                   Living the Game
                   <ChevronDown className="w-3 h-3" />
@@ -263,6 +287,21 @@ export default function Layout({ children, currentPageName }) {
               <div className="border-t border-white/10 pt-3">
                 <p className="text-blue-400 text-xs px-4 mb-2 font-bold">DEEP INTO THE GAME</p>
                 {deepIntoGameItems.map((item) => (
+                  <Link
+                    key={item.title}
+                    to={item.url}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-white/5"
+                  >
+                    <item.icon className="w-5 h-5" />
+                    <span className="font-medium">{item.title}</span>
+                  </Link>
+                ))}
+              </div>
+
+              <div className="border-t border-white/10 pt-3">
+                <p className="text-green-400 text-xs px-4 mb-2 font-bold">RECREATING THE GAME</p>
+                {recreatingTheGameItems.map((item) => (
                   <Link
                     key={item.title}
                     to={item.url}
