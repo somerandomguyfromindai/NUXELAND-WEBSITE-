@@ -192,6 +192,28 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Game Overview Section */}
+      <section 
+        className="py-20 px-4 relative z-10"
+        style={{
+          opacity: Math.min(1, Math.max(0, (scrollY - 600) / 300)),
+        }}
+      >
+        <div className="max-w-4xl mx-auto">
+          <div className="relative">
+            <div className="absolute inset-0 bg-blue-500/10 rounded-3xl blur-3xl" />
+            <img 
+              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/69172463a52f7c40f0887fab/f7fbbdb9f_WhatsAppImage2025-11-17at161454_d6531f8e.jpg"
+              alt="The Game Itself - Complete Overview"
+              className="relative w-full rounded-2xl shadow-2xl border border-blue-500/30"
+              style={{
+                transform: `translateY(${Math.sin(scrollY * 0.001) * 10}px)`
+              }}
+            />
+          </div>
+        </div>
+      </section>
+
       {/* Features Grid - Three Pillars */}
       <section 
         className="py-20 px-4 relative z-10"

@@ -14,7 +14,7 @@ import FormulaRD from './pages/FormulaRD';
 import Blog from './pages/Blog';
 import Groups from './pages/Groups';
 import Leaderboards from './pages/Leaderboards';
-import Layout from './Layout.jsx';
+import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
@@ -39,5 +39,5 @@ export const PAGES = {
 export const pagesConfig = {
     mainPage: "Home",
     Pages: PAGES,
-    Layout: Layout,
+    Layout: __Layout,
 };
